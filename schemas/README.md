@@ -106,6 +106,23 @@ Those records are intentionally support-safe and local-first:
 
 Future runtimes should inspect these S04 schemas when the question is about operator-visible website route honesty and composed continuity truth, while still using the S02/S03 schemas for the lower-level voice/session and identity seams.
 
+## S05 design-teaching and research seam
+S05 adds a dedicated support-safe contract family on top of the canonical S04 website-specialist harness seam:
+- `design-teaching-summary.schema.json`
+- `design-research-summary.schema.json`
+- `design-teaching-research-record.schema.json`
+- `examples/design-teaching-research-record.local-teaching.example.json`
+- `examples/design-teaching-research-record.hybrid-research.example.json`
+- `examples/design-teaching-research-record.blocked.example.json`
+
+Those records are intentionally composed rather than flattened:
+- the canonical S04 `website-specialist-harness-record` remains nested under `harness`
+- S05 adds one bounded `teaching` subrecord and one bounded `research` subrecord
+- the seam exposes teaching status, research status, provenance mode, freshness, disclosure, anti-slop rationale, and support-safe summaries
+- it does **not** embed raw transcripts, private memory, raw current-reference dumps, or claims that live browsing/runtime execution occurred
+
+Future runtimes should inspect S04 schemas when the question is about route honesty and website-specialist execution truth, and inspect S05 schemas when the question is about design-teaching posture, bounded research provenance, and anti-slop explanation layered on top of that S04 truth.
+
 ## Validation harness
 Run:
 - `python tools/validate_schemas.py`

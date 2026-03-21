@@ -56,6 +56,26 @@ Run:
 - `python tools/runtime_scenarios.py`
 - `cd packages/node-runtime && npm test`
 
+## S05 design-teaching and research seam
+S05 adds a dedicated design-teaching and current-reference research seam on top of the canonical S04 website-specialist harness:
+- `runtime_types.design_teaching_research.derive_design_teaching_research_record(...)`
+- `tools/inspect_design_teaching_research.py`
+- `tests/test_design_teaching_research.py`
+- `schemas/examples/design-teaching-research-record.*.example.json`
+
+That seam shows whether Cipher can teach the design reasoning from canonical S04 website-specialist truth, disclose bounded hybrid research support honestly, and stay anti-slop without pretending a live browser/runtime exists.
+Use S04 when the operator question is about website-specialist route honesty and execution state; use S05 when the question is about teaching posture, research provenance/freshness/disclosure, and support-safe explanation layered on top of that S04 truth.
+
+The S05 proof is intentionally support-safe:
+- it exposes lesson summaries, anti-slop rationale, provenance mode, freshness, and disclosure text
+- it does **not** expose raw transcripts, private memory, or raw current-reference/reference dumps
+- it does **not** claim that a live browsing or production website runtime is wired in this repo
+
+Recommended S05 verification commands:
+- `python -m unittest tests.test_design_teaching_research`
+- `python tools/inspect_design_teaching_research.py`
+- `python tools/validate_schemas.py`
+
 ## Telegram voice, Cipher continuity, and website-specialist inspection seams
 S02 adds a support-safe Telegram voice-loop contract seam backed by schemas, parser loaders, and one authoritative restore point:
 - `runtime_types.telegram_voice_loop.derive_telegram_voice_turn(...)`

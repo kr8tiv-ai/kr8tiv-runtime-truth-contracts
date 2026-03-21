@@ -270,7 +270,43 @@ Inspect S02 first when the problem might be in onboarding, voiced reply readines
 
 The S04 restore point proves the contract seam and support-safe inspection surface only. It does **not** claim that a live website execution runtime, browser automation loop, or external website mutation pipeline is fully wired in this repo.
 
-## Formal test restore points
+## S05 design-teaching and research seam
+A dedicated S05 restore point now exists at `tools/inspect_design_teaching_research.py`.
+
+It derives representative local-teaching, hybrid-research, and blocked/suppressed records through `derive_design_teaching_research_record(...)` and prints a stable, support-safe summary for:
+- teaching status
+- research status
+- provenance mode
+- freshness label
+- disclosure level and disclosure text
+- lesson summary
+- anti-slop rationale
+- translated signal summary
+- composed support-safe summary
+
+Run:
+- `python tools/inspect_design_teaching_research.py`
+
+Use this script when a future agent needs to inspect whether Cipher can:
+- explain design choices from local S04 website-specialist truth alone
+- disclose bounded hybrid current-reference support honestly
+- remain blocked or suppressed without pretending live browsing, leaking raw references, or exposing private memory
+
+This is the authoritative S05 restore point for design-teaching and research truth. It intentionally layers on top of S04 rather than replacing it:
+- S04 (`tools/inspect_website_specialist_harness.py`) remains the factual website-specialist execution seam for route mode, fallback honesty, and continuity markers.
+- S05 (`tools/inspect_design_teaching_research.py`) is the teaching/research interpretation seam that adds bounded lesson output, provenance/freshness/disclosure, and anti-slop rationale on top of canonical S04 harness truth.
+
+Inspect S04 first when the question is whether website-specialist work stayed local, used bounded hybrid help, or refused fallback. Inspect S05 when the operator question is whether Cipher can teach the design reasoning, disclose research provenance honestly, and stay support-safe without exposing transcripts, raw reference dumps, or private memory.
+
+Pinned S05 proof now lives at:
+- `tests/test_design_teaching_research.py`
+- `tests/test_runtime_types.py`
+- `schemas/examples/design-teaching-research-record.*.example.json`
+
+Preferred verification commands for the current seam are:
+- `python tools/inspect_design_teaching_research.py`
+- `python -m unittest tests.test_design_teaching_research`
+- `python -m unittest tests.test_runtime_types`
 Stdlib test layers now exist at:
 - `tests/test_runtime_types.py`
 - `tests/test_schema_validation.py`

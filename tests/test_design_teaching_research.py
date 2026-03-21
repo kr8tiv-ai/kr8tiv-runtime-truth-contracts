@@ -1,19 +1,19 @@
 from __future__ import annotations
 
+import contextlib
 import io
 import json
-import unittest
-from contextlib import redirect_stdout
-from pathlib import Path
+import runpy
 import sys
+import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from runtime_types.design_teaching_research import derive_design_teaching_research_record
-from runtime_types.parsers import load_website_specialist_harness_record
-from tools.inspect_design_teaching_research import main as inspect_main
+from runtime_types.parsers import load_design_teaching_research_record, load_website_specialist_harness_record
 
 
 def example_payload(name: str) -> dict:
@@ -43,6 +43,9 @@ class DesignTeachingResearchDerivationTests(unittest.TestCase):
         self.assertIn("hierarchy", record["teaching"]["lesson_summary"].lower())
         self.assertIn("generic", record["teaching"]["anti_slop_rationale"].lower())
         self.assertIn("no current-reference research", record["research"]["disclosure_text"].lower())
+        self.assertEqual(record["harness"]["execution"]["route"]["mode"], harness["execution"]["route"]["mode"])
+        self.assertNotIn("raw transcript", json.dumps(record).lower())
+        self.assertNotIn("private memory", json.dumps(record).lower())
 
     def test_derives_hybrid_research_record_with_honest_provenance(self) -> None:
         harness = load_website_specialist_harness_record(
@@ -67,6 +70,8 @@ class DesignTeachingResearchDerivationTests(unittest.TestCase):
         self.assertIn("hybrid research support", record["research"]["disclosure_text"].lower())
         self.assertIn("current-reference", record["research"]["signal_summary"].lower())
         self.assertIn("trend worship", record["teaching"]["anti_slop_rationale"].lower())
+        self.assertEqual(record["harness"]["execution"]["route"]["mode"], "hybrid")
+        self.assertNotIn("https://", json.dumps(record).lower())
 
     def test_derives_blocked_suppressed_record_without_teaching_or_live_claims(self) -> None:
         harness = load_website_specialist_harness_record(
@@ -88,23 +93,44 @@ class DesignTeachingResearchDerivationTests(unittest.TestCase):
         self.assertIn("suppressed", record["teaching"]["lesson_summary"].lower())
         self.assertIn("blocked", record["research"]["disclosure_text"].lower())
         self.assertIn("without bluffing", record["support_safe_summary"].lower())
+        self.assertEqual(record["harness"]["execution"]["route"]["mode"], "local")
+        self.assertNotIn("http://", json.dumps(record).lower())
+        self.assertNotIn("https://", json.dumps(record).lower())
+
+
+class DesignTeachingResearchParserBoundaryTests(unittest.TestCase):
+    def test_example_record_stays_support_safe_and_schema_valid(self) -> None:
+        payload = example_payload("design-teaching-research-record.hybrid-research.example.json")
+
+        record = load_design_teaching_research_record(payload)
+
+        rendered = json.dumps(record).lower()
+        self.assertEqual(record["schema_family"], "s05_design_teaching_research")
+        self.assertEqual(record["harness"]["execution"]["route"]["mode"], "hybrid")
+        self.assertNotIn("raw transcript", rendered)
+        self.assertNotIn("private memory", rendered)
+        self.assertNotIn("http://", rendered)
+        self.assertNotIn("https://", rendered)
 
 
 class DesignTeachingResearchCliTests(unittest.TestCase):
     def test_cli_prints_support_safe_restore_point(self) -> None:
         output = io.StringIO()
 
-        with redirect_stdout(output):
-            exit_code = inspect_main()
+        with contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as exit_ctx:
+                runpy.run_path(str(ROOT / "tools" / "inspect_design_teaching_research.py"), run_name="__main__")
 
         rendered = output.getvalue()
-        self.assertEqual(exit_code, 0)
+        self.assertEqual(exit_ctx.exception.code, 0)
         self.assertIn("Design teaching + research inspection", rendered)
         self.assertIn("SCENARIO local_teaching", rendered)
         self.assertIn("SCENARIO hybrid_research", rendered)
         self.assertIn("SCENARIO blocked_or_suppressed", rendered)
         self.assertIn("teaching_status:", rendered)
         self.assertIn("research_status:", rendered)
+        self.assertIn("provenance_mode:", rendered)
+        self.assertIn("freshness_label:", rendered)
         self.assertNotIn("raw reference", rendered.lower())
         self.assertNotIn("raw transcript", rendered.lower())
         self.assertNotIn("private memory", rendered.lower())

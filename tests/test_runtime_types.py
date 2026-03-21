@@ -287,6 +287,27 @@ class DesignTeachingResearchParserTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             load_design_teaching_research_record(payload)
 
+    def test_load_design_teaching_research_record_rejects_missing_freshness_label(self) -> None:
+        payload = design_teaching_research_record_payload()
+        del payload["research"]["freshness_label"]
+
+        with self.assertRaises(ValueError):
+            load_design_teaching_research_record(payload)
+
+    def test_load_design_teaching_research_record_rejects_private_memory_leak_field(self) -> None:
+        payload = design_teaching_research_record_payload()
+        payload["private_memory_payload"] = {"secret": "support-safe seams must never expose this"}
+
+        with self.assertRaises(ValueError):
+            load_design_teaching_research_record(payload)
+
+    def test_load_design_teaching_research_record_rejects_invalid_schema_family(self) -> None:
+        payload = design_teaching_research_record_payload()
+        payload["schema_family"] = "s04_website_specialist_harness"
+
+        with self.assertRaises(ValueError):
+            load_design_teaching_research_record(payload)
+
     def test_load_design_teaching_research_record_accepts_local_teaching_example_fixture(self) -> None:
         example_path = ROOT / "schemas" / "examples" / "design-teaching-research-record.local-teaching.example.json"
         payload = json.loads(example_path.read_text(encoding="utf-8"))
