@@ -10,7 +10,11 @@ if str(ROOT) not in sys.path:
 
 from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.feedback_selection import select_relevant_feedback
-from runtime_types.parsers import load_behavior_signal_entry, load_truth_surface
+from runtime_types.parsers import (
+    load_behavior_signal_entry,
+    load_route_decision_result,
+    load_truth_surface,
+)
 from runtime_types.precedence import resolve_precedence
 from runtime_types.promotion import evaluate_feedback_promotion
 from runtime_types.promotion_audit import format_promotion_audit
@@ -503,6 +507,136 @@ class DisclosureTests(unittest.TestCase):
 
         self.assertEqual(result["level"], "brief")
         self.assertFalse(result["mention_external_help"])
+
+
+class RuntimeRouteDecisionContractTests(unittest.TestCase):
+    def test_route_decision_parser_accepts_local_mode_payload(self) -> None:
+        payload = {
+            "mode": "local",
+            "status": "selected",
+            "reason": "Local-first policy keeps this routine task on the local path.",
+            "reason_code": "local_policy_default",
+            "fallback_allowed": True,
+            "fallback_used": False,
+            "fallback_refused": False,
+            "refusal": None,
+        }
+
+        result = load_route_decision_result(payload)
+
+        self.assertEqual(result["mode"], "local")
+        self.assertEqual(result["status"], "selected")
+        self.assertFalse(result["fallback_used"])
+        self.assertIsNone(result["refusal"])
+
+    def test_route_decision_parser_rejects_missing_refusal_fields(self) -> None:
+        payload = {
+            "mode": "refused",
+            "status": "refused",
+            "reason": "Fallback is disallowed for this local-only task.",
+            "reason_code": "fallback_disallowed",
+            "fallback_allowed": False,
+            "fallback_used": False,
+            "fallback_refused": True,
+        }
+
+        with self.assertRaises(ValueError):
+            load_route_decision_result(payload)
+
+    def test_route_decision_contract_represents_local_hybrid_and_refused_outcomes(self) -> None:
+        local_result = load_route_decision_result(
+            {
+                "mode": "local",
+                "status": "selected",
+                "reason": "Routine work stays local under the route policy.",
+                "reason_code": "local_policy_default",
+                "fallback_allowed": True,
+                "fallback_used": False,
+                "fallback_refused": False,
+                "refusal": None,
+            }
+        )
+        hybrid_result = load_route_decision_result(
+            {
+                "mode": "hybrid",
+                "status": "selected",
+                "reason": "Truth-surface policy allows hybrid support for high-complexity work.",
+                "reason_code": "quality_support_needed",
+                "fallback_allowed": True,
+                "fallback_used": True,
+                "fallback_refused": False,
+                "refusal": None,
+            }
+        )
+        refused_result = load_route_decision_result(
+            {
+                "mode": "refused",
+                "status": "refused",
+                "reason": "Truth-surface policy forbids external fallback for this local-only task.",
+                "reason_code": "fallback_disallowed",
+                "fallback_allowed": False,
+                "fallback_used": False,
+                "fallback_refused": True,
+                "refusal": {
+                    "kind": "policy_refusal",
+                    "message": "External fallback is not permitted for this task.",
+                    "learned_effect_allowed": False,
+                },
+            }
+        )
+
+        self.assertEqual(local_result["mode"], "local")
+        self.assertEqual(hybrid_result["mode"], "hybrid")
+        self.assertTrue(hybrid_result["fallback_used"])
+        self.assertEqual(refused_result["mode"], "refused")
+        self.assertEqual(refused_result["status"], "refused")
+        self.assertEqual(refused_result["refusal"]["kind"], "policy_refusal")
+        self.assertFalse(refused_result["refusal"]["learned_effect_allowed"])
+
+    def test_truth_surface_examples_cover_local_hybrid_and_refused_route_inputs(self) -> None:
+        local_truth_surface = load_truth_surface(base_truth_surface())
+        hybrid_truth_surface = load_truth_surface(
+            {
+                **base_truth_surface(),
+                "routing_policy": {
+                    "default_mode": "local",
+                    "high_complexity_allows_hybrid": True,
+                },
+                "current_task": {
+                    "task_id": "task-hybrid",
+                    "phase": "generation",
+                    "target_outcome": "Complex generation task needing broader capability.",
+                    "complexity": "high",
+                },
+                "fallback_policy": {
+                    "must_disclose_material_external_help": True,
+                    "refuse_on_local_only_tasks": False,
+                },
+            }
+        )
+        refused_truth_surface = load_truth_surface(
+            {
+                **base_truth_surface(),
+                "routing_policy": {
+                    "default_mode": "local",
+                    "high_complexity_allows_hybrid": False,
+                },
+                "current_task": {
+                    "task_id": "task-refused",
+                    "phase": "generation",
+                    "target_outcome": "Local-only task that forbids fallback.",
+                    "local_only": True,
+                },
+                "fallback_policy": {
+                    "must_disclose_material_external_help": True,
+                    "refuse_on_local_only_tasks": True,
+                },
+            }
+        )
+
+        self.assertEqual(local_truth_surface["routing_policy"], {})
+        self.assertTrue(hybrid_truth_surface["routing_policy"]["high_complexity_allows_hybrid"])
+        self.assertTrue(refused_truth_surface["fallback_policy"]["refuse_on_local_only_tasks"])
 
 
 class RuntimeStepTests(unittest.TestCase):

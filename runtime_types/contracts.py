@@ -11,6 +11,21 @@ ProvenanceLevel: TypeAlias = Literal["local-proven", "hybrid-proven", "external-
 PreferenceScope: TypeAlias = Literal["project", "owner"]
 ConflictStatus: TypeAlias = Literal["active", "superseded", "contradicted", "paused"]
 RouteMode: TypeAlias = Literal["local", "hybrid", "external"]
+RouteDecisionMode: TypeAlias = Literal["local", "hybrid", "refused"]
+RouteDecisionStatus: TypeAlias = Literal["selected", "refused"]
+RouteDecisionReasonCode: TypeAlias = Literal[
+    "local_policy_default",
+    "quality_support_needed",
+    "fallback_disallowed",
+    "policy_refusal",
+    "revision_budget_exhausted",
+    "manual_review_required",
+]
+RouteRefusalKind: TypeAlias = Literal[
+    "policy_refusal",
+    "fallback_not_allowed",
+    "manual_review_required",
+]
 DestinationScope: TypeAlias = Literal["project", "owner"]
 BehaviorSignalType: TypeAlias = Literal[
     "suggestion_not_adopted",
@@ -66,6 +81,23 @@ class RoutingProvenanceEvent(TypedDict):
     fallback_used: bool
     fallback_refused: bool
     learned_effect_allowed: bool
+
+
+class RouteDecisionRefusal(TypedDict):
+    kind: RouteRefusalKind
+    message: str
+    learned_effect_allowed: bool
+
+
+class RouteDecisionResult(TypedDict):
+    mode: RouteDecisionMode
+    status: RouteDecisionStatus
+    reason: str
+    reason_code: RouteDecisionReasonCode
+    fallback_allowed: bool
+    fallback_used: bool
+    fallback_refused: bool
+    refusal: RouteDecisionRefusal | None
 
 
 class PromotionDecisionRecord(TypedDict):

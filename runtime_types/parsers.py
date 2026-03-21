@@ -7,6 +7,7 @@ from .contracts import (
     FeedbackLedgerEntry,
     PreferenceRecord,
     PromotionDecisionRecord,
+    RouteDecisionResult,
     RoutingProvenanceEvent,
     TruthSurface,
 )
@@ -46,6 +47,13 @@ def load_routing_provenance_event(data: object) -> RoutingProvenanceEvent:
     return cast(
         RoutingProvenanceEvent,
         _load("routing-provenance-event.schema.json", data, "RoutingProvenanceEvent"),
+    )
+
+
+def load_route_decision_result(data: object) -> RouteDecisionResult:
+    return cast(
+        RouteDecisionResult,
+        _load("route-decision-result.schema.json", data, "RouteDecisionResult"),
     )
 
 

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RouteDecisionResult",
+  "description": "Canonical runtime-owned route decision surface derived from TruthSurface for a single step.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["local", "hybrid", "refused"],
+      "description": "The bounded route mode selected by the runtime for this step."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["selected", "refused"],
+      "description": "Whether a route was selected or the step was refused."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Human-inspectable explanation of why this route result occurred."
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "local_policy_default",
+        "quality_support_needed",
+        "fallback_disallowed",
+        "policy_refusal",
+        "revision_budget_exhausted",
+        "manual_review_required"
+      ],
+      "description": "Stable machine-readable reason code for tooling and tests."
+    },
+    "fallback_allowed": {
+      "type": "boolean",
+      "description": "Whether policy allowed the runtime to consider fallback beyond the local path."
+    },
+    "fallback_used": {
+      "type": "boolean",
+      "description": "Whether the runtime used fallback or hybrid support for this step."
+    },
+    "fallback_refused": {
+      "type": "boolean",
+      "description": "Whether a fallback path was explicitly refused."
+    },
+    "refusal": {
+      "description": "Structured refusal details when no route may proceed.",
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["policy_refusal", "fallback_not_allowed", "manual_review_required"],
+          "description": "Why the runtime refused the route."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable refusal explanation."
+        },
+        "learned_effect_allowed": {
+          "type": "boolean",
+          "description": "Whether a refused step may still contribute to future learning surfaces."
+        }
+      },
+      "required": ["kind", "message", "learned_effect_allowed"]
+    }
+  },
+  "required": [
+    "mode",
+    "status",
+    "reason",
+    "reason_code",
+    "fallback_allowed",
+    "fallback_used",
+    "fallback_refused",
+    "refusal"
+  ]
+}

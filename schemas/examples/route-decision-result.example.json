@@ -1,0 +1,10 @@
+{
+  "mode": "hybrid",
+  "status": "selected",
+  "reason": "Truth-surface routing policy allowed hybrid support for a high-complexity step.",
+  "reason_code": "quality_support_needed",
+  "fallback_allowed": true,
+  "fallback_used": true,
+  "fallback_refused": false,
+  "refusal": null
+}
