@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -12,6 +13,37 @@ from runtime_types.concierge_claims import derive_concierge_lifecycle
 
 
 class ConciergeLifecycleTests(unittest.TestCase):
+    def test_inspection_script_reports_support_safe_restore_point_states(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "inspect_concierge_claim.py")],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        output = result.stdout
+
+        self.assertIn("Concierge claim inspection", output)
+        self.assertIn("- claim-concierge-001 (demo-owner-cipher)", output)
+        self.assertIn("  Claim status: claimed", output)
+        self.assertIn("  Setup stage: awaiting_device_setup", output)
+        self.assertIn("  Activation ready: no", output)
+        self.assertIn("  Blocking reason: none", output)
+        self.assertIn("  Manual checkpoint: none", output)
+        self.assertIn("  Next user step: Complete the device setup steps sent by support.", output)
+        self.assertIn("- claim-concierge-002 (demo-owner-catalyst)", output)
+        self.assertIn("  Claim status: blocked", output)
+        self.assertIn("  Setup stage: support_followup_required", output)
+        self.assertIn("  Blocking reason: identity_verification_pending", output)
+        self.assertIn("  Manual checkpoint: await_support_followup", output)
+        self.assertIn("  Support-safe notes: Do not continue setup until support confirms the checkpoint is cleared.", output)
+        self.assertIn("- claim-concierge-003 (demo-owner-forge)", output)
+        self.assertIn("  Claim status: activation_ready", output)
+        self.assertIn("  Setup stage: setup_complete", output)
+        self.assertIn("  Activation ready: yes", output)
+        self.assertIn("  Guidance status: ready", output)
+        self.assertIn("  Summary: Everything is complete and you are ready to schedule activation.", output)
+
     def test_claimed_but_awaiting_setup_state_exposes_support_safe_guidance(self) -> None:
         result = derive_concierge_lifecycle(
             claim_id="claim-concierge-001",

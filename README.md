@@ -28,6 +28,7 @@ A good starting note for the public shape of the work is:
 
 ## Current capabilities
 - precedence resolution across spec, explicit feedback, preferences, and defaults
+- concierge onboarding lifecycle derivation plus a support-safe inspection restore point
 - provenance disclosure formatting for local, hybrid, external, and fallback-refused paths
 - feedback promotion decisions with behavioral shaping
 - scope-aware explicit feedback selection

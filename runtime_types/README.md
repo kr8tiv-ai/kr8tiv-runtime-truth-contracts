@@ -169,6 +169,28 @@ It exercises precedence, disclosure, promotion, populated/empty artifact cases, 
 Run:
 - `python tools/runtime_scenarios.py`
 
+## Concierge restore point
+A dedicated concierge inspection restore point now exists at `tools/inspect_concierge_claim.py`.
+
+It derives representative concierge onboarding states through `derive_concierge_lifecycle(...)` and prints a stable, support-safe summary for:
+- `claim_status`
+- `setup_stage`
+- `activation_ready`
+- `blocking_reason`
+- `manual_checkpoint`
+- `next_user_step`
+- setup-guidance summary and support-safe notes
+
+Run:
+- `python tools/inspect_concierge_claim.py`
+
+Use this script first when a future agent needs to understand whether a concierge claim is:
+- claimed but still waiting on setup
+- blocked and waiting on a manual checkpoint
+- activation ready
+
+This is the authoritative S01 restore point for concierge onboarding truth. It intentionally reuses the schema-backed runtime helper instead of maintaining a separate CLI-only output model.
+
 ## Formal test restore points
 Stdlib test layers now exist at:
 - `tests/test_runtime_types.py`
