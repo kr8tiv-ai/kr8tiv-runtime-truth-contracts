@@ -1,8 +1,8 @@
 {
   "active_spec": {
-    "milestone": "M003-2cpdzh",
-    "slice": "S05",
-    "goal": "Keep local-first primary while allowing governed fallback and scoped learning.",
+    "milestone": "M004-j5w2ex",
+    "slice": "S01",
+    "goal": "Let the runtime own one bounded route decision from the canonical truth surface.",
     "resolved_rules": {
       "routing.prefer_local": true
     }
@@ -15,7 +15,8 @@
   "current_task": {
     "task_id": "example-task-001",
     "phase": "generation",
-    "target_outcome": "Produce a revised website direction after explicit feedback."
+    "target_outcome": "Produce a revised website direction after explicit feedback while proving runtime-owned route selection.",
+    "complexity": "high"
   },
   "persona_anchor": {
     "companion": "Cipher / Code Kraken",
@@ -80,6 +81,6 @@
   "recent_behavior_signals": [],
   "disclosure_state": {
     "must_disclose_current_route": true,
-    "current_route_label": "local"
+    "current_route_label": "hybrid"
   }
 }
