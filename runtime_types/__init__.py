@@ -1,4 +1,5 @@
 from .contracts import (
+    AdaptationDecisionSummary,
     BehaviorSignalEntry,
     BehaviorSignalType,
     CipherContinuityRecord,
@@ -22,6 +23,7 @@ from .contracts import (
     DesignTeachingResearchRecord,
     DesignTeachingSummary,
     DestinationScope,
+    AdaptationDecisionSummary,
     DisclosureLevel,
     FeedbackLedgerEntry,
     FeedbackPolarity,
@@ -55,6 +57,9 @@ from .contracts import (
     RuntimeReadinessSummary,
     RuntimeStepArtifacts,
     ScopeRequested,
+    SpecPrecedenceSummary,
+    TasteAdaptationRecord,
+    TasteSignalSummary,
     TelegramActivationGateStatus,
     TelegramContinuityStatus,
     TelegramInboundVoiceNoteRecord,
@@ -93,6 +98,9 @@ from .parsers import (
     load_design_teaching_summary,
     load_runtime_step_artifacts,
     load_routing_provenance_event,
+    load_spec_precedence_summary,
+    load_taste_adaptation_record,
+    load_taste_signal_summary,
     load_telegram_voice_continuity,
     load_telegram_voice_reply,
     load_telegram_voice_transcript,
@@ -126,6 +134,7 @@ __all__ = [
     "DesignTeachingResearchRecord",
     "DesignTeachingSummary",
     "DestinationScope",
+    "AdaptationDecisionSummary",
     "DisclosureLevel",
     "DisclosureResult",
     "FeedbackLedgerEntry",
@@ -133,6 +142,9 @@ __all__ = [
     "FeedbackSource",
     "FeedbackTarget",
     "GenesisBloodline",
+    "SpecPrecedenceSummary",
+    "TasteAdaptationRecord",
+    "TasteSignalSummary",
     "GenesisClaimFailureReason",
     "GenesisClaimResult",
     "GenesisEntitlementRecord",
@@ -195,6 +207,9 @@ __all__ = [
     "load_design_teaching_summary",
     "load_runtime_step_artifacts",
     "load_routing_provenance_event",
+    "load_spec_precedence_summary",
+    "load_taste_adaptation_record",
+    "load_taste_signal_summary",
     "load_telegram_voice_continuity",
     "load_telegram_voice_reply",
     "load_telegram_voice_transcript",
@@ -208,6 +223,7 @@ __all__ = [
     "derive_cipher_continuity",
     "derive_concierge_lifecycle",
     "derive_design_teaching_research_record",
+    "derive_taste_adaptation_record",
     "derive_telegram_voice_turn",
     "derive_website_specialist_harness_record",
     "evaluate_feedback_promotion",
@@ -255,6 +271,10 @@ def __getattr__(name: str):
         from .design_teaching_research import derive_design_teaching_research_record
 
         return derive_design_teaching_research_record
+    if name in {"derive_taste_adaptation_record"}:
+        from .taste_adaptation_memory_boundary import derive_taste_adaptation_record
+
+        return derive_taste_adaptation_record
     if name in {"derive_telegram_voice_turn"}:
         from .telegram_voice_loop import derive_telegram_voice_turn
 
