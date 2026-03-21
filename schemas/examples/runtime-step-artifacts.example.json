@@ -1,0 +1,28 @@
+{
+  "provenance": {
+    "route_mode": "hybrid",
+    "route_reason": "quality support during demo step",
+    "fallback_used": true,
+    "fallback_refused": false,
+    "disclosure_level": "explicit",
+    "disclosure_text": "This step used a hybrid path: local execution with external help for quality or capability support. Reason: quality support during demo step",
+    "mention_external_help": true
+  },
+  "feedback_selection": {
+    "selected": true,
+    "selected_feedback_id": "fb-201",
+    "scope_requested": "turn",
+    "target": "design",
+    "selection_reason": "Selected the most relevant explicit feedback for this step using scope and recency ordering."
+  },
+  "promotion_analysis": {
+    "evaluated": true,
+    "status": "evaluated",
+    "decision": "project",
+    "reason": "Feedback can promote project-wide because it repeated and was accepted without edit in practice.",
+    "provenance_warning": false,
+    "blocking_signal_type": null,
+    "supporting_signal_used": true,
+    "audit_summary": "decision=project; signal=accepted_without_edit; provenance=provenance_clear; reason=Feedback can promote project-wide because it repeated and was accepted without edit in practice."
+  }
+}

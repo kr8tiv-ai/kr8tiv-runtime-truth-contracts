@@ -15,6 +15,8 @@ It mirrors the validated runtime contract using:
 - `feedback_selection.py` — scope-aware relevant-feedback selector
 - `behavior_signals.py` — behavioral evidence summarization helpers
 - `promotion_audit.py` — compact formatter for promotion audit summaries
+- `runtime_step.py` — composed one-step runtime seam with runtime-owned artifact output
+- `runtime_operations.py` — operational readiness and mismatch-localization helpers for one runtime step
 - `__init__.py` — public exports
 
 ## Relationship to `schemas/`
@@ -29,15 +31,16 @@ It mirrors the validated runtime contract using:
 - `PromotionDecisionRecord`
 - `BehaviorSignalEntry`
 - `TruthSurface`
+- `RuntimeStepArtifacts`
+- `RuntimeReadinessSummary`
 - shared schema validation helpers
 - thin parser/bridge functions
 - a first-pass precedence resolver
 
 ## What is not modeled yet
-- business logic
 - storage
-- service interfaces
-- promotion engines
+- service interfaces beyond one composed runtime step
+- long-horizon orchestration
 - coercive parsing or default injection
 
 ## Bridge behavior
@@ -98,39 +101,102 @@ A small normalization helper now exists in `runtime_types/rules.py`.
 It normalizes rule keys and candidate text into a more stable comparison shape so precedence matching is less brittle across casing and separator differences.
 It is intentionally simple and does not implement fuzzy ranking or a larger ontology.
 
-## First composed service layer
-A first-pass runtime step service now exists in `runtime_types/runtime_step.py`.
+## Runtime-owned artifact seam
+`resolve_runtime_step(...)` now always returns an `artifacts` block alongside the precedence result and any optional disclosure/promotion convenience fields.
 
-It composes existing behavior for one step by combining:
-- precedence resolution
-- optional provenance disclosure formatting
-- optional feedback promotion evaluation
+That artifact block contains three always-present sections:
+- `provenance` — route mode, route reason, fallback state, and disclosure details derived from the same route/disclosure seam the runtime used
+- `feedback_selection` — whether a relevant feedback entry was selected, which one, and why
+- `promotion_analysis` — whether promotion was evaluated, the decision when present, and a stable audit summary
 
-The promotion result now passes through its behavioral audit fields unchanged, so callers can inspect whether a blocking signal or supporting acceptance signal affected the promotion outcome.
+This is the first inspection surface for S03+ drift. If route truth, disclosure truth, feedback selection, or promotion evidence seem inconsistent, inspect `result["artifacts"]` before reading lower-level helpers.
 
-It is intentionally thin and does not persist, mutate, or orchestrate multiple steps.
+## Operational readiness seam
+`evaluate_runtime_readiness(...)` now provides the first MVP-facing operational check over one runtime-step result.
+
+It does not recompute truth. It inspects the already-composed runtime result and answers:
+- is the artifacts block present?
+- does `result["disclosure"]` still match artifact provenance?
+- does `result["promotion"]` still match artifact promotion analysis?
+
+It returns a compact summary with:
+- `status` (`ready` or `not-ready`)
+- `checks`
+- `failed_checks`
+- `mismatches`
+
+This is the first inspection surface for S04+ MVP-honesty doubts.
+
+## Empty-case semantics
+The artifact block is present even when no relevant feedback exists.
+
+In that case:
+- `feedback_selection.selected` is `false`
+- `feedback_selection.selected_feedback_id` is `null`
+- `promotion_analysis.status` is `not-evaluated`
+- `promotion_analysis.decision` is `null`
+
+This avoids ambiguity between “not evaluated” and “missing output”.
 
 ## Demo restore point
-A runnable demonstration now exists at `tools/demo_runtime_step.py`.
+A runnable demonstration exists at `tools/demo_runtime_step.py`.
 
-It loads the example truth surface, passes it through the parser bridge, runs the composed runtime step, and prints a compact summary showing precedence, disclosure, and promotion behavior together.
+It loads the example truth surface, runs one populated and one empty-case runtime step, and prints concise artifact summaries.
+
+Run:
+- `python tools/demo_runtime_step.py`
+
+Note: in this environment the standalone demo entrypoint still crashes intermittently, so prefer the test and readiness surfaces below when you need dependable verification.
+
+## Operational readiness restore point
+A dedicated readiness script now exists at `tools/runtime_operational_readiness.py`.
+
+It loads the repo truth-surface fixture and prints:
+- a healthy populated case
+- a deliberately drifted promotion-artifact mismatch case
+- a healthy empty-feedback case
+
+Run:
+- `python tools/runtime_operational_readiness.py`
+
+Inspect `failed_checks` and `mismatches` first when MVP honesty is in doubt.
 
 ## Scenario restore point
 A lightweight multi-scenario harness now exists at `tools/runtime_scenarios.py`.
 
-It exercises multiple representative paths across precedence, promotion, disclosure, and promotion-audit formatting behavior and prints PASS/FAIL results. It now includes both acceptance-supported and repair-blocked promotion scenarios, making it a stronger restore point than the single demo because it checks several core contract behaviors and their audit surfaces in one run.
+It exercises precedence, disclosure, promotion, populated/empty artifact cases, and readiness drift detection.
 
-## Formal test restore point
-A first stdlib test layer now exists at `tests/test_runtime_types.py`.
+Run:
+- `python tools/runtime_scenarios.py`
 
-It mirrors the current runtime scenarios and adds direct coverage for:
+## Formal test restore points
+Stdlib test layers now exist at:
+- `tests/test_runtime_types.py`
+- `tests/test_schema_validation.py`
+- `tests/test_runtime_operations.py`
+
+They cover:
 - active-spec precedence over feedback
 - scope-aware explicit feedback selection
 - parser/schema boundary enforcement for behavioral signals
-- stale/superseded preference filtering during resolution
+- parser/schema boundary enforcement for runtime-step artifacts
+- example/schema validation behavior
 - blocking behavioral signals such as repair and non-adoption
 - supporting acceptance signals that can weakly support project promotion
 - promotion audit fields (`blocking_signal_type`, `supporting_signal_used`)
-- compact promotion-audit formatting for blocked, supported, and neutral cases
 - disclosure formatting for hybrid and fallback-refused paths
-- composed runtime-step behavior, including propagation of promotion audit fields
+- composed runtime-step behavior, including artifact population for both empty and non-empty cases
+- readiness classification for healthy, drifted, and missing-artifact results
+
+Run:
+- `python -m unittest tests.test_runtime_types tests.test_schema_validation tests.test_runtime_operations`
+
+## Schema restore point
+The schema examples under `schemas/examples/` include dedicated runtime-step artifact fixtures:
+- `runtime-step-artifacts.example.json`
+- `runtime-step-artifacts-empty.example.json`
+
+Use them with:
+- `python tools/validate_schemas.py`
+
+If schema validation fails, check example-to-schema mapping first, then compare fixture shape against the parser boundary.

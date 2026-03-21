@@ -19,6 +19,20 @@ BehaviorSignalType: TypeAlias = Literal[
     "proposal_reverted",
     "accepted_without_edit",
 ]
+DisclosureLevel: TypeAlias = Literal["none", "brief", "explicit"]
+PromotionDecision: TypeAlias = Literal["local-only", "project", "owner", "reject"]
+PromotionAnalysisStatus: TypeAlias = Literal["evaluated", "not-evaluated"]
+RuntimeReadinessStatus: TypeAlias = Literal["ready", "not-ready"]
+GenesisTier: TypeAlias = Literal["Egg", "Hatchling", "Elder"]
+GenesisBloodline: TypeAlias = Literal["Mischief", "Vortex", "Forge", "Aether", "Catalyst", "Cipher"]
+GenesisClaimFailureReason: TypeAlias = Literal[
+    "not_genesis_collection",
+    "unresolvable_metadata",
+]
+RebindingStatus: TypeAlias = Literal["pending_onboarding", "blocked"]
+OwnerAccessStatus: TypeAlias = Literal["revoked"]
+PrivateStateStatus: TypeAlias = Literal["detached"]
+ManualCheckpoint: TypeAlias = Literal["await_rebinding_fee", "await_new_owner_onboarding"]
 
 
 class FeedbackLedgerEntry(TypedDict):
@@ -92,3 +106,85 @@ class TruthSurface(TypedDict):
     recent_explicit_feedback: list[FeedbackLedgerEntry]
     recent_behavior_signals: list[BehaviorSignalEntry]
     disclosure_state: dict[str, object]
+
+
+class RuntimeArtifactProvenance(TypedDict):
+    route_mode: RouteMode
+    route_reason: str
+    fallback_used: bool
+    fallback_refused: bool
+    disclosure_level: DisclosureLevel
+    disclosure_text: str
+    mention_external_help: bool
+
+
+class RuntimeArtifactFeedbackSelection(TypedDict):
+    selected: bool
+    selected_feedback_id: str | None
+    scope_requested: ScopeRequested | None
+    target: FeedbackTarget | None
+    selection_reason: str
+
+
+class RuntimeArtifactPromotionAnalysis(TypedDict):
+    evaluated: bool
+    status: PromotionAnalysisStatus
+    decision: PromotionDecision | None
+    reason: str
+    provenance_warning: bool
+    blocking_signal_type: BehaviorSignalType | None
+    supporting_signal_used: bool
+    audit_summary: str
+
+
+class RuntimeStepArtifacts(TypedDict):
+    provenance: RuntimeArtifactProvenance
+    feedback_selection: RuntimeArtifactFeedbackSelection
+    promotion_analysis: RuntimeArtifactPromotionAnalysis
+
+
+class RuntimeReadinessChecks(TypedDict):
+    artifact_present: bool
+    disclosure_matches_provenance: bool
+    promotion_matches_artifact: bool
+
+
+class RuntimeReadinessSummary(TypedDict):
+    status: RuntimeReadinessStatus
+    checks: RuntimeReadinessChecks
+    failed_checks: list[str]
+    mismatches: list[str]
+
+
+class GenesisOwnershipRecord(TypedDict):
+    asset_id: str
+    collection: str
+    owner_wallet: str
+    bloodline: GenesisBloodline
+
+
+class GenesisEntitlementRecord(TypedDict):
+    tier: GenesisTier
+    included_months: int
+    lifetime_discount_percent: int
+    solana_rewards_percent: int
+
+
+class GenesisClaimResult(TypedDict):
+    eligible: bool
+    failure_reason: GenesisClaimFailureReason | None
+    ownership: GenesisOwnershipRecord | None
+    entitlement: GenesisEntitlementRecord | None
+
+
+class RebindingLifecycleRecord(TypedDict):
+    asset_id: str
+    previous_owner_wallet: str
+    current_owner_wallet: str
+    transferable_state_ref: str
+    private_state_ref: str
+    private_state_status: PrivateStateStatus
+    old_owner_access_status: OwnerAccessStatus
+    status: RebindingStatus
+    blocking_reason: str | None
+    manual_checkpoint: ManualCheckpoint

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -10,11 +11,16 @@ if str(ROOT) not in sys.path:
 
 from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.feedback_selection import select_relevant_feedback
-from runtime_types.parsers import load_behavior_signal_entry, load_truth_surface
+from runtime_types.parsers import (
+    load_behavior_signal_entry,
+    load_runtime_step_artifacts,
+    load_truth_surface,
+)
 from runtime_types.precedence import resolve_precedence
 from runtime_types.promotion import evaluate_feedback_promotion
 from runtime_types.promotion_audit import format_promotion_audit
 from runtime_types.runtime_step import resolve_runtime_step
+from runtime_types.schema_validation import validate_examples
 
 
 def base_truth_surface() -> dict:
@@ -164,6 +170,90 @@ class ParserBoundaryTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             load_truth_surface(payload)
+
+    def test_load_truth_surface_accepts_repo_example_fixture(self) -> None:
+        example_path = ROOT / "schemas" / "examples" / "truth-surface.example.json"
+        payload = json.loads(example_path.read_text(encoding="utf-8"))
+
+        result = load_truth_surface(payload)
+
+        self.assertEqual(result["current_task"]["task_id"], "example-task-001")
+        self.assertEqual(len(result["recent_explicit_feedback"]), 2)
+        self.assertEqual(len(result["recent_behavior_signals"]), 2)
+
+    def test_validate_examples_accepts_repo_schema_and_examples(self) -> None:
+        errors, schema_count, example_count = validate_examples()
+
+        self.assertEqual(errors, [])
+        self.assertGreaterEqual(schema_count, 8)
+        self.assertGreaterEqual(example_count, 9)
+
+    def test_load_runtime_step_artifacts_accepts_empty_case_payload(self) -> None:
+        payload = {
+            "provenance": {
+                "route_mode": "local",
+                "route_reason": "local path satisfied the request",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "disclosure_level": "brief",
+                "disclosure_text": "This step ran on the local path.",
+                "mention_external_help": False,
+            },
+            "feedback_selection": {
+                "selected": False,
+                "selected_feedback_id": None,
+                "scope_requested": None,
+                "target": None,
+                "selection_reason": "No relevant explicit feedback matched the key for this step.",
+            },
+            "promotion_analysis": {
+                "evaluated": False,
+                "status": "not-evaluated",
+                "decision": None,
+                "reason": "No relevant feedback was available to evaluate for promotion.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": False,
+                "audit_summary": "decision=not-evaluated; signal=no_behavioral_signal; provenance=provenance_clear; reason=No relevant feedback was available to evaluate for promotion.",
+            },
+        }
+
+        result = load_runtime_step_artifacts(payload)
+
+        self.assertFalse(result["feedback_selection"]["selected"])
+        self.assertEqual(result["promotion_analysis"]["status"], "not-evaluated")
+
+    def test_load_runtime_step_artifacts_rejects_missing_feedback_selection_reason(self) -> None:
+        payload = {
+            "provenance": {
+                "route_mode": "local",
+                "route_reason": "local path satisfied the request",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "disclosure_level": "brief",
+                "disclosure_text": "This step ran on the local path.",
+                "mention_external_help": False,
+            },
+            "feedback_selection": {
+                "selected": False,
+                "selected_feedback_id": None,
+                "scope_requested": None,
+                "target": None,
+            },
+            "promotion_analysis": {
+                "evaluated": False,
+                "status": "not-evaluated",
+                "decision": None,
+                "reason": "No relevant feedback was available to evaluate for promotion.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": False,
+                "audit_summary": "decision=not-evaluated; signal=no_behavioral_signal; provenance=provenance_clear; reason=No relevant feedback was available to evaluate for promotion.",
+            },
+        }
+
+        with self.assertRaises(ValueError):
+            load_runtime_step_artifacts(payload)
 
 
 class PrecedenceTests(unittest.TestCase):
@@ -541,6 +631,11 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertEqual(result["promotion"]["decision"], "project")
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertFalse(result["promotion"]["supporting_signal_used"])
+        self.assertEqual(result["artifacts"]["provenance"]["route_mode"], "hybrid")
+        self.assertTrue(result["artifacts"]["feedback_selection"]["selected"])
+        self.assertEqual(result["artifacts"]["feedback_selection"]["selected_feedback_id"], "f-runtime")
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "evaluated")
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["decision"], "project")
 
     def test_runtime_step_omits_promotion_when_feedback_absent(self) -> None:
         ts = base_truth_surface()
@@ -554,6 +649,8 @@ class RuntimeStepTests(unittest.TestCase):
 
         self.assertEqual(result["precedence"]["winner_source"], "default")
         self.assertNotIn("promotion", result)
+        self.assertFalse(result["artifacts"]["feedback_selection"]["selected"])
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "not-evaluated")
 
 
     def test_runtime_step_uses_selected_feedback_for_promotion_instead_of_last_entry(self) -> None:
@@ -593,6 +690,7 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertFalse(result["promotion"]["provenance_warning"])
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertFalse(result["promotion"]["supporting_signal_used"])
+        self.assertEqual(result["artifacts"]["feedback_selection"]["selected_feedback_id"], "f-relevant")
 
     def test_runtime_step_omits_promotion_when_only_irrelevant_feedback_exists(self) -> None:
         ts = base_truth_surface()
@@ -614,6 +712,8 @@ class RuntimeStepTests(unittest.TestCase):
 
         self.assertEqual(result["precedence"]["winner_source"], "default")
         self.assertNotIn("promotion", result)
+        self.assertFalse(result["artifacts"]["feedback_selection"]["selected"])
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "not-evaluated")
 
 
     def test_runtime_step_blocks_promotion_when_behavioral_signal_shows_user_repair(self) -> None:
@@ -651,6 +751,8 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertEqual(result["promotion"]["decision"], "reject")
         self.assertEqual(result["promotion"]["blocking_signal_type"], "user_repair")
         self.assertFalse(result["promotion"]["supporting_signal_used"])
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["decision"], "reject")
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["blocking_signal_type"], "user_repair")
 
     def test_runtime_step_reports_supporting_acceptance_audit_fields(self) -> None:
         ts = base_truth_surface()
@@ -686,6 +788,25 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertEqual(result["promotion"]["decision"], "project")
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertTrue(result["promotion"]["supporting_signal_used"])
+        self.assertTrue(result["artifacts"]["promotion_analysis"]["supporting_signal_used"])
+
+    def test_runtime_step_artifacts_reflect_local_empty_case_without_route_event(self) -> None:
+        ts = base_truth_surface()
+
+        result = resolve_runtime_step(
+            "routing.prefer_local",
+            ts,
+            default=True,
+            evaluate_promotion=True,
+        )
+
+        self.assertEqual(result["artifacts"]["provenance"]["route_mode"], "local")
+        self.assertEqual(
+            result["artifacts"]["feedback_selection"]["selection_reason"],
+            "No relevant explicit feedback matched the key for this step.",
+        )
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["decision"], None)
+        self.assertIn("not-evaluated", result["artifacts"]["promotion_analysis"]["audit_summary"])
 
 
 if __name__ == "__main__":

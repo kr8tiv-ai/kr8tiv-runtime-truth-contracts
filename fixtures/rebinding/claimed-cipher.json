@@ -1,0 +1,16 @@
+{
+  "eligible": true,
+  "failure_reason": null,
+  "ownership": {
+    "asset_id": "asset-cipher-001",
+    "collection": "genesis-kin",
+    "owner_wallet": "wallet-old-owner",
+    "bloodline": "Cipher"
+  },
+  "entitlement": {
+    "tier": "Egg",
+    "included_months": 1,
+    "lifetime_discount_percent": 25,
+    "solana_rewards_percent": 1
+  }
+}

@@ -15,7 +15,8 @@ It is intentionally contract-oriented rather than product-complete.
 ## Repo structure
 - `schemas/` — portable JSON Schemas for truth surfaces, feedback, preferences, provenance, promotion, and behavioral signals
 - `runtime_types/` — Python `TypedDict` layer and thin runtime helpers
-- `tools/` — schema validator, demo script, org/repo helpers, and runtime scenario harness
+- `packages/node-runtime/` — minimal Node persistence seam and schema-validated record writers
+- `tools/` — schema validator, demo script, org-repo helpers, and runtime scenario harness
 - `tests/` — stdlib regression tests for logic, parser boundaries, and audit formatting
 - `runtime/` — supporting runtime notes and contract context
 - `specs/` — design/reference specs
@@ -36,12 +37,18 @@ A good starting note for the public shape of the work is:
   - reversion
   - accepted-without-edit
 - compact promotion-audit formatting for scripts and future UI/reporting
+- first Node-side atomic persistence seam for small runtime state files
+- first Node-side schema-validated record writers for:
+  - truth surface
+  - promotion decision record
+  - routing provenance event
 
 ## Verification
 Run:
 - `python tools/validate_schemas.py`
 - `python -c "import runpy; runpy.run_path('tests/test_runtime_types.py', run_name='__main__')"`
 - `python tools/runtime_scenarios.py`
+- `cd packages/node-runtime && npm test`
 
 ## Public-repo boundary
 This repo should stay public-safe.

@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimeStepArtifacts",
+  "description": "Stable runtime-owned artifact block emitted alongside one resolved runtime step for provenance, feedback selection, and promotion analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "route_mode": {
+          "type": "string",
+          "enum": ["local", "hybrid", "external"]
+        },
+        "route_reason": {
+          "type": "string"
+        },
+        "fallback_used": {
+          "type": "boolean"
+        },
+        "fallback_refused": {
+          "type": "boolean"
+        },
+        "disclosure_level": {
+          "type": "string",
+          "enum": ["none", "brief", "explicit"]
+        },
+        "disclosure_text": {
+          "type": "string"
+        },
+        "mention_external_help": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "route_mode",
+        "route_reason",
+        "fallback_used",
+        "fallback_refused",
+        "disclosure_level",
+        "disclosure_text",
+        "mention_external_help"
+      ]
+    },
+    "feedback_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selected": {
+          "type": "boolean"
+        },
+        "selected_feedback_id": {
+          "type": ["string", "null"]
+        },
+        "scope_requested": {
+          "type": ["string", "null"],
+          "enum": ["turn", "project", "owner", "unspecified", null]
+        },
+        "target": {
+          "type": ["string", "null"],
+          "enum": ["output", "tone", "design", "workflow", "routing", "teaching", "other", null]
+        },
+        "selection_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "selected",
+        "selected_feedback_id",
+        "scope_requested",
+        "target",
+        "selection_reason"
+      ]
+    },
+    "promotion_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "evaluated": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["evaluated", "not-evaluated"]
+        },
+        "decision": {
+          "type": ["string", "null"],
+          "enum": ["local-only", "project", "owner", "reject", null]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "provenance_warning": {
+          "type": "boolean"
+        },
+        "blocking_signal_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "suggestion_not_adopted",
+            "user_repair",
+            "repeated_manual_fix",
+            "proposal_reverted",
+            "accepted_without_edit",
+            null
+          ]
+        },
+        "supporting_signal_used": {
+          "type": "boolean"
+        },
+        "audit_summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "evaluated",
+        "status",
+        "decision",
+        "reason",
+        "provenance_warning",
+        "blocking_signal_type",
+        "supporting_signal_used",
+        "audit_summary"
+      ]
+    }
+  },
+  "required": ["provenance", "feedback_selection", "promotion_analysis"]
+}

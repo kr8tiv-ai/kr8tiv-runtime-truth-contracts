@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PromotionLedgerEvent",
+  "description": "Append-only ledger event recording one promotion evaluation outcome.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Stable ledger event identifier."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event was recorded."
+    },
+    "promoted_rule": {
+      "type": "string",
+      "description": "Rule or preference under evaluation."
+    },
+    "source_feedback_ids": {
+      "type": "array",
+      "description": "Feedback identifiers related to this event.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decision": {
+      "type": "string",
+      "enum": ["local-only", "project", "owner", "reject"],
+      "description": "Promotion outcome."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Human-readable explanation for the outcome."
+    },
+    "destination_scope": {
+      "type": "string",
+      "enum": ["project", "owner"],
+      "description": "Target scope considered for promotion."
+    },
+    "blocking_signal_type": {
+      "enum": [null, "suggestion_not_adopted", "user_repair", "repeated_manual_fix", "proposal_reverted", "accepted_without_edit"],
+      "description": "Behavioral signal that blocked promotion, if any."
+    },
+    "supporting_signal_used": {
+      "type": "boolean",
+      "description": "Whether acceptance evidence supported the outcome."
+    },
+    "provenance_warning": {
+      "type": "boolean",
+      "description": "Whether the source provenance should reduce confidence."
+    }
+  },
+  "required": [
+    "event_id",
+    "timestamp",
+    "promoted_rule",
+    "source_feedback_ids",
+    "decision",
+    "reason",
+    "destination_scope",
+    "blocking_signal_type",
+    "supporting_signal_used",
+    "provenance_warning"
+  ]
+}

@@ -36,7 +36,10 @@ def load_all_schemas() -> dict[str, dict[str, Any]]:
 def example_to_schema_name(example_name: str) -> str:
     if not example_name.endswith(".example.json"):
         raise ValueError(f"Unexpected example filename format: {example_name}")
-    return example_name.replace(".example.json", ".schema.json")
+    stem = example_name.removesuffix(".example.json")
+    if stem.endswith("-empty"):
+        stem = stem.removesuffix("-empty")
+    return f"{stem}.schema.json"
 
 
 def resolve_ref(ref: str, schemas: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
@@ -56,6 +59,30 @@ def json_type_ok(expected_type: str, value: Any) -> bool:
     return isinstance(value, allowed)
 
 
+def _json_type_name(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, list):
+        return "array"
+    if isinstance(value, dict):
+        return "object"
+    return type(value).__name__
+
+
+def _json_type_matches(expected_type: str, value: Any) -> bool:
+    if expected_type == "null":
+        return value is None
+    return json_type_ok(expected_type, value)
+
+
 def validate_value(
     schema: dict[str, Any],
     value: Any,
@@ -73,6 +100,11 @@ def validate_value(
     expected_type = schema.get("type")
     if isinstance(expected_type, str) and not json_type_ok(expected_type, value):
         return [f"{label}: expected type '{expected_type}', got '{type(value).__name__}'"]
+    if isinstance(expected_type, list):
+        if not any(isinstance(option, str) and _json_type_matches(option, value) for option in expected_type):
+            return [
+                f"{label}: expected one of types {expected_type!r}, got '{_json_type_name(value)}'"
+            ]
 
     if "enum" in schema and value not in schema["enum"]:
         return [f"{label}: invalid value {value!r}; allowed={schema['enum']!r}"]

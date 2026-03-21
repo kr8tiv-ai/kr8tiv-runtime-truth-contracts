@@ -17,6 +17,7 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `preference-record.schema.json`
 - `routing-provenance-event.schema.json`
 - `promotion-decision-record.schema.json`
+- `promotion-ledger-event.schema.json`
 
 ## Included examples
 - `examples/truth-surface.example.json`
@@ -25,6 +26,7 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `examples/preference-record.example.json`
 - `examples/routing-provenance-event.example.json`
 - `examples/promotion-decision-record.example.json`
+- `examples/promotion-ledger-event.example.json`
 
 ## Design rules
 - Governance-critical fields are required.

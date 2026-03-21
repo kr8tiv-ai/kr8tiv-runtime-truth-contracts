@@ -1,0 +1,28 @@
+{
+  "provenance": {
+    "route_mode": "local",
+    "route_reason": "local path satisfied the request",
+    "fallback_used": false,
+    "fallback_refused": false,
+    "disclosure_level": "brief",
+    "disclosure_text": "This step ran on the local path.",
+    "mention_external_help": false
+  },
+  "feedback_selection": {
+    "selected": false,
+    "selected_feedback_id": null,
+    "scope_requested": null,
+    "target": null,
+    "selection_reason": "No relevant explicit feedback matched the key for this step."
+  },
+  "promotion_analysis": {
+    "evaluated": false,
+    "status": "not-evaluated",
+    "decision": null,
+    "reason": "No relevant feedback was available to evaluate for promotion.",
+    "provenance_warning": false,
+    "blocking_signal_type": null,
+    "supporting_signal_used": false,
+    "audit_summary": "decision=not-evaluated; signal=no_behavioral_signal; provenance=provenance_clear; reason=No relevant feedback was available to evaluate for promotion."
+  }
+}

@@ -12,6 +12,8 @@ from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.precedence import resolve_precedence
 from runtime_types.promotion import evaluate_feedback_promotion
 from runtime_types.promotion_audit import format_promotion_audit
+from runtime_types.runtime_operations import evaluate_runtime_readiness
+from runtime_types.runtime_step import resolve_runtime_step
 
 
 def base_truth_surface() -> dict:
@@ -141,6 +143,98 @@ def scenario_fallback_refused_disclosure() -> tuple[bool, str]:
     return result["level"] == "brief" and result["mention_external_help"] is False, str(result)
 
 
+def scenario_runtime_artifact_populated_case() -> tuple[bool, str]:
+    ts = base_truth_surface()
+    ts["recent_explicit_feedback"] = [{**base_feedback(), "feedback_id": "f-artifact"}]
+    ts["recent_behavior_signals"] = [
+        {
+            "signal_id": "sig-accept-1",
+            "timestamp": "2026-03-20T00:05:00Z",
+            "target": "design",
+            "signal_type": "accepted_without_edit",
+            "strength": 0.9,
+            "applied_to": "x",
+            "source_route": "hybrid",
+            "notes": "User accepted the generated treatment without edits.",
+        }
+    ]
+    route_event = {
+        "event_id": "e-artifact",
+        "provider": "p",
+        "model": "m",
+        "mode": "hybrid",
+        "route_reason": "quality support",
+        "fallback_used": True,
+        "fallback_refused": False,
+        "learned_effect_allowed": True,
+    }
+    result = resolve_runtime_step(
+        "design",
+        ts,
+        route_event=route_event,
+        default="neutral",
+        evaluate_promotion=True,
+        project_repeat_count=1,
+    )
+    artifacts = result["artifacts"]
+    readiness = evaluate_runtime_readiness(result)
+    ok = (
+        artifacts["provenance"]["route_mode"] == "hybrid"
+        and artifacts["feedback_selection"]["selected_feedback_id"] == "f-artifact"
+        and artifacts["promotion_analysis"]["status"] == "evaluated"
+        and artifacts["promotion_analysis"]["decision"] == "project"
+        and readiness["status"] == "ready"
+    )
+    return ok, f"artifacts={artifacts}; readiness={readiness}"
+
+
+def scenario_runtime_artifact_empty_case() -> tuple[bool, str]:
+    ts = base_truth_surface()
+    result = resolve_runtime_step(
+        "routing.prefer_local",
+        ts,
+        default=True,
+        evaluate_promotion=True,
+    )
+    artifacts = result["artifacts"]
+    readiness = evaluate_runtime_readiness(result)
+    ok = (
+        artifacts["provenance"]["route_mode"] == "local"
+        and artifacts["feedback_selection"]["selected"] is False
+        and artifacts["promotion_analysis"]["status"] == "not-evaluated"
+        and artifacts["promotion_analysis"]["decision"] is None
+        and readiness["status"] == "ready"
+    )
+    return ok, f"artifacts={artifacts}; readiness={readiness}"
+
+
+def scenario_runtime_readiness_detects_drift() -> tuple[bool, str]:
+    ts = base_truth_surface()
+    ts["recent_explicit_feedback"] = [{**base_feedback(), "feedback_id": "f-drift"}]
+    route_event = {
+        "event_id": "e-drift",
+        "provider": "p",
+        "model": "m",
+        "mode": "hybrid",
+        "route_reason": "quality support",
+        "fallback_used": True,
+        "fallback_refused": False,
+        "learned_effect_allowed": True,
+    }
+    result = resolve_runtime_step(
+        "design",
+        ts,
+        route_event=route_event,
+        default="neutral",
+        evaluate_promotion=True,
+        project_repeat_count=2,
+    )
+    result["artifacts"]["promotion_analysis"]["decision"] = "reject"
+    readiness = evaluate_runtime_readiness(result)
+    ok = readiness["status"] == "not-ready" and "promotion_matches_artifact" in readiness["failed_checks"]
+    return ok, str(readiness)
+
+
 def main() -> int:
     scenarios = [
         ("spec-wins-over-default", scenario_spec_wins_over_default),
@@ -151,6 +245,9 @@ def main() -> int:
         ("repair-blocked-reject", scenario_repair_blocked_reject),
         ("hybrid-disclosure", scenario_hybrid_disclosure),
         ("fallback-refused-disclosure", scenario_fallback_refused_disclosure),
+        ("runtime-artifact-populated-case", scenario_runtime_artifact_populated_case),
+        ("runtime-artifact-empty-case", scenario_runtime_artifact_empty_case),
+        ("runtime-readiness-detects-drift", scenario_runtime_readiness_detects_drift),
     ]
 
     failures = 0

@@ -75,9 +75,42 @@
       "applied_to": "example-task-001",
       "promotion_status": "local-only",
       "provenance": "not-yet-proven"
+    },
+    {
+      "feedback_id": "fb-202",
+      "feedback_text": "Teach more while presenting the website direction.",
+      "timestamp": "2026-03-20T18:40:00Z",
+      "scope_requested": "project",
+      "target": "teaching",
+      "polarity": "correction",
+      "source": "user",
+      "applied_to": "example-task-001",
+      "promotion_status": "local-only",
+      "provenance": "hybrid-proven"
     }
   ],
-  "recent_behavior_signals": [],
+  "recent_behavior_signals": [
+    {
+      "signal_id": "sig-201",
+      "timestamp": "2026-03-20T18:46:00Z",
+      "target": "design",
+      "signal_type": "accepted_without_edit",
+      "strength": 0.92,
+      "applied_to": "example-task-001",
+      "source_route": "hybrid",
+      "notes": "The simplified hero direction was accepted without further edits after the revised pass."
+    },
+    {
+      "signal_id": "sig-202",
+      "timestamp": "2026-03-20T18:47:00Z",
+      "target": "teaching",
+      "signal_type": "suggestion_not_adopted",
+      "strength": 0.85,
+      "applied_to": "example-task-001",
+      "source_route": "local",
+      "notes": "The extra teaching detail was not carried forward in the resulting draft."
+    }
+  ],
   "disclosure_state": {
     "must_disclose_current_route": true,
     "current_route_label": "local"

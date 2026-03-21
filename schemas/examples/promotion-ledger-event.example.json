@@ -1,0 +1,12 @@
+{
+  "event_id": "pe-001",
+  "timestamp": "2026-03-20T00:00:00Z",
+  "promoted_rule": "design.less_glossy",
+  "source_feedback_ids": ["fb-001"],
+  "decision": "project",
+  "reason": "Repeated and accepted without edit.",
+  "destination_scope": "project",
+  "blocking_signal_type": null,
+  "supporting_signal_used": true,
+  "provenance_warning": false
+}
