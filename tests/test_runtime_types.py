@@ -13,6 +13,8 @@ from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.feedback_selection import select_relevant_feedback
 from runtime_types.parsers import (
     load_behavior_signal_entry,
+    load_concierge_claim_lifecycle,
+    load_concierge_setup_guidance,
     load_runtime_step_artifacts,
     load_truth_surface,
 )
@@ -53,6 +55,40 @@ def base_feedback() -> dict:
         "applied_to": "x",
         "promotion_status": "local-only",
         "provenance": "not-yet-proven",
+    }
+
+
+def concierge_lifecycle_payload() -> dict:
+    return {
+        "claim_id": "claim-concierge-001",
+        "claimant_label": "demo-owner-cipher",
+        "claim_status": "claimed",
+        "setup_stage": "awaiting_device_setup",
+        "blocking_reason": None,
+        "manual_checkpoint": None,
+        "activation_ready": False,
+        "next_user_step": "Complete the device setup steps sent by support.",
+        "setup_guidance": {
+            "guidance_id": "guide-concierge-001",
+            "guidance_status": "needs_user_action",
+            "plain_language_summary": "Your claim is approved and the next step is device setup with support.",
+            "next_user_step": "Complete the device setup steps sent by support.",
+            "blocking_reason": None,
+            "manual_checkpoint": None,
+            "support_safe_notes": "Support is waiting for device setup confirmation before activation.",
+        },
+    }
+
+
+def concierge_setup_guidance_payload() -> dict:
+    return {
+        "guidance_id": "guide-concierge-001",
+        "guidance_status": "blocked",
+        "plain_language_summary": "Support still needs to verify your identity before setup can continue.",
+        "next_user_step": "Wait for support to confirm your identity and next steps.",
+        "blocking_reason": "identity_verification_pending",
+        "manual_checkpoint": "await_support_followup",
+        "support_safe_notes": "Do not continue setup until support confirms the checkpoint is cleared.",
     }
 
 
@@ -180,6 +216,26 @@ class ParserBoundaryTests(unittest.TestCase):
         self.assertEqual(result["current_task"]["task_id"], "example-task-001")
         self.assertEqual(len(result["recent_explicit_feedback"]), 2)
         self.assertEqual(len(result["recent_behavior_signals"]), 2)
+
+    def test_load_concierge_claim_lifecycle_accepts_valid_payload(self) -> None:
+        result = load_concierge_claim_lifecycle(concierge_lifecycle_payload())
+
+        self.assertEqual(result["claim_status"], "claimed")
+        self.assertEqual(result["setup_stage"], "awaiting_device_setup")
+        self.assertEqual(result["setup_guidance"]["guidance_status"], "needs_user_action")
+
+    def test_load_concierge_setup_guidance_accepts_valid_payload(self) -> None:
+        result = load_concierge_setup_guidance(concierge_setup_guidance_payload())
+
+        self.assertEqual(result["guidance_status"], "blocked")
+        self.assertEqual(result["manual_checkpoint"], "await_support_followup")
+
+    def test_load_concierge_claim_lifecycle_rejects_invalid_claim_status(self) -> None:
+        payload = concierge_lifecycle_payload()
+        payload["claim_status"] = "mystery"
+
+        with self.assertRaises(ValueError):
+            load_concierge_claim_lifecycle(payload)
 
     def test_validate_examples_accepts_repo_schema_and_examples(self) -> None:
         errors, schema_count, example_count = validate_examples()
@@ -652,7 +708,6 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertFalse(result["artifacts"]["feedback_selection"]["selected"])
         self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "not-evaluated")
 
-
     def test_runtime_step_uses_selected_feedback_for_promotion_instead_of_last_entry(self) -> None:
         ts = base_truth_surface()
         ts["recent_explicit_feedback"] = [
@@ -714,7 +769,6 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertNotIn("promotion", result)
         self.assertFalse(result["artifacts"]["feedback_selection"]["selected"])
         self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "not-evaluated")
-
 
     def test_runtime_step_blocks_promotion_when_behavioral_signal_shows_user_repair(self) -> None:
         ts = base_truth_surface()
