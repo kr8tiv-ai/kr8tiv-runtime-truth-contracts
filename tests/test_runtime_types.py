@@ -985,7 +985,7 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertIn("external help", result["disclosure"]["text"].lower())
         self.assertNotIn("caller-authored contradiction", result["disclosure"]["text"].lower())
 
-    def test_runtime_step_omits_promotion_when_feedback_absent(self) -> None:
+    def test_runtime_step_emits_empty_artifacts_when_feedback_absent(self) -> None:
         ts = base_truth_surface()
 
         result = resolve_runtime_step(
@@ -995,8 +995,23 @@ class RuntimeStepTests(unittest.TestCase):
             evaluate_promotion=True,
         )
 
+        artifacts = result["artifacts"]
+
         self.assertEqual(result["precedence"]["winner_source"], "default")
         self.assertNotIn("promotion", result)
+        self.assertEqual(artifacts["provenance"]["route_mode"], result["route"]["mode"])
+        self.assertEqual(artifacts["provenance"]["route_status"], result["route"]["status"])
+        self.assertEqual(artifacts["provenance"]["route_reason_code"], result["route"]["reason_code"])
+        self.assertFalse(artifacts["provenance"]["disclosure_present"])
+        self.assertEqual(artifacts["provenance"]["disclosure_level"], "none")
+        self.assertFalse(artifacts["feedback_selection"]["selected"])
+        self.assertIsNone(artifacts["feedback_selection"]["feedback_id"])
+        self.assertEqual(artifacts["promotion_analysis"]["status"], "not_evaluated")
+        self.assertIsNone(artifacts["promotion_analysis"]["decision"])
+        self.assertEqual(
+            artifacts["promotion_analysis"]["reason"],
+            "No matching feedback was selected for promotion evaluation.",
+        )
 
     def test_runtime_step_uses_selected_feedback_for_promotion_instead_of_last_entry(self) -> None:
         ts = base_truth_surface()
@@ -1029,9 +1044,20 @@ class RuntimeStepTests(unittest.TestCase):
             project_repeat_count=2,
         )
 
+        artifacts = result["artifacts"]
+
         self.assertEqual(result["precedence"]["winner_source"], "explicit_feedback")
         self.assertEqual(result["precedence"]["winner_value"], "less glossy")
+        self.assertTrue(artifacts["feedback_selection"]["selected"])
+        self.assertEqual(artifacts["feedback_selection"]["feedback_id"], "f-relevant")
+        self.assertEqual(artifacts["feedback_selection"]["target"], "design")
+        self.assertEqual(artifacts["feedback_selection"]["scope_requested"], "turn")
+        self.assertEqual(artifacts["feedback_selection"]["promotion_status"], "local-only")
+        self.assertEqual(artifacts["feedback_selection"]["provenance"], "not-yet-proven")
         self.assertEqual(result["promotion"]["decision"], "project")
+        self.assertEqual(artifacts["promotion_analysis"]["status"], "evaluated")
+        self.assertEqual(artifacts["promotion_analysis"]["decision"], result["promotion"]["decision"])
+        self.assertEqual(artifacts["promotion_analysis"]["reason"], result["promotion"]["reason"])
         self.assertFalse(result["promotion"]["provenance_warning"])
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertFalse(result["promotion"]["supporting_signal_used"])
@@ -1088,10 +1114,64 @@ class RuntimeStepTests(unittest.TestCase):
             project_repeat_count=3,
         )
 
+        artifacts = result["artifacts"]
+
         self.assertEqual(result["precedence"]["winner_source"], "explicit_feedback")
         self.assertEqual(result["promotion"]["decision"], "reject")
         self.assertEqual(result["promotion"]["blocking_signal_type"], "user_repair")
         self.assertFalse(result["promotion"]["supporting_signal_used"])
+        self.assertEqual(artifacts["promotion_analysis"]["status"], "evaluated")
+        self.assertEqual(artifacts["promotion_analysis"]["decision"], "reject")
+        self.assertEqual(artifacts["promotion_analysis"]["blocking_signal_type"], "user_repair")
+        self.assertFalse(artifacts["promotion_analysis"]["supporting_signal_used"])
+        self.assertIn("user_repair", artifacts["promotion_analysis"]["audit_summary"])
+
+    def test_runtime_step_artifacts_follow_runtime_owned_disclosure_truth_not_caller_route_event(self) -> None:
+        ts = base_truth_surface()
+        ts["routing_policy"] = {
+            "default_mode": "local",
+            "high_complexity_allows_hybrid": True,
+        }
+        ts["current_task"] = {
+            "task_id": "task-hybrid-artifacts",
+            "phase": "generation",
+            "target_outcome": "Complex generation task needing broader capability.",
+            "complexity": "high",
+        }
+        ts["fallback_policy"] = {
+            "must_disclose_material_external_help": True,
+            "refuse_on_local_only_tasks": False,
+        }
+
+        contradictory_event = {
+            "event_id": "caller-claims-local",
+            "provider": "caller",
+            "model": "manual",
+            "mode": "local",
+            "route_reason": "Caller-authored contradiction",
+            "fallback_used": False,
+            "fallback_refused": False,
+            "learned_effect_allowed": True,
+        }
+
+        result = resolve_runtime_step(
+            "design",
+            ts,
+            default="neutral",
+            route_event=contradictory_event,
+            evaluate_promotion=True,
+        )
+
+        artifacts = result["artifacts"]
+
+        self.assertEqual(result["route"]["mode"], "hybrid")
+        self.assertEqual(artifacts["provenance"]["route_mode"], "hybrid")
+        self.assertEqual(artifacts["provenance"]["route_status"], result["route"]["status"])
+        self.assertEqual(artifacts["provenance"]["route_reason_code"], result["route"]["reason_code"])
+        self.assertTrue(artifacts["provenance"]["disclosure_present"])
+        self.assertEqual(artifacts["provenance"]["disclosure_level"], result["disclosure"]["level"])
+        self.assertTrue(artifacts["provenance"]["disclosure_mentions_external_help"])
+        self.assertEqual(artifacts["promotion_analysis"]["status"], "not_evaluated")
 
     def test_runtime_step_reports_supporting_acceptance_audit_fields(self) -> None:
         ts = base_truth_surface()
