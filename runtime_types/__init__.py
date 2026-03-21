@@ -84,6 +84,7 @@ from .cipher_continuity import derive_cipher_continuity
 from .concierge_claims import derive_concierge_lifecycle
 from .genesis_claims import resolve_genesis_claim
 from .telegram_voice_loop import derive_telegram_voice_turn
+from .website_specialist_harness import derive_website_specialist_harness_record
 from .parsers import (
     load_cipher_continuity_record,
     load_cipher_persona_anchor,
@@ -95,6 +96,7 @@ from .parsers import (
     load_telegram_voice_reply,
     load_telegram_voice_transcript,
     load_telegram_voice_turn,
+    load_routing_provenance_event,
     load_website_specialist_execution,
     load_website_specialist_harness_record,
     load_website_specialist_request,
@@ -197,6 +199,8 @@ __all__ = [
     "format_promotion_audit",
     "derive_cipher_continuity",
     "derive_concierge_lifecycle",
+    "derive_telegram_voice_turn",
+    "derive_website_specialist_harness_record",
     "load_cipher_continuity_record",
     "load_cipher_persona_anchor",
     "load_cipher_voice_expression",
@@ -207,6 +211,7 @@ __all__ = [
     "load_telegram_voice_reply",
     "load_telegram_voice_transcript",
     "load_telegram_voice_turn",
+    "load_routing_provenance_event",
     "load_website_specialist_execution",
     "load_website_specialist_harness_record",
     "load_website_specialist_request",

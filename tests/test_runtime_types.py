@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.feedback_selection import select_relevant_feedback
 from runtime_types.telegram_voice_loop import derive_telegram_voice_turn
+from runtime_types.website_specialist_harness import derive_website_specialist_harness_record
 from runtime_types.parsers import (
     load_behavior_signal_entry,
     load_cipher_continuity_record,
@@ -25,6 +26,7 @@ from runtime_types.parsers import (
     load_telegram_voice_transcript,
     load_telegram_voice_turn,
     load_truth_surface,
+    load_routing_provenance_event,
     load_website_specialist_execution,
     load_website_specialist_harness_record,
     load_website_specialist_request,
@@ -567,6 +569,130 @@ class ParserBoundaryTests(unittest.TestCase):
 
         self.assertEqual(result["execution"]["route"]["mode"], "hybrid")
         self.assertEqual(result["execution"]["disclosure_level"], "explicit")
+
+    def test_derive_website_specialist_harness_record_composes_validated_upstream_records(self) -> None:
+        lifecycle = load_concierge_claim_lifecycle(
+            {
+                "claim_id": "claim-concierge-001",
+                "claimant_label": "demo-owner-cipher",
+                "claim_status": "activation_ready",
+                "setup_stage": "setup_complete",
+                "blocking_reason": None,
+                "manual_checkpoint": None,
+                "activation_ready": True,
+                "next_user_step": "Reply to support to schedule activation.",
+                "setup_guidance": {
+                    "guidance_id": "guide-concierge-001",
+                    "guidance_status": "ready",
+                    "plain_language_summary": "Everything is complete and you are ready to schedule activation.",
+                    "next_user_step": "Reply to support to schedule activation.",
+                    "blocking_reason": None,
+                    "manual_checkpoint": None,
+                    "support_safe_notes": "Support can now schedule the activation handoff.",
+                },
+            }
+        )
+        voice_turn = load_telegram_voice_turn(telegram_voice_turn_payload())
+        continuity = load_cipher_continuity_record(
+            json.loads(
+                (ROOT / "schemas" / "examples" / "cipher-continuity-record.carryover.example.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
+        route_event = load_routing_provenance_event(
+            {
+                "event_id": "route-local-success-derived-001",
+                "provider": "local-runtime",
+                "model": "llama-local",
+                "mode": "local",
+                "route_reason": "Local website specialist completed the request without external help.",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "learned_effect_allowed": True,
+            }
+        )
+
+        result = derive_website_specialist_harness_record(
+            harness_id="ws-harness-local-success-derived-001",
+            request_id="ws-request-local-success-derived-001",
+            execution_id="ws-execution-local-success-derived-001",
+            lifecycle=lifecycle,
+            voice_turn=voice_turn,
+            continuity=continuity,
+            route_event=route_event,
+            requested_capability="website_update",
+            request_source="telegram_voice_turn",
+            support_safe_request_summary="Owner wants Cipher to help with a website update after activation was confirmed.",
+            desired_outcome_summary="Prepare the next website-specialist step while preserving Cipher continuity and route honesty.",
+        )
+
+        self.assertEqual(result["request"]["request_status"], "activation_ready")
+        self.assertEqual(result["execution"]["route"]["mode"], "local")
+        self.assertEqual(result["execution"]["disclosure_level"], "brief")
+        self.assertIn("cipher_bloodline", result["execution"]["persona_markers"])
+        self.assertIn("tg-session-042", result["execution"]["continuity_carryover_refs"])
+
+    def test_derive_website_specialist_harness_record_reports_fallback_refusal_honestly(self) -> None:
+        lifecycle = load_concierge_claim_lifecycle(
+            {
+                "claim_id": "claim-concierge-001",
+                "claimant_label": "demo-owner-cipher",
+                "claim_status": "activation_ready",
+                "setup_stage": "setup_complete",
+                "blocking_reason": None,
+                "manual_checkpoint": None,
+                "activation_ready": True,
+                "next_user_step": "Reply to support to schedule activation.",
+                "setup_guidance": {
+                    "guidance_id": "guide-concierge-001",
+                    "guidance_status": "ready",
+                    "plain_language_summary": "Everything is complete and you are ready to schedule activation.",
+                    "next_user_step": "Reply to support to schedule activation.",
+                    "blocking_reason": None,
+                    "manual_checkpoint": None,
+                    "support_safe_notes": "Support can now schedule the activation handoff.",
+                },
+            }
+        )
+        voice_turn = load_telegram_voice_turn(telegram_voice_turn_payload())
+        continuity = load_cipher_continuity_record(
+            json.loads(
+                (ROOT / "schemas" / "examples" / "cipher-continuity-record.carryover.example.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
+        route_event = load_routing_provenance_event(
+            {
+                "event_id": "route-fallback-refused-001",
+                "provider": "local-runtime",
+                "model": "llama-local",
+                "mode": "local",
+                "route_reason": "Local specialist could not expand coverage because external fallback was refused.",
+                "fallback_used": False,
+                "fallback_refused": True,
+                "learned_effect_allowed": False,
+            }
+        )
+
+        result = derive_website_specialist_harness_record(
+            harness_id="ws-harness-refused-derived-001",
+            request_id="ws-request-refused-derived-001",
+            execution_id="ws-execution-refused-derived-001",
+            lifecycle=lifecycle,
+            voice_turn=voice_turn,
+            continuity=continuity,
+            route_event=route_event,
+            requested_capability="diagnostic_review",
+            request_source="telegram_voice_turn",
+            support_safe_request_summary="Owner asked Cipher to keep the website diagnostic local even if fallback would help.",
+            desired_outcome_summary="Refuse external fallback honestly and preserve support-safe continuity markers.",
+        )
+
+        self.assertEqual(result["execution"]["specialist_status"], "refused_fallback")
+        self.assertTrue(result["execution"]["fallback_refused"])
+        self.assertIn("refused", result["execution"]["disclosure_text"].lower())
 
     def test_validate_examples_accepts_repo_schema_and_examples(self) -> None:
         errors, schema_count, example_count = validate_examples()
