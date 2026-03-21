@@ -4,6 +4,8 @@ from typing import Any, cast
 
 from .contracts import (
     BehaviorSignalEntry,
+    ConciergeClaimLifecycleRecord,
+    ConciergeSetupGuidanceRecord,
     FeedbackLedgerEntry,
     PreferenceRecord,
     PromotionDecisionRecord,
@@ -61,4 +63,18 @@ def load_runtime_step_artifacts(data: object) -> RuntimeStepArtifacts:
     return cast(
         RuntimeStepArtifacts,
         _load("runtime-step-artifacts.schema.json", data, "RuntimeStepArtifacts"),
+    )
+
+
+def load_concierge_claim_lifecycle(data: object) -> ConciergeClaimLifecycleRecord:
+    return cast(
+        ConciergeClaimLifecycleRecord,
+        _load("concierge-claim-lifecycle.schema.json", data, "ConciergeClaimLifecycleRecord"),
+    )
+
+
+def load_concierge_setup_guidance(data: object) -> ConciergeSetupGuidanceRecord:
+    return cast(
+        ConciergeSetupGuidanceRecord,
+        _load("concierge-setup-guidance.schema.json", data, "ConciergeSetupGuidanceRecord"),
     )

@@ -18,6 +18,8 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `routing-provenance-event.schema.json`
 - `promotion-decision-record.schema.json`
 - `promotion-ledger-event.schema.json`
+- `concierge-claim-lifecycle.schema.json`
+- `concierge-setup-guidance.schema.json`
 
 ## Included examples
 - `examples/truth-surface.example.json`
@@ -27,12 +29,18 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `examples/routing-provenance-event.example.json`
 - `examples/promotion-decision-record.example.json`
 - `examples/promotion-ledger-event.example.json`
+- `examples/concierge-claim-lifecycle.claimed-awaiting-setup.example.json`
+- `examples/concierge-claim-lifecycle.blocked-manual-checkpoint.example.json`
+- `examples/concierge-claim-lifecycle.activation-ready.example.json`
+- `examples/concierge-setup-guidance.awaiting-device-setup.example.json`
+- `examples/concierge-setup-guidance.blocked-support-followup.example.json`
 
 ## Design rules
 - Governance-critical fields are required.
 - Bounded states use explicit enums.
 - Schemas default to `additionalProperties: false`.
 - The package is neutral and should remain portable across future runtimes.
+- Concierge onboarding examples under `schemas/examples/` are the authoritative support-safe fixtures for claimed-awaiting-setup, blocked/manual-checkpoint, activation-ready, and plain-language setup-guidance states.
 
 ## What this package does not do
 This package does not yet implement:

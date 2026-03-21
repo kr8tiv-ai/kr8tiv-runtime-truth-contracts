@@ -1,0 +1,19 @@
+{
+  "claim_id": "claim-concierge-001",
+  "claimant_label": "demo-owner-cipher",
+  "claim_status": "claimed",
+  "setup_stage": "awaiting_device_setup",
+  "blocking_reason": null,
+  "manual_checkpoint": null,
+  "activation_ready": false,
+  "next_user_step": "Complete the device setup steps sent by support.",
+  "setup_guidance": {
+    "guidance_id": "guide-concierge-001",
+    "guidance_status": "needs_user_action",
+    "plain_language_summary": "Your claim is approved and the next step is device setup with support.",
+    "next_user_step": "Complete the device setup steps sent by support.",
+    "blocking_reason": null,
+    "manual_checkpoint": null,
+    "support_safe_notes": "Support is waiting for device setup confirmation before activation."
+  }
+}

@@ -33,6 +33,26 @@ RebindingStatus: TypeAlias = Literal["pending_onboarding", "blocked"]
 OwnerAccessStatus: TypeAlias = Literal["revoked"]
 PrivateStateStatus: TypeAlias = Literal["detached"]
 ManualCheckpoint: TypeAlias = Literal["await_rebinding_fee", "await_new_owner_onboarding"]
+ConciergeClaimStatus: TypeAlias = Literal["claimed", "blocked", "activation_ready"]
+ConciergeSetupStage: TypeAlias = Literal[
+    "awaiting_device_setup",
+    "awaiting_owner_confirmation",
+    "support_followup_required",
+    "setup_complete",
+]
+ConciergeBlockingReason: TypeAlias = Literal[
+    "identity_verification_pending",
+    "device_setup_incomplete",
+    "owner_confirmation_pending",
+    "support_followup_required",
+]
+ConciergeManualCheckpoint: TypeAlias = Literal[
+    "await_support_followup",
+    "await_identity_review",
+    "await_device_setup_confirmation",
+    "await_owner_confirmation",
+]
+ConciergeGuidanceStatus: TypeAlias = Literal["needs_user_action", "blocked", "ready"]
 
 
 class FeedbackLedgerEntry(TypedDict):
@@ -188,3 +208,25 @@ class RebindingLifecycleRecord(TypedDict):
     status: RebindingStatus
     blocking_reason: str | None
     manual_checkpoint: ManualCheckpoint
+
+
+class ConciergeSetupGuidanceRecord(TypedDict):
+    guidance_id: str
+    guidance_status: ConciergeGuidanceStatus
+    plain_language_summary: str
+    next_user_step: str
+    blocking_reason: ConciergeBlockingReason | None
+    manual_checkpoint: ConciergeManualCheckpoint | None
+    support_safe_notes: str
+
+
+class ConciergeClaimLifecycleRecord(TypedDict):
+    claim_id: str
+    claimant_label: str
+    claim_status: ConciergeClaimStatus
+    setup_stage: ConciergeSetupStage
+    blocking_reason: ConciergeBlockingReason | None
+    manual_checkpoint: ConciergeManualCheckpoint | None
+    activation_ready: bool
+    next_user_step: str
+    setup_guidance: ConciergeSetupGuidanceRecord

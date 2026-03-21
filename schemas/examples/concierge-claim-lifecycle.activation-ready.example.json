@@ -1,0 +1,19 @@
+{
+  "claim_id": "claim-concierge-003",
+  "claimant_label": "demo-owner-forge",
+  "claim_status": "activation_ready",
+  "setup_stage": "setup_complete",
+  "blocking_reason": null,
+  "manual_checkpoint": null,
+  "activation_ready": true,
+  "next_user_step": "Reply to support to schedule activation.",
+  "setup_guidance": {
+    "guidance_id": "guide-concierge-003",
+    "guidance_status": "ready",
+    "plain_language_summary": "Everything is complete and you are ready to schedule activation.",
+    "next_user_step": "Reply to support to schedule activation.",
+    "blocking_reason": null,
+    "manual_checkpoint": null,
+    "support_safe_notes": "Support can now schedule the activation handoff."
+  }
+}

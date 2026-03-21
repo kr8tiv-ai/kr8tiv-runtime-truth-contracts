@@ -39,6 +39,9 @@ def example_to_schema_name(example_name: str) -> str:
     stem = example_name.removesuffix(".example.json")
     if stem.endswith("-empty"):
         stem = stem.removesuffix("-empty")
+    dotted_parts = stem.split(".")
+    if len(dotted_parts) > 1:
+        stem = dotted_parts[0]
     return f"{stem}.schema.json"
 
 

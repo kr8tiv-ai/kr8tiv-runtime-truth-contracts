@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConciergeClaimLifecycle",
+  "description": "Canonical machine-readable lifecycle record for a concierge onboarding claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "claim_id": {
+      "type": "string"
+    },
+    "claimant_label": {
+      "type": "string"
+    },
+    "claim_status": {
+      "type": "string",
+      "enum": ["claimed", "blocked", "activation_ready"]
+    },
+    "setup_stage": {
+      "type": "string",
+      "enum": [
+        "awaiting_device_setup",
+        "awaiting_owner_confirmation",
+        "support_followup_required",
+        "setup_complete"
+      ]
+    },
+    "blocking_reason": {
+      "type": ["string", "null"],
+      "enum": [
+        "identity_verification_pending",
+        "device_setup_incomplete",
+        "owner_confirmation_pending",
+        "support_followup_required",
+        null
+      ]
+    },
+    "manual_checkpoint": {
+      "type": ["string", "null"],
+      "enum": [
+        "await_support_followup",
+        "await_identity_review",
+        "await_device_setup_confirmation",
+        "await_owner_confirmation",
+        null
+      ]
+    },
+    "activation_ready": {
+      "type": "boolean"
+    },
+    "next_user_step": {
+      "type": "string"
+    },
+    "setup_guidance": {
+      "$ref": "./concierge-setup-guidance.schema.json"
+    }
+  },
+  "required": [
+    "claim_id",
+    "claimant_label",
+    "claim_status",
+    "setup_stage",
+    "blocking_reason",
+    "manual_checkpoint",
+    "activation_ready",
+    "next_user_step",
+    "setup_guidance"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "claim_id": "claim-concierge-002",
+  "claimant_label": "demo-owner-catalyst",
+  "claim_status": "blocked",
+  "setup_stage": "support_followup_required",
+  "blocking_reason": "identity_verification_pending",
+  "manual_checkpoint": "await_support_followup",
+  "activation_ready": false,
+  "next_user_step": "Wait for support to confirm your identity and next steps.",
+  "setup_guidance": {
+    "guidance_id": "guide-concierge-002",
+    "guidance_status": "blocked",
+    "plain_language_summary": "Support still needs to verify your identity before setup can continue.",
+    "next_user_step": "Wait for support to confirm your identity and next steps.",
+    "blocking_reason": "identity_verification_pending",
+    "manual_checkpoint": "await_support_followup",
+    "support_safe_notes": "Do not continue setup until support confirms the checkpoint is cleared."
+  }
+}

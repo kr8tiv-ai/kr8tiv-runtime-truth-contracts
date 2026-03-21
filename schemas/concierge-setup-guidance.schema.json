@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConciergeSetupGuidance",
+  "description": "Support-safe plain-language setup guidance for a concierge onboarding claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "guidance_id": {
+      "type": "string"
+    },
+    "guidance_status": {
+      "type": "string",
+      "enum": ["needs_user_action", "blocked", "ready"]
+    },
+    "plain_language_summary": {
+      "type": "string"
+    },
+    "next_user_step": {
+      "type": "string"
+    },
+    "blocking_reason": {
+      "type": ["string", "null"],
+      "enum": [
+        "identity_verification_pending",
+        "device_setup_incomplete",
+        "owner_confirmation_pending",
+        "support_followup_required",
+        null
+      ]
+    },
+    "manual_checkpoint": {
+      "type": ["string", "null"],
+      "enum": [
+        "await_support_followup",
+        "await_identity_review",
+        "await_device_setup_confirmation",
+        "await_owner_confirmation",
+        null
+      ]
+    },
+    "support_safe_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "guidance_id",
+    "guidance_status",
+    "plain_language_summary",
+    "next_user_step",
+    "blocking_reason",
+    "manual_checkpoint",
+    "support_safe_notes"
+  ]
+}
