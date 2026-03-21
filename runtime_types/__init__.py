@@ -13,6 +13,11 @@ from .contracts import (
     PromotionDecisionRecord,
     PromotionStatus,
     ProvenanceLevel,
+    RuntimeArtifactFeedbackSelection,
+    RuntimeArtifactProvenance,
+    RuntimeArtifactSchemaVersion,
+    RuntimeArtifactPromotionAnalysis,
+    RuntimeStepArtifacts,
     RouteDecisionMode,
     RouteDecisionReasonCode,
     RouteDecisionRefusal,
@@ -26,6 +31,7 @@ from .contracts import (
 )
 from .disclosure import DisclosureLevel, DisclosureResult, format_provenance_disclosure, format_route_disclosure
 from .feedback_selection import select_relevant_feedback
+from .parsers import load_runtime_step_artifacts
 from .precedence import ResolutionResult, ResolutionSource, resolve_precedence
 from .promotion import PromotionDecision, PromotionEvaluationResult, evaluate_feedback_promotion
 from .promotion_audit import format_promotion_audit
@@ -62,6 +68,11 @@ __all__ = [
     "RouteMode",
     "RouteRefusalKind",
     "RoutingProvenanceEvent",
+    "RuntimeArtifactFeedbackSelection",
+    "RuntimeArtifactPromotionAnalysis",
+    "RuntimeArtifactProvenance",
+    "RuntimeArtifactSchemaVersion",
+    "RuntimeStepArtifacts",
     "RuntimeStepResult",
     "ScopeRequested",
     "TruthSurface",
@@ -70,6 +81,7 @@ __all__ = [
     "format_provenance_disclosure",
     "format_route_disclosure",
     "format_promotion_audit",
+    "load_runtime_step_artifacts",
     "normalize_rule_key",
     "resolve_precedence",
     "resolve_runtime_step",

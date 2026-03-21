@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "provenance": {
+    "route_mode": "hybrid",
+    "route_status": "selected",
+    "route_reason_code": "quality_support_needed",
+    "fallback_used": true,
+    "fallback_refused": false,
+    "disclosure_level": "explicit",
+    "disclosure_mentions_external_help": true,
+    "disclosure_present": true
+  },
+  "feedback_selection": {
+    "selected": true,
+    "feedback_id": "fb-201",
+    "target": "routing",
+    "scope_requested": "turn",
+    "promotion_status": "local-only",
+    "provenance": "not-yet-proven"
+  },
+  "promotion_analysis": {
+    "status": "evaluated",
+    "decision": "project",
+    "reason": "Repeated runtime-relevant feedback qualifies for project promotion.",
+    "provenance_warning": false,
+    "blocking_signal_type": null,
+    "supporting_signal_used": true,
+    "audit_summary": "decision=project; signal=accepted_without_edit"
+  }
+}

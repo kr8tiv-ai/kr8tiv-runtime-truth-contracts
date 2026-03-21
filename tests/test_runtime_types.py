@@ -19,6 +19,7 @@ from runtime_types.feedback_selection import select_relevant_feedback
 from runtime_types.parsers import (
     load_behavior_signal_entry,
     load_route_decision_result,
+    load_runtime_step_artifacts,
     load_truth_surface,
 )
 from runtime_types.precedence import resolve_precedence
@@ -175,6 +176,148 @@ class ParserBoundaryTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             load_truth_surface(payload)
+
+
+class RuntimeStepArtifactParserTests(unittest.TestCase):
+    def test_load_runtime_step_artifacts_accepts_populated_payload(self) -> None:
+        payload = {
+            "schema_version": "1.0",
+            "provenance": {
+                "route_mode": "hybrid",
+                "route_status": "selected",
+                "route_reason_code": "quality_support_needed",
+                "fallback_used": True,
+                "fallback_refused": False,
+                "disclosure_level": "explicit",
+                "disclosure_mentions_external_help": True,
+                "disclosure_present": True,
+            },
+            "feedback_selection": {
+                "selected": True,
+                "feedback_id": "fb-201",
+                "target": "design",
+                "scope_requested": "turn",
+                "promotion_status": "local-only",
+                "provenance": "not-yet-proven",
+            },
+            "promotion_analysis": {
+                "status": "evaluated",
+                "decision": "project",
+                "reason": "Repeated design correction qualifies for project promotion.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": True,
+                "audit_summary": "decision=project; signal=accepted_without_edit",
+            },
+        }
+
+        result = load_runtime_step_artifacts(payload)
+
+        self.assertEqual(result["provenance"]["route_mode"], "hybrid")
+        self.assertTrue(result["feedback_selection"]["selected"])
+        self.assertEqual(result["promotion_analysis"]["status"], "evaluated")
+
+    def test_load_runtime_step_artifacts_accepts_empty_case_payload(self) -> None:
+        payload = {
+            "schema_version": "1.0",
+            "provenance": {
+                "route_mode": "local",
+                "route_status": "selected",
+                "route_reason_code": "local_policy_default",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "disclosure_level": "none",
+                "disclosure_mentions_external_help": False,
+                "disclosure_present": False,
+            },
+            "feedback_selection": {
+                "selected": False,
+                "feedback_id": None,
+                "target": None,
+                "scope_requested": None,
+                "promotion_status": None,
+                "provenance": None,
+            },
+            "promotion_analysis": {
+                "status": "not_evaluated",
+                "decision": None,
+                "reason": "No matching feedback was selected for promotion evaluation.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": False,
+                "audit_summary": "decision=not_evaluated; signal=none",
+            },
+        }
+
+        result = load_runtime_step_artifacts(payload)
+
+        self.assertFalse(result["feedback_selection"]["selected"])
+        self.assertIsNone(result["feedback_selection"]["feedback_id"])
+        self.assertEqual(result["promotion_analysis"]["status"], "not_evaluated")
+        self.assertFalse(result["provenance"]["disclosure_present"])
+
+    def test_load_runtime_step_artifacts_rejects_missing_top_level_block_members(self) -> None:
+        payload = {
+            "schema_version": "1.0",
+            "provenance": {
+                "route_mode": "local",
+                "route_status": "selected",
+                "route_reason_code": "local_policy_default",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "disclosure_level": "none",
+                "disclosure_mentions_external_help": False,
+                "disclosure_present": False,
+            },
+            "promotion_analysis": {
+                "status": "not_evaluated",
+                "decision": None,
+                "reason": "No matching feedback was selected for promotion evaluation.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": False,
+                "audit_summary": "decision=not_evaluated; signal=none",
+            },
+        }
+
+        with self.assertRaises(ValueError):
+            load_runtime_step_artifacts(payload)
+
+    def test_load_runtime_step_artifacts_rejects_caller_authored_route_event_dependency(self) -> None:
+        payload = {
+            "schema_version": "1.0",
+            "route_event": {"event_id": "caller-authored"},
+            "provenance": {
+                "route_mode": "local",
+                "route_status": "selected",
+                "route_reason_code": "local_policy_default",
+                "fallback_used": False,
+                "fallback_refused": False,
+                "disclosure_level": "none",
+                "disclosure_mentions_external_help": False,
+                "disclosure_present": False,
+            },
+            "feedback_selection": {
+                "selected": False,
+                "feedback_id": None,
+                "target": None,
+                "scope_requested": None,
+                "promotion_status": None,
+                "provenance": None,
+            },
+            "promotion_analysis": {
+                "status": "not_evaluated",
+                "decision": None,
+                "reason": "No matching feedback was selected for promotion evaluation.",
+                "provenance_warning": False,
+                "blocking_signal_type": None,
+                "supporting_signal_used": False,
+                "audit_summary": "decision=not_evaluated; signal=none",
+            },
+        }
+
+        with self.assertRaises(ValueError):
+            load_runtime_step_artifacts(payload)
 
 
 class PrecedenceTests(unittest.TestCase):

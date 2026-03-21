@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "provenance": {
+    "route_mode": "local",
+    "route_status": "selected",
+    "route_reason_code": "local_policy_default",
+    "fallback_used": false,
+    "fallback_refused": false,
+    "disclosure_level": "none",
+    "disclosure_mentions_external_help": false,
+    "disclosure_present": false
+  },
+  "feedback_selection": {
+    "selected": false,
+    "feedback_id": null,
+    "target": null,
+    "scope_requested": null,
+    "promotion_status": null,
+    "provenance": null
+  },
+  "promotion_analysis": {
+    "status": "not_evaluated",
+    "decision": null,
+    "reason": "No matching feedback was selected for promotion evaluation.",
+    "provenance_warning": false,
+    "blocking_signal_type": null,
+    "supporting_signal_used": false,
+    "audit_summary": "decision=not_evaluated; signal=none"
+  }
+}

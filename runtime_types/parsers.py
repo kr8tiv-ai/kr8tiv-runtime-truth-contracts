@@ -9,6 +9,7 @@ from .contracts import (
     PromotionDecisionRecord,
     RouteDecisionResult,
     RoutingProvenanceEvent,
+    RuntimeStepArtifacts,
     TruthSurface,
 )
 from .schema_validation import validate_against_schema_name
@@ -61,4 +62,11 @@ def load_promotion_decision_record(data: object) -> PromotionDecisionRecord:
     return cast(
         PromotionDecisionRecord,
         _load("promotion-decision-record.schema.json", data, "PromotionDecisionRecord"),
+    )
+
+
+def load_runtime_step_artifacts(data: object) -> RuntimeStepArtifacts:
+    return cast(
+        RuntimeStepArtifacts,
+        _load("runtime-step-artifacts.schema.json", data, "RuntimeStepArtifacts"),
     )

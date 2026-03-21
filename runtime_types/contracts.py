@@ -138,3 +138,44 @@ class TruthSurface(TypedDict):
     recent_explicit_feedback: list[FeedbackLedgerEntry]
     recent_behavior_signals: list[BehaviorSignalEntry]
     disclosure_state: dict[str, object]
+
+
+RuntimeArtifactSchemaVersion: TypeAlias = Literal["1.0"]
+PromotionAnalysisStatus: TypeAlias = Literal["not_evaluated", "evaluated"]
+
+
+class RuntimeArtifactProvenance(TypedDict):
+    route_mode: RouteDecisionMode
+    route_status: RouteDecisionStatus
+    route_reason_code: RouteDecisionReasonCode
+    fallback_used: bool
+    fallback_refused: bool
+    disclosure_level: DisclosureLevel
+    disclosure_mentions_external_help: bool
+    disclosure_present: bool
+
+
+class RuntimeArtifactFeedbackSelection(TypedDict):
+    selected: bool
+    feedback_id: str | None
+    target: FeedbackTarget | None
+    scope_requested: ScopeRequested | None
+    promotion_status: PromotionStatus | None
+    provenance: ProvenanceLevel | None
+
+
+class RuntimeArtifactPromotionAnalysis(TypedDict):
+    status: PromotionAnalysisStatus
+    decision: PromotionDecisionRecord["destination_scope"] | Literal["local-only", "reject"] | None
+    reason: str
+    provenance_warning: bool
+    blocking_signal_type: BehaviorSignalType | None
+    supporting_signal_used: bool
+    audit_summary: str
+
+
+class RuntimeStepArtifacts(TypedDict):
+    schema_version: RuntimeArtifactSchemaVersion
+    provenance: RuntimeArtifactProvenance
+    feedback_selection: RuntimeArtifactFeedbackSelection
+    promotion_analysis: RuntimeArtifactPromotionAnalysis

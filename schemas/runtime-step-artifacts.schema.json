@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuntimeStepArtifacts",
+  "description": "Always-present runtime-owned artifact block for training/eval provenance, selected feedback, and promotion analysis.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Version tag for the runtime artifact contract."
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "route_mode": {
+          "type": "string",
+          "enum": ["local", "hybrid", "refused"]
+        },
+        "route_status": {
+          "type": "string",
+          "enum": ["selected", "refused"]
+        },
+        "route_reason_code": {
+          "type": "string",
+          "enum": [
+            "local_policy_default",
+            "quality_support_needed",
+            "fallback_disallowed",
+            "policy_refusal",
+            "revision_budget_exhausted",
+            "manual_review_required"
+          ]
+        },
+        "fallback_used": {
+          "type": "boolean"
+        },
+        "fallback_refused": {
+          "type": "boolean"
+        },
+        "disclosure_level": {
+          "type": "string",
+          "enum": ["none", "brief", "explicit"]
+        },
+        "disclosure_mentions_external_help": {
+          "type": "boolean"
+        },
+        "disclosure_present": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "route_mode",
+        "route_status",
+        "route_reason_code",
+        "fallback_used",
+        "fallback_refused",
+        "disclosure_level",
+        "disclosure_mentions_external_help",
+        "disclosure_present"
+      ]
+    },
+    "feedback_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selected": {
+          "type": "boolean"
+        },
+        "feedback_id": {
+          "type": ["string", "null"]
+        },
+        "target": {
+          "type": ["string", "null"],
+          "enum": ["output", "tone", "design", "workflow", "routing", "teaching", "other", null]
+        },
+        "scope_requested": {
+          "type": ["string", "null"],
+          "enum": ["turn", "project", "owner", "unspecified", null]
+        },
+        "promotion_status": {
+          "type": ["string", "null"],
+          "enum": ["local-only", "promoted", "rejected", "expired", null]
+        },
+        "provenance": {
+          "type": ["string", "null"],
+          "enum": ["local-proven", "hybrid-proven", "external-only", "not-yet-proven", null]
+        }
+      },
+      "required": [
+        "selected",
+        "feedback_id",
+        "target",
+        "scope_requested",
+        "promotion_status",
+        "provenance"
+      ]
+    },
+    "promotion_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["not_evaluated", "evaluated"]
+        },
+        "decision": {
+          "type": ["string", "null"],
+          "enum": ["local-only", "project", "owner", "reject", null]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "provenance_warning": {
+          "type": "boolean"
+        },
+        "blocking_signal_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "suggestion_not_adopted",
+            "user_repair",
+            "repeated_manual_fix",
+            "proposal_reverted",
+            "accepted_without_edit",
+            null
+          ]
+        },
+        "supporting_signal_used": {
+          "type": "boolean"
+        },
+        "audit_summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "decision",
+        "reason",
+        "provenance_warning",
+        "blocking_signal_type",
+        "supporting_signal_used",
+        "audit_summary"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "provenance",
+    "feedback_selection",
+    "promotion_analysis"
+  ]
+}
