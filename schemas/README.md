@@ -24,6 +24,12 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `telegram-voice-reply.schema.json`
 - `telegram-voice-continuity.schema.json`
 - `telegram-voice-turn.schema.json`
+- `cipher-persona-anchor.schema.json`
+- `cipher-voice-expression.schema.json`
+- `cipher-continuity-record.schema.json`
+- `website-specialist-request.schema.json`
+- `website-specialist-execution.schema.json`
+- `website-specialist-harness-record.schema.json`
 
 ## Included examples
 - `examples/truth-surface.example.json`
@@ -41,6 +47,11 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - `examples/telegram-voice-turn.blocked.example.json`
 - `examples/telegram-voice-turn.activation-ready.example.json`
 - `examples/telegram-voice-turn.continuity-carryover.example.json`
+- `examples/cipher-continuity-record.activation-ready.example.json`
+- `examples/cipher-continuity-record.carryover.example.json`
+- `examples/cipher-continuity-record.drift-guard.example.json`
+- `examples/website-specialist-harness-record.local-success.example.json`
+- `examples/website-specialist-harness-record.hybrid-escalation.example.json`
 
 ## Design rules
 - Governance-critical fields are required.
@@ -49,6 +60,8 @@ It encodes portable JSON Schemas for the core governance objects needed to suppo
 - The package is neutral and should remain portable across future runtimes.
 - Concierge onboarding examples under `schemas/examples/` are the authoritative support-safe fixtures for claimed-awaiting-setup, blocked/manual-checkpoint, activation-ready, and plain-language setup-guidance states.
 - Telegram voice-loop examples under `schemas/examples/` are the authoritative support-safe fixtures for blocked, activation-ready, and continuity-carryover voice turns; they expose summaries only and must not be extended with raw transcript or private-memory detail.
+- Cipher continuity examples under `schemas/examples/` are the authoritative support-safe fixtures for activation-ready, carryover, and drift-guard continuity states; they carry bounded persona / spoken-manner markers rather than transcript or hidden memory payloads.
+- Website-specialist harness examples under `schemas/examples/` are the authoritative support-safe fixtures for local-success and hybrid-escalation website execution truth; they expose route honesty, disclosure state, and bounded continuity refs without claiming live website automation already exists.
 
 ## What this package does not do
 This package does not yet implement:
@@ -77,6 +90,21 @@ Future runtime components should use these schemas at service boundaries to:
 - keep provenance and learning semantics explicit
 
 A first Python consumer layer now exists under `runtime_types/`, where the current contract is mirrored with `TypedDict` and `Literal` definitions.
+
+## S04 website-specialist seam
+S04 adds a dedicated website-specialist contract family on top of the earlier onboarding, Telegram voice, Cipher continuity, and routing seams:
+- `website-specialist-request.schema.json`
+- `website-specialist-execution.schema.json`
+- `website-specialist-harness-record.schema.json`
+- `examples/website-specialist-harness-record.local-success.example.json`
+- `examples/website-specialist-harness-record.hybrid-escalation.example.json`
+
+Those records are intentionally support-safe and local-first:
+- they expose route mode, disclosure level/text, specialist task state, fallback-refused state, bounded continuity refs, and persona markers
+- they do **not** embed transcripts, private memory, or hidden browser/session payloads
+- they document whether work stayed local or needed bounded hybrid help without overstating that a live website runtime is already wired
+
+Future runtimes should inspect these S04 schemas when the question is about operator-visible website route honesty and composed continuity truth, while still using the S02/S03 schemas for the lower-level voice/session and identity seams.
 
 ## Validation harness
 Run:

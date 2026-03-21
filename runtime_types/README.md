@@ -239,6 +239,37 @@ This is the authoritative S03 restore point for identity/personality continuity.
 
 Inspect S02 first when a bug might be in onboarding, reply readiness, or session carryover mechanics. Inspect S03 when the question is whether Cipher’s bounded persona markers, spoken posture, and drift guard behavior still read as one support-safe identity.
 
+## Website-specialist harness restore point
+A dedicated website-specialist harness inspection restore point now exists at `tools/inspect_website_specialist_harness.py`.
+
+It derives representative local-success, hybrid-escalation, and fallback-refused website-specialist records through `derive_website_specialist_harness_record(...)` and prints a stable, support-safe summary for:
+- request status and requested capability
+- activation handoff status
+- route mode and route reason
+- disclosure level and disclosure text
+- specialist status and task phase
+- fallback-refused state
+- continuity carryover refs
+- persona and spoken-manner markers
+- support-safe execution and outcome summaries
+
+Run:
+- `python tools/inspect_website_specialist_harness.py`
+
+Use this script when a future agent needs to inspect whether a website request:
+- stayed local end to end
+- escalated through a bounded hybrid route with explicit disclosure
+- remained support-safe while refusing external fallback
+
+This is the authoritative S04 restore point for route-honest website-specialist execution truth. It intentionally composes the earlier seams instead of replacing them:
+- S02 (`tools/inspect_telegram_voice_loop.py`) remains the factual Telegram voice/session seam.
+- S03 (`tools/inspect_cipher_continuity.py`) remains the persona / continuity seam.
+- S04 (`tools/inspect_website_specialist_harness.py`) is the composed website-specialist seam that adds routing provenance and execution-state honesty on top of those earlier facts.
+
+Inspect S02 first when the problem might be in onboarding, voiced reply readiness, or session carryover. Inspect S03 when the question is whether Cipher still reads as one governed identity. Inspect S04 when the operator question is whether website-specialist work stayed local, used hybrid help, or explicitly refused fallback while preserving bounded continuity markers.
+
+The S04 restore point proves the contract seam and support-safe inspection surface only. It does **not** claim that a live website execution runtime, browser automation loop, or external website mutation pipeline is fully wired in this repo.
+
 ## Formal test restore points
 Stdlib test layers now exist at:
 - `tests/test_runtime_types.py`

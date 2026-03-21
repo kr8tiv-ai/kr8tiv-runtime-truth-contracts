@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import runpy
 import sys
 import unittest
 from pathlib import Path
@@ -24,6 +27,79 @@ def _load_example(relative_path: str) -> dict:
 
 
 class WebsiteSpecialistHarnessContractTests(unittest.TestCase):
+    maxDiff = None
+
+    def test_inspect_website_specialist_harness_cli_stdout_is_stable(self) -> None:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as exit_ctx:
+                runpy.run_path(str(ROOT / "tools" / "inspect_website_specialist_harness.py"), run_name="__main__")
+
+        self.assertEqual(exit_ctx.exception.code, 0)
+        self.assertEqual(
+            output.getvalue().strip(),
+            """Website specialist harness inspection
+Support-safe restore point for representative local, hybrid, and fallback-refused website-specialist states.
+S02 remains the factual Telegram voice/session seam, S03 remains the Cipher continuity seam, and S04 composes both into route-honest website-specialist execution truth.
+This restore point proves the contract and inspection seam, not a live website execution runtime.
+
+SCENARIO local_success
+  harness_id: ws-harness-local-success-derived-001
+  request_status: activation_ready
+  requested_capability: website_update
+  activation_handoff_status: handoff_complete
+  route_mode: local
+  route_reason: Local website specialist completed the request without external help.
+  disclosure_level: brief
+  disclosure_text: This step ran on the local path.
+  specialist_status: completed
+  task_phase: fulfilled
+  fallback_refused: no
+  continuity_refs: tg-session-042, cipher-continuity-carryover-001
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, owner_guidance, calm_precision
+  spoken_manner_markers: warmth, measured_pacing, carryover_callback, confident_guidance
+  support_safe_status_summary: Website-specialist work completed locally with bounded Cipher continuity markers preserved.
+  support_safe_outcome_summary: Cipher completed the website-specialist step locally and preserved support-safe continuity truth.
+
+SCENARIO hybrid_escalation
+  harness_id: ws-harness-hybrid-derived-001
+  request_status: needs_route_decision
+  requested_capability: diagnostic_review
+  activation_handoff_status: activation_ready
+  route_mode: hybrid
+  route_reason: Local specialist required bounded hybrid help for the diagnostic review.
+  disclosure_level: explicit
+  disclosure_text: This step used a hybrid path: local execution with external help for quality or capability support. Reason: Local specialist required bounded hybrid help for the diagnostic review.
+  specialist_status: escalated
+  task_phase: routing
+  fallback_refused: no
+  continuity_refs: tg-session-042, cipher-continuity-activation-ready-001, tg-turn-activation-ready-001
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, activation_ready, owner_guidance
+  spoken_manner_markers: warmth, measured_pacing, confident_guidance
+  support_safe_status_summary: Website-specialist work escalated through a hybrid route and disclosed that choice explicitly while preserving bounded continuity markers.
+  support_safe_outcome_summary: Cipher preserved activation-ready continuity markers while honestly disclosing a hybrid website-specialist escalation.
+
+SCENARIO fallback_refused
+  harness_id: ws-harness-refused-derived-001
+  request_status: activation_ready
+  requested_capability: diagnostic_review
+  activation_handoff_status: activation_ready
+  route_mode: local
+  route_reason: Local specialist could not expand coverage because external fallback was refused.
+  disclosure_level: brief
+  disclosure_text: External fallback was refused for this step, so the result stayed within the current allowed route.
+  specialist_status: refused_fallback
+  task_phase: blocked
+  fallback_refused: yes
+  continuity_refs: tg-session-042, cipher-continuity-carryover-001
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, owner_guidance, calm_precision
+  spoken_manner_markers: warmth, measured_pacing, carryover_callback, confident_guidance
+  support_safe_status_summary: Website-specialist work stayed within the allowed local route because external fallback was refused, and bounded continuity markers were preserved.
+  support_safe_outcome_summary: Cipher preserved website-specialist continuity truth and clearly reported that external fallback was refused.""",
+        )
+        self.assertNotIn("raw transcript", output.getvalue().lower())
+        self.assertNotIn("private memory", output.getvalue().lower())
+
     def test_local_success_example_stays_support_safe_and_local(self) -> None:
         payload = _load_example("schemas/examples/website-specialist-harness-record.local-success.example.json")
 

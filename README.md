@@ -30,6 +30,8 @@ A good starting note for the public shape of the work is:
 - precedence resolution across spec, explicit feedback, preferences, and defaults
 - concierge onboarding lifecycle derivation plus a support-safe inspection restore point
 - Telegram voice-turn derivation gated by concierge lifecycle truth plus a support-safe inspection restore point
+- Cipher continuity derivation that preserves bounded persona and spoken-manner markers plus a support-safe inspection restore point
+- website-specialist harness derivation that composes concierge activation truth, Telegram continuity, Cipher continuity, and routing provenance into one operator-facing restore point
 - provenance disclosure formatting for local, hybrid, external, and fallback-refused paths
 - feedback promotion decisions with behavioral shaping
 - scope-aware explicit feedback selection
@@ -54,7 +56,7 @@ Run:
 - `python tools/runtime_scenarios.py`
 - `cd packages/node-runtime && npm test`
 
-## Telegram voice and Cipher continuity inspection seams
+## Telegram voice, Cipher continuity, and website-specialist inspection seams
 S02 adds a support-safe Telegram voice-loop contract seam backed by schemas, parser loaders, and one authoritative restore point:
 - `runtime_types.telegram_voice_loop.derive_telegram_voice_turn(...)`
 - `tools/inspect_telegram_voice_loop.py`
@@ -72,6 +74,17 @@ S03 layers a separate support-safe Cipher continuity seam on top of that factual
 
 That seam composes `TruthSurface` persona/policy inputs with canonical `TelegramVoiceTurnRecord` state to show whether Cipher remains activation-ready, in bounded cross-surface carryover, or under drift guard.
 Use S02 to inspect what happened in the Telegram voice/session flow; use S03 to inspect whether the resulting text-and-voice identity still presents one governed Cipher continuity surface.
+
+S04 adds a website-specialist execution seam that composes the earlier activation, voice/session, continuity, and routing truth into one operator-facing honesty surface:
+- `runtime_types.website_specialist_harness.derive_website_specialist_harness_record(...)`
+- `tools/inspect_website_specialist_harness.py`
+- `tests/test_website_specialist_harness.py`
+- `schemas/examples/website-specialist-harness-record.local-success.example.json`
+- `schemas/examples/website-specialist-harness-record.hybrid-escalation.example.json`
+
+That seam shows whether a website request stayed local, escalated through bounded hybrid help, or refused external fallback while preserving bounded continuity refs and persona markers.
+Use S04 when the operator question is about route honesty and composed website-specialist execution state.
+It intentionally does **not** claim that a live browser automation loop or production website execution runtime is fully wired in this repo yet; the current proof is the contract seam, examples, restore-point CLI, and pinned tests.
 
 ## Public-repo boundary
 This repo should stay public-safe.
