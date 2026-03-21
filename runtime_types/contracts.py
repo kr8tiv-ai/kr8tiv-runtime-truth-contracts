@@ -13,6 +13,7 @@ ConflictStatus: TypeAlias = Literal["active", "superseded", "contradicted", "pau
 RouteMode: TypeAlias = Literal["local", "hybrid", "external"]
 RouteDecisionMode: TypeAlias = Literal["local", "hybrid", "refused"]
 RouteDecisionStatus: TypeAlias = Literal["selected", "refused"]
+DisclosureLevel: TypeAlias = Literal["none", "brief", "explicit"]
 RouteDecisionReasonCode: TypeAlias = Literal[
     "local_policy_default",
     "quality_support_needed",
@@ -108,6 +109,19 @@ class PromotionDecisionRecord(TypedDict):
     evidence_summary: str
     override_conditions: str
     decision_timestamp: str
+
+
+class RouteDisclosureMode(TypedDict):
+    level: DisclosureLevel
+    text: str
+    mention_external_help: bool
+    route_mode: RouteDecisionMode
+    status: RouteDecisionStatus
+
+
+class DisclosureHints(TypedDict, total=False):
+    fallback_policy: dict[str, object]
+    disclosure_state: dict[str, object]
 
 
 class TruthSurface(TypedDict):

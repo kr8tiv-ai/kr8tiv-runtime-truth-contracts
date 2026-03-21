@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import NotRequired, TypedDict
 
-from .contracts import RouteDecisionResult, RoutingProvenanceEvent, TruthSurface
-from .disclosure import DisclosureResult, format_provenance_disclosure
+from .contracts import DisclosureHints, RouteDecisionResult, RoutingProvenanceEvent, TruthSurface
+from .disclosure import DisclosureResult, format_route_disclosure
 from .feedback_selection import select_relevant_feedback
 from .precedence import ResolutionResult, resolve_precedence
 from .promotion import PromotionEvaluationResult, evaluate_feedback_promotion
@@ -35,21 +35,17 @@ def resolve_runtime_step(
         "route": route,
     }
 
-    disclosure_event: RoutingProvenanceEvent | None = route_event
-    if disclosure_event is None:
-        disclosure_event = {
-            "event_id": "runtime-owned-route",
-            "provider": "runtime-core",
-            "model": "truth-surface",
-            "mode": "external" if route["mode"] == "refused" else route["mode"],
-            "route_reason": route["reason"],
-            "fallback_used": route["fallback_used"],
-            "fallback_refused": route["fallback_refused"],
-            "learned_effect_allowed": route["refusal"]["learned_effect_allowed"] if route["refusal"] is not None else True,
-        }
+    disclosure_hints: DisclosureHints = {
+        "fallback_policy": truth_surface.get("fallback_policy", {}),
+        "disclosure_state": truth_surface.get("disclosure_state", {}),
+    }
 
-    if route["fallback_used"] or route["fallback_refused"]:
-        result["disclosure"] = format_provenance_disclosure(disclosure_event)
+    if route["mode"] == "hybrid" or route["mode"] == "refused" or disclosure_hints["disclosure_state"].get("force_local_disclosure") is True:
+        result["disclosure"] = format_route_disclosure(
+            route,
+            fallback_policy=disclosure_hints["fallback_policy"],
+            disclosure_state=disclosure_hints["disclosure_state"],
+        )
 
     if evaluate_promotion:
         feedback = select_relevant_feedback(key, truth_surface)

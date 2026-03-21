@@ -8,7 +8,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from runtime_types.disclosure import format_provenance_disclosure
+from runtime_types.disclosure import (
+    format_provenance_disclosure,
+    format_route_disclosure,
+)
 from runtime_types.feedback_selection import select_relevant_feedback
 from runtime_types.parsers import (
     load_behavior_signal_entry,
@@ -474,6 +477,71 @@ class PromotionAuditFormatterTests(unittest.TestCase):
 
 
 class DisclosureTests(unittest.TestCase):
+    def test_route_formatter_reports_local_path_without_external_help(self) -> None:
+        route = {
+            "mode": "local",
+            "status": "selected",
+            "reason": "Routine work stays local under the route policy.",
+            "reason_code": "local_policy_default",
+            "fallback_allowed": True,
+            "fallback_used": False,
+            "fallback_refused": False,
+            "refusal": None,
+        }
+
+        result = format_route_disclosure(route)
+
+        self.assertEqual(result["level"], "brief")
+        self.assertEqual(result["route_mode"], "local")
+        self.assertEqual(result["status"], "selected")
+        self.assertFalse(result["mention_external_help"])
+        self.assertIn("local path", result["text"].lower())
+
+    def test_route_formatter_reports_hybrid_path_with_external_help(self) -> None:
+        route = {
+            "mode": "hybrid",
+            "status": "selected",
+            "reason": "Truth-surface policy allows hybrid support for high-complexity work.",
+            "reason_code": "quality_support_needed",
+            "fallback_allowed": True,
+            "fallback_used": True,
+            "fallback_refused": False,
+            "refusal": None,
+        }
+
+        result = format_route_disclosure(route)
+
+        self.assertEqual(result["level"], "explicit")
+        self.assertEqual(result["route_mode"], "hybrid")
+        self.assertEqual(result["status"], "selected")
+        self.assertTrue(result["mention_external_help"])
+        self.assertIn("external help", result["text"].lower())
+
+    def test_route_formatter_reports_governed_refusal_without_claiming_external_execution(self) -> None:
+        route = {
+            "mode": "refused",
+            "status": "refused",
+            "reason": "Truth-surface policy forbids external fallback for this local-only task.",
+            "reason_code": "fallback_disallowed",
+            "fallback_allowed": False,
+            "fallback_used": False,
+            "fallback_refused": True,
+            "refusal": {
+                "kind": "policy_refusal",
+                "message": "External fallback is not permitted for this task.",
+                "learned_effect_allowed": False,
+            },
+        }
+
+        result = format_route_disclosure(route)
+
+        self.assertEqual(result["level"], "brief")
+        self.assertEqual(result["route_mode"], "refused")
+        self.assertEqual(result["status"], "refused")
+        self.assertFalse(result["mention_external_help"])
+        self.assertIn("refused", result["text"].lower())
+        self.assertNotIn("used external help", result["text"].lower())
+
     def test_hybrid_route_requires_explicit_disclosure(self) -> None:
         event = {
             "event_id": "e1",
@@ -728,6 +796,47 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertTrue(result["route"]["fallback_refused"])
         self.assertEqual(result["route"]["refusal"]["kind"], "policy_refusal")
         self.assertEqual(result["disclosure"]["level"], "brief")
+
+    def test_runtime_step_ignores_contradictory_caller_route_event_for_disclosure_truth(self) -> None:
+        ts = base_truth_surface()
+        ts["routing_policy"] = {
+            "default_mode": "local",
+            "high_complexity_allows_hybrid": True,
+        }
+        ts["current_task"] = {
+            "task_id": "task-hybrid-contradiction",
+            "phase": "generation",
+            "target_outcome": "Complex generation task needing broader capability.",
+            "complexity": "high",
+        }
+        ts["fallback_policy"] = {
+            "must_disclose_material_external_help": True,
+            "refuse_on_local_only_tasks": False,
+        }
+
+        contradictory_event = {
+            "event_id": "caller-claims-local",
+            "provider": "caller",
+            "model": "manual",
+            "mode": "local",
+            "route_reason": "Caller-authored contradiction",
+            "fallback_used": False,
+            "fallback_refused": False,
+            "learned_effect_allowed": True,
+        }
+
+        result = resolve_runtime_step(
+            "design",
+            ts,
+            default="neutral",
+            route_event=contradictory_event,
+        )
+
+        self.assertEqual(result["route"]["mode"], "hybrid")
+        self.assertEqual(result["disclosure"]["route_mode"], "hybrid")
+        self.assertTrue(result["disclosure"]["mention_external_help"])
+        self.assertIn("external help", result["disclosure"]["text"].lower())
+        self.assertNotIn("caller-authored contradiction", result["disclosure"]["text"].lower())
 
     def test_runtime_step_omits_promotion_when_feedback_absent(self) -> None:
         ts = base_truth_surface()

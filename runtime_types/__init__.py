@@ -3,6 +3,7 @@ from .contracts import (
     BehaviorSignalType,
     ConflictStatus,
     DestinationScope,
+    DisclosureHints,
     FeedbackLedgerEntry,
     FeedbackPolarity,
     FeedbackSource,
@@ -23,7 +24,7 @@ from .contracts import (
     ScopeRequested,
     TruthSurface,
 )
-from .disclosure import DisclosureLevel, DisclosureResult, format_provenance_disclosure
+from .disclosure import DisclosureLevel, DisclosureResult, format_provenance_disclosure, format_route_disclosure
 from .feedback_selection import select_relevant_feedback
 from .precedence import ResolutionResult, ResolutionSource, resolve_precedence
 from .promotion import PromotionDecision, PromotionEvaluationResult, evaluate_feedback_promotion
@@ -37,6 +38,7 @@ __all__ = [
     "BehaviorSignalType",
     "ConflictStatus",
     "DestinationScope",
+    "DisclosureHints",
     "DisclosureLevel",
     "DisclosureResult",
     "FeedbackLedgerEntry",
@@ -66,6 +68,7 @@ __all__ = [
     "derive_route_decision",
     "evaluate_feedback_promotion",
     "format_provenance_disclosure",
+    "format_route_disclosure",
     "format_promotion_audit",
     "normalize_rule_key",
     "resolve_precedence",
