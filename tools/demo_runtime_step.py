@@ -1,16 +1,8 @@
-#!/usr/bin/env python3
-from __future__ import annotations
-
-import json
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 from runtime_types.parsers import load_truth_surface
 from runtime_types.runtime_step import resolve_runtime_step
+
+import json
+from pathlib import Path
 
 
 def load_json(path: Path) -> object:
@@ -48,16 +40,50 @@ def print_route_summary(result: dict) -> None:
         print("- disclosure text: none")
 
 
+def print_artifact_summary(result: dict) -> None:
+    artifacts = result["artifacts"]
+    provenance = artifacts["provenance"]
+    feedback_selection = artifacts["feedback_selection"]
+    promotion_analysis = artifacts["promotion_analysis"]
+
+    print(f"- artifact schema version: {artifacts['schema_version']}")
+    print(
+        "- artifact provenance: "
+        f"route_mode={provenance['route_mode']}, "
+        f"route_status={provenance['route_status']}, "
+        f"route_reason_code={provenance['route_reason_code']}, "
+        f"disclosure_level={provenance['disclosure_level']}, "
+        f"disclosure_present={provenance['disclosure_present']}"
+    )
+    print(
+        "- artifact feedback selection: "
+        f"selected={feedback_selection['selected']}, "
+        f"feedback_id={feedback_selection['feedback_id']}, "
+        f"target={feedback_selection['target']}, "
+        f"scope={feedback_selection['scope_requested']}, "
+        f"promotion_status={feedback_selection['promotion_status']}"
+    )
+    print(
+        "- artifact promotion analysis: "
+        f"status={promotion_analysis['status']}, "
+        f"decision={promotion_analysis['decision']}, "
+        f"blocking_signal={promotion_analysis['blocking_signal_type']}, "
+        f"supporting_signal_used={promotion_analysis['supporting_signal_used']}"
+    )
+    print(f"- artifact audit summary: {promotion_analysis['audit_summary']}")
+
+
 def main() -> int:
-    truth_surface_path = ROOT / "schemas" / "examples" / "truth-surface.example.json"
+    root = Path(__file__).resolve().parent.parent
+    truth_surface_path = root / "schemas" / "examples" / "truth-surface.example.json"
     truth_surface = load_truth_surface(load_json(truth_surface_path))
 
     result = resolve_runtime_step(
-        "routing.prefer_local",
+        "design",
         truth_surface,
-        default=False,
+        default="neutral",
         evaluate_promotion=True,
-        project_repeat_count=2,
+        project_repeat_count=1,
     )
 
     print("Runtime demo")
@@ -66,12 +92,16 @@ def main() -> int:
     print(f"- precedence winner: {result['precedence']['winner_source']}")
     print(f"- precedence value: {result['precedence']['winner_value']}")
     print_route_summary(result)
+    print_artifact_summary(result)
 
     if "promotion" in result:
         print(f"- promotion decision: {result['promotion']['decision']}")
         print(f"- promotion reason: {result['promotion']['reason']}")
 
-    print("- inspection hint: compare the route/disclosure block above against tools/runtime_scenarios.py and tests.test_runtime_types.RuntimeStepTests")
+    print(
+        "- inspection hint: inspect result['artifacts'] first, then compare against tools/runtime_scenarios.py, "
+        "runtime_types/README.md, and tests.test_runtime_types.RuntimeStepTests when route/disclosure or training/eval behavior drifts"
+    )
     return 0
 
 

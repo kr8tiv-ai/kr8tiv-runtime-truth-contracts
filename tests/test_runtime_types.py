@@ -1213,21 +1213,28 @@ class RuntimeStepTests(unittest.TestCase):
         truth_surface = load_truth_surface(json.loads(truth_surface_path.read_text(encoding="utf-8")))
 
         result = resolve_runtime_step(
-            "routing.prefer_local",
+            "design",
             truth_surface,
-            default=False,
+            default="neutral",
             evaluate_promotion=True,
-            project_repeat_count=2,
+            project_repeat_count=1,
         )
 
+        self.assertEqual(result["precedence"]["winner_source"], "explicit_feedback")
         self.assertEqual(result["route"]["mode"], "hybrid")
         self.assertEqual(result["route"]["status"], "selected")
         self.assertTrue(result["route"]["fallback_used"])
         self.assertEqual(result["disclosure"]["route_mode"], result["route"]["mode"])
         self.assertTrue(result["disclosure"]["mention_external_help"])
         self.assertIn("external help", result["disclosure"]["text"].lower())
+        self.assertTrue(result["artifacts"]["feedback_selection"]["selected"])
+        self.assertEqual(result["artifacts"]["feedback_selection"]["feedback_id"], "fb-202")
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["status"], "evaluated")
+        self.assertEqual(result["artifacts"]["promotion_analysis"]["decision"], "project")
+        self.assertTrue(result["artifacts"]["promotion_analysis"]["supporting_signal_used"])
+        self.assertIn("accepted_without_edit", result["artifacts"]["promotion_analysis"]["audit_summary"])
 
-    def test_runtime_scenarios_script_prints_route_refusal_and_disclosure_restore_points(self) -> None:
+    def test_runtime_scenarios_script_prints_route_refusal_disclosure_and_artifact_restore_points(self) -> None:
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             exit_code = runtime_scenarios.main()
@@ -1235,16 +1242,20 @@ class RuntimeStepTests(unittest.TestCase):
         output = buffer.getvalue()
 
         self.assertEqual(exit_code, 0)
-        self.assertIn("runtime-owned-local-route", output)
-        self.assertIn("runtime-owned-hybrid-route", output)
-        self.assertIn("runtime-owned-refused-route", output)
+        self.assertIn("runtime-owned-local-route-empty-artifacts", output)
+        self.assertIn("runtime-owned-hybrid-route-populated-artifacts", output)
+        self.assertIn("runtime-owned-refused-route-empty-artifacts", output)
         self.assertIn("route.mode=local", output)
         self.assertIn("route.mode=hybrid", output)
         self.assertIn("route.mode=refused", output)
         self.assertIn("refusal.kind=policy_refusal", output)
         self.assertIn("disclosure.text=", output)
+        self.assertIn("artifacts.feedback_selection selected=False", output)
+        self.assertIn("artifacts.feedback_selection selected=True | feedback_id=fb-scenario-design", output)
+        self.assertIn("artifacts.promotion_analysis status=evaluated | decision=project", output)
+        self.assertIn("accepted_without_edit", output)
 
-    def test_demo_runtime_step_script_prints_matching_route_and_disclosure_surface(self) -> None:
+    def test_demo_runtime_step_script_prints_matching_route_and_artifact_surface(self) -> None:
         buffer = io.StringIO()
         with redirect_stdout(buffer):
             exit_code = demo_runtime_step.main()
@@ -1257,6 +1268,10 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertIn("disclosure route mode: hybrid", output)
         self.assertIn("disclosure mentions external help: True", output)
         self.assertIn("refusal kind: none", output)
+        self.assertIn("artifact feedback selection: selected=True, feedback_id=fb-202", output)
+        self.assertIn("artifact promotion analysis: status=evaluated, decision=project", output)
+        self.assertIn("artifact audit summary:", output)
+        self.assertIn("accepted_without_edit", output)
 
 
 if __name__ == "__main__":

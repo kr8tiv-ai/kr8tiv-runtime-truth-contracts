@@ -1,8 +1,8 @@
 {
   "active_spec": {
     "milestone": "M004-j5w2ex",
-    "slice": "S02",
-    "goal": "Keep disclosure and refusal wording owned by the runtime-selected route result.",
+    "slice": "S03",
+    "goal": "Emit one runtime-owned artifact block with provenance, selected feedback, and promotion analysis.",
     "resolved_rules": {
       "routing.prefer_local": false
     }
@@ -13,9 +13,9 @@
     "fallback_allowed": true
   },
   "current_task": {
-    "task_id": "example-task-002",
+    "task_id": "example-task-003",
     "phase": "generation",
-    "target_outcome": "Produce a revised website direction after explicit feedback while proving runtime-owned route/disclosure honesty.",
+    "target_outcome": "Produce a restrained website direction after explicit feedback while proving runtime-owned route/disclosure honesty and inspectable training artifacts.",
     "complexity": "high"
   },
   "persona_anchor": {
@@ -47,7 +47,10 @@
       "evidence_count": 3,
       "last_confirmed_at": "2026-03-20T18:30:00Z",
       "conflict_status": "active",
-      "origin_feedback_ids": ["fb-101", "fb-104"],
+      "origin_feedback_ids": [
+        "fb-101",
+        "fb-104"
+      ],
       "provenance_level": "local-proven"
     }
   ],
@@ -60,7 +63,10 @@
       "evidence_count": 5,
       "last_confirmed_at": "2026-03-20T18:00:00Z",
       "conflict_status": "active",
-      "origin_feedback_ids": ["fb-050", "fb-077"],
+      "origin_feedback_ids": [
+        "fb-050",
+        "fb-077"
+      ],
       "provenance_level": "hybrid-proven"
     }
   ],
@@ -73,12 +79,35 @@
       "target": "routing",
       "polarity": "correction",
       "source": "user",
-      "applied_to": "example-task-002",
+      "applied_to": "example-task-003",
+      "promotion_status": "local-only",
+      "provenance": "not-yet-proven"
+    },
+    {
+      "feedback_id": "fb-202",
+      "feedback_text": "Less glossy. Simpler hero.",
+      "timestamp": "2026-03-20T18:47:00Z",
+      "scope_requested": "turn",
+      "target": "design",
+      "polarity": "correction",
+      "source": "user",
+      "applied_to": "example-task-003",
       "promotion_status": "local-only",
       "provenance": "not-yet-proven"
     }
   ],
-  "recent_behavior_signals": [],
+  "recent_behavior_signals": [
+    {
+      "signal_id": "sig-301",
+      "timestamp": "2026-03-20T18:49:00Z",
+      "target": "design",
+      "signal_type": "accepted_without_edit",
+      "strength": 0.88,
+      "applied_to": "example-task-003",
+      "source_route": "hybrid",
+      "notes": "The user accepted the simplified hero direction without further edits in the follow-up review."
+    }
+  ],
   "disclosure_state": {
     "must_disclose_current_route": true,
     "current_route_label": "hybrid"

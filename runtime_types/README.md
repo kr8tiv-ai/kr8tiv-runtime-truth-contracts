@@ -17,7 +17,7 @@ It mirrors the validated runtime contract using:
 - `promotion_audit.py` — compact formatter for promotion audit summaries
 - `routing.py` — pure runtime-owned route derivation from `TruthSurface`
 - `disclosure.py` — canonical route-result-driven disclosure/refusal formatting
-- `runtime_step.py` — one-step composition across precedence, route, disclosure, and promotion
+- `runtime_step.py` — one-step composition across precedence, route, disclosure, artifacts, and promotion
 - `__init__.py` — public exports
 
 ## Relationship to `schemas/`
@@ -32,6 +32,7 @@ It mirrors the validated runtime contract using:
 - `RouteDecisionResult`
 - `PromotionDecisionRecord`
 - `BehaviorSignalEntry`
+- `RuntimeStepArtifacts`
 - `TruthSurface`
 - shared schema validation helpers
 - thin parser/bridge functions
@@ -128,32 +129,34 @@ A first-pass runtime step service exists in `runtime_types/runtime_step.py`.
 - precedence resolution
 - runtime-owned route derivation
 - optional disclosure/refusal formatting derived from the runtime route result
+- an always-present `result["artifacts"]` block with provenance, feedback-selection, and promotion-analysis output
 - optional feedback promotion evaluation
 
-The stable route surface is returned directly as `result["route"]`. When disclosure is present, it must be interpreted as a narration of that route block rather than an independent truth source.
+The stable route surface is returned directly as `result["route"]`. When disclosure is present, it must be interpreted as a narration of that route block rather than an independent truth source. When training/eval or taste-adaptation behavior drifts, inspect `result["artifacts"]` first because it is the stable runtime-owned summary tying route/disclosure truth to selected feedback and promotion evidence.
 
 ## Inspection and restore points
 The repo keeps a stdlib-first proof style. The main inspection surfaces are:
-- `tests/test_runtime_types.py` — direct contract and composition assertions, including contradiction resistance and script-alignment checks
-- `tools/runtime_scenarios.py` — readable local/hybrid/refused route scenarios from truth-surface inputs, printed with fallback, refusal, and disclosure together
-- `tools/demo_runtime_step.py` — compact single-run demo of the composed runtime step against the example truth surface
-- `schemas/examples/truth-surface.example.json` — example truth input that feeds the demo and exercises governed fallback disclosure
+- `tests/test_runtime_types.py` — direct contract and composition assertions, including contradiction resistance, artifact-block expectations, and script-alignment checks
+- `tools/runtime_scenarios.py` — readable empty and populated scenarios that print route, refusal, disclosure, and artifact summaries from the same `resolve_runtime_step(...)` result
+- `tools/demo_runtime_step.py` — compact single-run demo of the composed runtime step against the example truth surface, including the selected feedback and promotion-analysis summary
+- `schemas/examples/truth-surface.example.json` — example truth input that now includes bounded feedback and behavior-signal fixtures for non-empty artifact output
 
 Recommended commands:
 - `python -m unittest tests.test_runtime_types`
 - `python tools/runtime_scenarios.py`
 - `python tools/demo_runtime_step.py`
 - `python tools/validate_schemas.py`
-- `python -m unittest tests.test_runtime_types.RuntimeStepTests.test_runtime_step_derives_refused_route_from_truth_surface_inputs`
+- `python -m unittest tests.test_runtime_types.RuntimeStepTests.test_runtime_step_demo_example_emits_hybrid_route_with_matching_disclosure`
 
 ## How to localize failures
 Use the output surfaces to narrow failures quickly:
 - If `tools/validate_schemas.py` fails, the contract or example payloads drifted at the parser/schema boundary.
-- If `tools/runtime_scenarios.py` fails on one route mode, inspect `runtime_types/routing.py` first, then `runtime_types/disclosure.py`; the scenario output prints route mode/status/reason, fallback flags, refusal details, and disclosure text from the same runtime-owned result.
-- If `tools/demo_runtime_step.py` shows the right route but wrong disclosure or refusal narration, inspect `runtime_types/runtime_step.py` composition and confirm the example truth surface still drives the intended fallback policy.
+- If `tools/runtime_scenarios.py` fails on an empty/populated artifact case, inspect `runtime_types/runtime_step.py` first, then `runtime_types/feedback_selection.py`, `runtime_types/promotion.py`, and `runtime_types/disclosure.py`; the scenario output prints route mode/status/reason, fallback flags, refusal details, disclosure text, selected feedback, and promotion audit summary from the same runtime-owned result.
+- If `tools/demo_runtime_step.py` shows the right route but the wrong artifact narration, compare `result["artifacts"]["provenance"]`, `result["artifacts"]["feedback_selection"]`, and `result["artifacts"]["promotion_analysis"]` against the example truth surface before inspecting the formatter output.
 - If `tests.test_runtime_types.RuntimeRouteDecisionContractTests` fail, the parser/schema boundary for route decisions no longer matches the canonical contract.
-- If `tests.test_runtime_types.RuntimeStepTests` fail, the composed step no longer preserves the expected runtime-owned route/disclosure seam.
+- If `tests.test_runtime_types.RuntimeStepTests` fail, the composed step no longer preserves the expected runtime-owned route/disclosure/artifact seam.
 - If disclosure text and route mode disagree, compare `result["route"]` and `result["disclosure"]` from the same `resolve_runtime_step(...)` call before inspecting any caller-authored provenance event.
+- If selected feedback or promotion traces disagree with expectations, inspect `result["artifacts"]` before reading raw feedback lists; the artifact block is the repo’s primary diagnostic surface for S03 behavior.
 
 ## Process note for future agents
-The planning/process trail for this slice explicitly referenced the superpowers workflow skills `using-superpowers`, `brainstorming`, and `writing-plans`. This task keeps the resulting restore points lightweight and stdlib-first so later slices can inspect the route seam without re-planning or introducing extra tooling.
+The planning/process trail for this slice explicitly referenced the superpowers workflow skills `using-superpowers`, `brainstorming`, and `writing-plans`. This task keeps the resulting restore points lightweight and stdlib-first so later slices can inspect the route seam and artifact seam without re-planning or introducing extra tooling.
