@@ -22,6 +22,9 @@ It is intentionally contract-oriented rather than product-complete.
 - `verification/` — validation checklists and contract verification notes
 - `docs/plans/` — design and implementation plans used to shape the current contract
 
+A good starting note for the public shape of the work is:
+- `specs/why-this-exists-and-node-atomicity.md`
+
 ## Current capabilities
 - precedence resolution across spec, explicit feedback, preferences, and defaults
 - provenance disclosure formatting for local, hybrid, external, and fallback-refused paths
