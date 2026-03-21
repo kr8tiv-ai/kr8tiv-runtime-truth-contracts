@@ -1,10 +1,10 @@
 {
   "active_spec": {
     "milestone": "M004-j5w2ex",
-    "slice": "S01",
-    "goal": "Let the runtime own one bounded route decision from the canonical truth surface.",
+    "slice": "S02",
+    "goal": "Keep disclosure and refusal wording owned by the runtime-selected route result.",
     "resolved_rules": {
-      "routing.prefer_local": true
+      "routing.prefer_local": false
     }
   },
   "active_policy": {
@@ -13,9 +13,9 @@
     "fallback_allowed": true
   },
   "current_task": {
-    "task_id": "example-task-001",
+    "task_id": "example-task-002",
     "phase": "generation",
-    "target_outcome": "Produce a revised website direction after explicit feedback while proving runtime-owned route selection.",
+    "target_outcome": "Produce a revised website direction after explicit feedback while proving runtime-owned route/disclosure honesty.",
     "complexity": "high"
   },
   "persona_anchor": {
@@ -67,13 +67,13 @@
   "recent_explicit_feedback": [
     {
       "feedback_id": "fb-201",
-      "feedback_text": "Less glossy. Simpler hero. Keep it local if you can.",
+      "feedback_text": "Less glossy. Simpler hero. Use fallback support if quality needs it, but say so honestly.",
       "timestamp": "2026-03-20T18:45:00Z",
       "scope_requested": "turn",
-      "target": "design",
+      "target": "routing",
       "polarity": "correction",
       "source": "user",
-      "applied_to": "example-task-001",
+      "applied_to": "example-task-002",
       "promotion_status": "local-only",
       "provenance": "not-yet-proven"
     }

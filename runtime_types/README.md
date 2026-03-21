@@ -16,6 +16,7 @@ It mirrors the validated runtime contract using:
 - `behavior_signals.py` — behavioral evidence summarization helpers
 - `promotion_audit.py` — compact formatter for promotion audit summaries
 - `routing.py` — pure runtime-owned route derivation from `TruthSurface`
+- `disclosure.py` — canonical route-result-driven disclosure/refusal formatting
 - `runtime_step.py` — one-step composition across precedence, route, disclosure, and promotion
 - `__init__.py` — public exports
 
@@ -84,15 +85,21 @@ Its result also exposes a small audit surface:
 A compact summary formatter in `runtime_types/promotion_audit.py` keeps those decisions inspectable without persisting extra runtime state.
 
 ## First executable honesty behavior
-A first-pass provenance disclosure formatter exists in `runtime_types/disclosure.py`.
+A first-pass route-result-driven disclosure formatter exists in `runtime_types/disclosure.py`.
 
-It currently derives a disclosure result from a routing/provenance event and can distinguish:
+The canonical honesty seam is:
+1. `derive_route_decision(truth_surface)` in `runtime_types/routing.py`
+2. `resolve_runtime_step(...)` in `runtime_types/runtime_step.py`
+3. `format_route_disclosure(result["route"], ...)` in `runtime_types/disclosure.py`
+
+That seam ensures user-facing disclosure and refusal wording are derived from the same `result["route"]` object the runtime actually selected. `format_provenance_disclosure(...)` still exists only as a legacy compatibility bridge for older provenance-event callers and should not be treated as the truth source for new runtime behavior.
+
+The route-driven formatter can distinguish:
 - local path
 - hybrid path
-- external path
 - fallback-refused path
 
-It returns a small structured result with disclosure level, text, and whether external help must be mentioned.
+It returns a small structured result with disclosure level, text, whether external help must be mentioned, plus the route mode/status it is narrating.
 
 ## First executable route core
 A first-pass runtime-owned route core now exists in `runtime_types/routing.py`.
@@ -120,17 +127,17 @@ A first-pass runtime step service exists in `runtime_types/runtime_step.py`.
 `resolve_runtime_step(...)` now composes existing behavior for one step by combining:
 - precedence resolution
 - runtime-owned route derivation
-- optional provenance disclosure formatting derived from the runtime route result
+- optional disclosure/refusal formatting derived from the runtime route result
 - optional feedback promotion evaluation
 
-The stable route surface is now returned directly as `result["route"]`. If fallback is used or refused, disclosure is derived downstream of that route result rather than being treated as the source of routing truth.
+The stable route surface is returned directly as `result["route"]`. When disclosure is present, it must be interpreted as a narration of that route block rather than an independent truth source.
 
 ## Inspection and restore points
 The repo keeps a stdlib-first proof style. The main inspection surfaces are:
-- `tests/test_runtime_types.py` — direct contract and composition assertions
-- `tools/runtime_scenarios.py` — readable local/hybrid/refused route scenarios from truth-surface inputs
-- `tools/demo_runtime_step.py` — compact single-run demo of the composed runtime step
-- `schemas/examples/truth-surface.example.json` — example truth input that feeds the demo
+- `tests/test_runtime_types.py` — direct contract and composition assertions, including contradiction resistance and script-alignment checks
+- `tools/runtime_scenarios.py` — readable local/hybrid/refused route scenarios from truth-surface inputs, printed with fallback, refusal, and disclosure together
+- `tools/demo_runtime_step.py` — compact single-run demo of the composed runtime step against the example truth surface
+- `schemas/examples/truth-surface.example.json` — example truth input that feeds the demo and exercises governed fallback disclosure
 
 Recommended commands:
 - `python -m unittest tests.test_runtime_types`
@@ -141,11 +148,12 @@ Recommended commands:
 
 ## How to localize failures
 Use the output surfaces to narrow failures quickly:
-- If `tools/validate_schemas.py` fails, the contract or example payloads drifted.
-- If `tools/runtime_scenarios.py` fails on one route mode, inspect `runtime_types/routing.py` first; the scenario output prints mode, status, reason code, fallback flags, refusal, and disclosure.
-- If `tools/demo_runtime_step.py` shows the right route but wrong disclosure or promotion fields, inspect `runtime_types/runtime_step.py` composition.
+- If `tools/validate_schemas.py` fails, the contract or example payloads drifted at the parser/schema boundary.
+- If `tools/runtime_scenarios.py` fails on one route mode, inspect `runtime_types/routing.py` first, then `runtime_types/disclosure.py`; the scenario output prints route mode/status/reason, fallback flags, refusal details, and disclosure text from the same runtime-owned result.
+- If `tools/demo_runtime_step.py` shows the right route but wrong disclosure or refusal narration, inspect `runtime_types/runtime_step.py` composition and confirm the example truth surface still drives the intended fallback policy.
 - If `tests.test_runtime_types.RuntimeRouteDecisionContractTests` fail, the parser/schema boundary for route decisions no longer matches the canonical contract.
-- If `tests.test_runtime_types.RuntimeStepTests` fail, the composed step no longer preserves the expected runtime-owned route seam.
+- If `tests.test_runtime_types.RuntimeStepTests` fail, the composed step no longer preserves the expected runtime-owned route/disclosure seam.
+- If disclosure text and route mode disagree, compare `result["route"]` and `result["disclosure"]` from the same `resolve_runtime_step(...)` call before inspecting any caller-authored provenance event.
 
 ## Process note for future agents
 The planning/process trail for this slice explicitly referenced the superpowers workflow skills `using-superpowers`, `brainstorming`, and `writing-plans`. This task keeps the resulting restore points lightweight and stdlib-first so later slices can inspect the route seam without re-planning or introducing extra tooling.

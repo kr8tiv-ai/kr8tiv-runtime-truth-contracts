@@ -33,25 +33,32 @@ def route_summary(result: dict) -> str:
     route = result["route"]
     refusal = route.get("refusal")
     disclosure = result.get("disclosure")
-    refusal_text = "none"
-    if refusal is not None:
-        refusal_text = f"{refusal['kind']} | {refusal['message']}"
 
-    disclosure_text = "none"
-    if disclosure is not None:
-        disclosure_text = f"{disclosure['level']} | {disclosure['text']}"
+    refusal_kind = refusal["kind"] if refusal is not None else "none"
+    refusal_message = refusal["message"] if refusal is not None else "none"
+    disclosure_level = disclosure["level"] if disclosure is not None else "none"
+    disclosure_text = disclosure["text"] if disclosure is not None else "none"
+    mention_external_help = disclosure["mention_external_help"] if disclosure is not None else False
 
-    return " | ".join(
+    return "\n".join(
         [
-            f"mode={route['mode']}",
-            f"status={route['status']}",
-            f"reason_code={route['reason_code']}",
-            f"reason={route['reason']}",
-            f"fallback_allowed={route['fallback_allowed']}",
-            f"fallback_used={route['fallback_used']}",
-            f"fallback_refused={route['fallback_refused']}",
-            f"refusal={refusal_text}",
-            f"disclosure={disclosure_text}",
+            f"    route.mode={route['mode']} | route.status={route['status']} | route.reason_code={route['reason_code']}",
+            f"    route.reason={route['reason']}",
+            (
+                "    fallback.allowed={allowed} | fallback.used={used} | fallback.refused={refused}"
+            ).format(
+                allowed=route["fallback_allowed"],
+                used=route["fallback_used"],
+                refused=route["fallback_refused"],
+            ),
+            f"    refusal.kind={refusal_kind} | refusal.message={refusal_message}",
+            (
+                "    disclosure.level={level} | disclosure.mentions_external_help={mention_external_help}"
+            ).format(
+                level=disclosure_level,
+                mention_external_help=mention_external_help,
+            ),
+            f"    disclosure.text={disclosure_text}",
         ]
     )
 
@@ -59,14 +66,19 @@ def route_summary(result: dict) -> str:
 def scenario_runtime_owned_local_route() -> tuple[bool, str]:
     truth_surface = base_truth_surface()
     truth_surface["active_spec"] = {"resolved_rules": {"routing.prefer_local": True}}
+    truth_surface["disclosure_state"] = {"force_local_disclosure": True}
 
     result = resolve_runtime_step("routing.prefer_local", truth_surface, default=False)
+    disclosure = result.get("disclosure")
     ok = (
         result["precedence"]["winner_source"] == "active_spec"
         and result["route"]["mode"] == "local"
         and result["route"]["status"] == "selected"
         and result["route"]["reason_code"] == "local_policy_default"
-        and "disclosure" not in result
+        and disclosure is not None
+        and disclosure["route_mode"] == "local"
+        and disclosure["mention_external_help"] is False
+        and "local path" in disclosure["text"].lower()
     )
     return ok, route_summary(result)
 
@@ -89,12 +101,16 @@ def scenario_runtime_owned_hybrid_route() -> tuple[bool, str]:
     }
 
     result = resolve_runtime_step("routing.prefer_local", truth_surface, default=True)
+    disclosure = result.get("disclosure")
     ok = (
         result["route"]["mode"] == "hybrid"
         and result["route"]["status"] == "selected"
         and result["route"]["reason_code"] == "quality_support_needed"
         and result["route"]["fallback_used"] is True
-        and result.get("disclosure", {}).get("level") == "explicit"
+        and disclosure is not None
+        and disclosure["level"] == "explicit"
+        and disclosure["mention_external_help"] is True
+        and "external help" in disclosure["text"].lower()
     )
     return ok, route_summary(result)
 
@@ -118,13 +134,18 @@ def scenario_runtime_owned_refused_route() -> tuple[bool, str]:
     }
 
     result = resolve_runtime_step("routing.prefer_local", truth_surface, default=True)
+    disclosure = result.get("disclosure")
     ok = (
         result["route"]["mode"] == "refused"
         and result["route"]["status"] == "refused"
         and result["route"]["reason_code"] == "fallback_disallowed"
         and result["route"]["fallback_refused"] is True
         and result["route"]["refusal"] is not None
-        and result.get("disclosure", {}).get("level") == "brief"
+        and disclosure is not None
+        and disclosure["level"] == "brief"
+        and disclosure["mention_external_help"] is False
+        and "refused" in disclosure["text"].lower()
+        and "no external execution ran" in disclosure["text"].lower()
     )
     return ok, route_summary(result)
 
@@ -138,12 +159,12 @@ def main() -> int:
 
     failures = 0
     print("Runtime route scenarios")
-    print("These restore points prove route choice comes from TruthSurface inputs inside resolve_runtime_step(...).")
+    print("These restore points prove route, fallback, refusal, and disclosure all come from the same resolve_runtime_step(...) result.")
     for name, fn in scenarios:
         ok, detail = fn()
         status = "PASS" if ok else "FAIL"
         print(f"- {status} {name}")
-        print(f"  {detail}")
+        print(detail)
         if not ok:
             failures += 1
 

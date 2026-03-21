@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import io
+import json
 import sys
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,6 +25,7 @@ from runtime_types.precedence import resolve_precedence
 from runtime_types.promotion import evaluate_feedback_promotion
 from runtime_types.promotion_audit import format_promotion_audit
 from runtime_types.runtime_step import resolve_runtime_step
+from tools import demo_runtime_step, runtime_scenarios
 
 
 def base_truth_surface() -> dict:
@@ -851,7 +855,6 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertEqual(result["precedence"]["winner_source"], "default")
         self.assertNotIn("promotion", result)
 
-
     def test_runtime_step_uses_selected_feedback_for_promotion_instead_of_last_entry(self) -> None:
         ts = base_truth_surface()
         ts["recent_explicit_feedback"] = [
@@ -910,7 +913,6 @@ class RuntimeStepTests(unittest.TestCase):
 
         self.assertEqual(result["precedence"]["winner_source"], "default")
         self.assertNotIn("promotion", result)
-
 
     def test_runtime_step_blocks_promotion_when_behavioral_signal_shows_user_repair(self) -> None:
         ts = base_truth_surface()
@@ -982,6 +984,56 @@ class RuntimeStepTests(unittest.TestCase):
         self.assertEqual(result["promotion"]["decision"], "project")
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertTrue(result["promotion"]["supporting_signal_used"])
+
+    def test_runtime_step_demo_example_emits_hybrid_route_with_matching_disclosure(self) -> None:
+        truth_surface_path = ROOT / "schemas" / "examples" / "truth-surface.example.json"
+        truth_surface = load_truth_surface(json.loads(truth_surface_path.read_text(encoding="utf-8")))
+
+        result = resolve_runtime_step(
+            "routing.prefer_local",
+            truth_surface,
+            default=False,
+            evaluate_promotion=True,
+            project_repeat_count=2,
+        )
+
+        self.assertEqual(result["route"]["mode"], "hybrid")
+        self.assertEqual(result["route"]["status"], "selected")
+        self.assertTrue(result["route"]["fallback_used"])
+        self.assertEqual(result["disclosure"]["route_mode"], result["route"]["mode"])
+        self.assertTrue(result["disclosure"]["mention_external_help"])
+        self.assertIn("external help", result["disclosure"]["text"].lower())
+
+    def test_runtime_scenarios_script_prints_route_refusal_and_disclosure_restore_points(self) -> None:
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            exit_code = runtime_scenarios.main()
+
+        output = buffer.getvalue()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("runtime-owned-local-route", output)
+        self.assertIn("runtime-owned-hybrid-route", output)
+        self.assertIn("runtime-owned-refused-route", output)
+        self.assertIn("route.mode=local", output)
+        self.assertIn("route.mode=hybrid", output)
+        self.assertIn("route.mode=refused", output)
+        self.assertIn("refusal.kind=policy_refusal", output)
+        self.assertIn("disclosure.text=", output)
+
+    def test_demo_runtime_step_script_prints_matching_route_and_disclosure_surface(self) -> None:
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            exit_code = demo_runtime_step.main()
+
+        output = buffer.getvalue()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("route mode: hybrid", output)
+        self.assertIn("fallback used: True", output)
+        self.assertIn("disclosure route mode: hybrid", output)
+        self.assertIn("disclosure mentions external help: True", output)
+        self.assertIn("refusal kind: none", output)
 
 
 if __name__ == "__main__":
