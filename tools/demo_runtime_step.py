@@ -21,21 +21,9 @@ def main() -> int:
     truth_surface_path = ROOT / "schemas" / "examples" / "truth-surface.example.json"
     truth_surface = load_truth_surface(load_json(truth_surface_path))
 
-    route_event = {
-        "event_id": "demo-route-001",
-        "provider": "demo-provider",
-        "model": "demo-model",
-        "mode": "hybrid",
-        "route_reason": "quality support during demo step",
-        "fallback_used": True,
-        "fallback_refused": False,
-        "learned_effect_allowed": True,
-    }
-
     result = resolve_runtime_step(
         "routing.prefer_local",
         truth_surface,
-        route_event=route_event,
         default=False,
         evaluate_promotion=True,
         project_repeat_count=2,
@@ -45,6 +33,15 @@ def main() -> int:
     print(f"- truth surface loaded: {truth_surface_path.name}")
     print(f"- precedence winner: {result['precedence']['winner_source']}")
     print(f"- precedence value: {result['precedence']['winner_value']}")
+    print(f"- route mode: {result['route']['mode']}")
+    print(f"- route status: {result['route']['status']}")
+    print(f"- route reason: {result['route']['reason']}")
+    print(f"- fallback allowed: {result['route']['fallback_allowed']}")
+    print(f"- fallback used: {result['route']['fallback_used']}")
+    print(f"- fallback refused: {result['route']['fallback_refused']}")
+    if result['route']['refusal'] is not None:
+        print(f"- refusal kind: {result['route']['refusal']['kind']}")
+        print(f"- refusal message: {result['route']['refusal']['message']}")
     if "disclosure" in result:
         print(f"- disclosure level: {result['disclosure']['level']}")
         print(f"- disclosure text: {result['disclosure']['text']}")
@@ -56,4 +53,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

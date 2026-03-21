@@ -640,7 +640,7 @@ class RuntimeRouteDecisionContractTests(unittest.TestCase):
 
 
 class RuntimeStepTests(unittest.TestCase):
-    def test_runtime_step_composes_precedence_disclosure_and_promotion(self) -> None:
+    def test_runtime_step_composes_runtime_owned_route_disclosure_and_promotion(self) -> None:
         ts = base_truth_surface()
         ts["recent_explicit_feedback"] = [
             {
@@ -650,31 +650,84 @@ class RuntimeStepTests(unittest.TestCase):
                 "target": "design",
             }
         ]
-        route_event = {
-            "event_id": "e-runtime",
-            "provider": "p",
-            "model": "m",
-            "mode": "hybrid",
-            "route_reason": "quality support",
-            "fallback_used": True,
-            "fallback_refused": False,
-            "learned_effect_allowed": True,
+        ts["routing_policy"] = {
+            "default_mode": "local",
+            "high_complexity_allows_hybrid": True,
+        }
+        ts["current_task"] = {
+            "task_id": "task-hybrid-runtime",
+            "phase": "generation",
+            "target_outcome": "Complex generation task needing broader capability.",
+            "complexity": "high",
+        }
+        ts["fallback_policy"] = {
+            "must_disclose_material_external_help": True,
+            "refuse_on_local_only_tasks": False,
         }
 
         result = resolve_runtime_step(
             "design",
             ts,
-            route_event=route_event,
             default="neutral",
             evaluate_promotion=True,
             project_repeat_count=2,
         )
 
         self.assertEqual(result["precedence"]["winner_source"], "explicit_feedback")
+        self.assertEqual(result["route"]["mode"], "hybrid")
+        self.assertEqual(result["route"]["status"], "selected")
+        self.assertTrue(result["route"]["fallback_used"])
         self.assertEqual(result["disclosure"]["level"], "explicit")
         self.assertEqual(result["promotion"]["decision"], "project")
         self.assertIsNone(result["promotion"]["blocking_signal_type"])
         self.assertFalse(result["promotion"]["supporting_signal_used"])
+
+    def test_runtime_step_derives_local_route_without_caller_authored_route_event(self) -> None:
+        ts = base_truth_surface()
+
+        result = resolve_runtime_step(
+            "routing.prefer_local",
+            ts,
+            default=True,
+        )
+
+        self.assertEqual(result["route"]["mode"], "local")
+        self.assertEqual(result["route"]["status"], "selected")
+        self.assertFalse(result["route"]["fallback_used"])
+        self.assertFalse(result["route"]["fallback_refused"])
+        self.assertIsNone(result["route"]["refusal"])
+        self.assertNotIn("disclosure", result)
+
+    def test_runtime_step_derives_refused_route_from_truth_surface_inputs(self) -> None:
+        ts = base_truth_surface()
+        ts["routing_policy"] = {
+            "default_mode": "local",
+            "high_complexity_allows_hybrid": True,
+        }
+        ts["current_task"] = {
+            "task_id": "task-refused-runtime",
+            "phase": "generation",
+            "target_outcome": "Local-only task that forbids fallback.",
+            "complexity": "high",
+            "local_only": True,
+        }
+        ts["fallback_policy"] = {
+            "must_disclose_material_external_help": True,
+            "refuse_on_local_only_tasks": True,
+        }
+
+        result = resolve_runtime_step(
+            "routing.prefer_local",
+            ts,
+            default=True,
+        )
+
+        self.assertEqual(result["route"]["mode"], "refused")
+        self.assertEqual(result["route"]["status"], "refused")
+        self.assertFalse(result["route"]["fallback_allowed"])
+        self.assertTrue(result["route"]["fallback_refused"])
+        self.assertEqual(result["route"]["refusal"]["kind"], "policy_refusal")
+        self.assertEqual(result["disclosure"]["level"], "brief")
 
     def test_runtime_step_omits_promotion_when_feedback_absent(self) -> None:
         ts = base_truth_surface()

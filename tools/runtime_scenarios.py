@@ -8,10 +8,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from runtime_types.disclosure import format_provenance_disclosure
 from runtime_types.precedence import resolve_precedence
 from runtime_types.promotion import evaluate_feedback_promotion
 from runtime_types.promotion_audit import format_promotion_audit
+from runtime_types.runtime_step import resolve_runtime_step
 
 
 def base_truth_surface() -> dict:
@@ -111,34 +111,57 @@ def scenario_repair_blocked_reject() -> tuple[bool, str]:
     return ok, format_promotion_audit(result)
 
 
-def scenario_hybrid_disclosure() -> tuple[bool, str]:
-    event = {
-        "event_id": "e1",
-        "provider": "p",
-        "model": "m",
-        "mode": "hybrid",
-        "route_reason": "quality support",
-        "fallback_used": True,
-        "fallback_refused": False,
-        "learned_effect_allowed": True,
+def scenario_runtime_step_hybrid_route() -> tuple[bool, str]:
+    ts = base_truth_surface()
+    ts["routing_policy"] = {
+        "default_mode": "local",
+        "high_complexity_allows_hybrid": True,
     }
-    result = format_provenance_disclosure(event)
-    return result["level"] == "explicit" and result["mention_external_help"] is True, str(result)
+    ts["current_task"] = {
+        "task_id": "scenario-hybrid",
+        "phase": "generation",
+        "target_outcome": "Complex generation task needing broader capability.",
+        "complexity": "high",
+    }
+    ts["fallback_policy"] = {
+        "must_disclose_material_external_help": True,
+        "refuse_on_local_only_tasks": False,
+    }
+
+    result = resolve_runtime_step("routing.prefer_local", ts, default=True)
+    ok = (
+        result["route"]["mode"] == "hybrid"
+        and result["route"]["fallback_used"] is True
+        and result.get("disclosure", {}).get("level") == "explicit"
+    )
+    return ok, f"route={result['route']}; disclosure={result.get('disclosure')}"
 
 
-def scenario_fallback_refused_disclosure() -> tuple[bool, str]:
-    event = {
-        "event_id": "e2",
-        "provider": "p",
-        "model": "m",
-        "mode": "local",
-        "route_reason": "policy lock",
-        "fallback_used": False,
-        "fallback_refused": True,
-        "learned_effect_allowed": False,
+def scenario_runtime_step_refused_route() -> tuple[bool, str]:
+    ts = base_truth_surface()
+    ts["routing_policy"] = {
+        "default_mode": "local",
+        "high_complexity_allows_hybrid": True,
     }
-    result = format_provenance_disclosure(event)
-    return result["level"] == "brief" and result["mention_external_help"] is False, str(result)
+    ts["current_task"] = {
+        "task_id": "scenario-refused",
+        "phase": "generation",
+        "target_outcome": "Local-only task that forbids fallback.",
+        "complexity": "high",
+        "local_only": True,
+    }
+    ts["fallback_policy"] = {
+        "must_disclose_material_external_help": True,
+        "refuse_on_local_only_tasks": True,
+    }
+
+    result = resolve_runtime_step("routing.prefer_local", ts, default=True)
+    ok = (
+        result["route"]["mode"] == "refused"
+        and result["route"]["fallback_refused"] is True
+        and result.get("disclosure", {}).get("level") == "brief"
+    )
+    return ok, f"route={result['route']}; disclosure={result.get('disclosure')}"
 
 
 def main() -> int:
@@ -149,8 +172,8 @@ def main() -> int:
         ("unsafe-feedback-reject", scenario_unsafe_feedback_reject),
         ("acceptance-supported-project-promotion", scenario_acceptance_supported_project_promotion),
         ("repair-blocked-reject", scenario_repair_blocked_reject),
-        ("hybrid-disclosure", scenario_hybrid_disclosure),
-        ("fallback-refused-disclosure", scenario_fallback_refused_disclosure),
+        ("runtime-step-hybrid-route", scenario_runtime_step_hybrid_route),
+        ("runtime-step-refused-route", scenario_runtime_step_refused_route),
     ]
 
     failures = 0

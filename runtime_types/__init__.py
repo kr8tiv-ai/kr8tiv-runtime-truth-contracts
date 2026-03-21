@@ -28,6 +28,7 @@ from .feedback_selection import select_relevant_feedback
 from .precedence import ResolutionResult, ResolutionSource, resolve_precedence
 from .promotion import PromotionDecision, PromotionEvaluationResult, evaluate_feedback_promotion
 from .promotion_audit import format_promotion_audit
+from .routing import derive_route_decision
 from .rules import normalize_rule_key, rule_matches
 from .runtime_step import RuntimeStepResult, resolve_runtime_step
 
@@ -62,6 +63,7 @@ __all__ = [
     "RuntimeStepResult",
     "ScopeRequested",
     "TruthSurface",
+    "derive_route_decision",
     "evaluate_feedback_promotion",
     "format_provenance_disclosure",
     "format_promotion_audit",
