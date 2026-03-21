@@ -14,6 +14,7 @@ from runtime_types.feedback_selection import select_relevant_feedback
 from runtime_types.telegram_voice_loop import derive_telegram_voice_turn
 from runtime_types.website_specialist_harness import derive_website_specialist_harness_record
 from runtime_types.parsers import (
+    load_adaptation_decision_summary,
     load_behavior_signal_entry,
     load_cipher_continuity_record,
     load_cipher_persona_anchor,
@@ -24,6 +25,9 @@ from runtime_types.parsers import (
     load_design_teaching_research_record,
     load_design_teaching_summary,
     load_runtime_step_artifacts,
+    load_spec_precedence_summary,
+    load_taste_adaptation_record,
+    load_taste_signal_summary,
     load_telegram_voice_continuity,
     load_telegram_voice_reply,
     load_telegram_voice_transcript,
@@ -245,6 +249,188 @@ def design_teaching_research_record_payload() -> dict:
         "research": design_research_summary_payload(),
         "support_safe_summary": "Cipher can explain the design direction using local teaching signals without claiming live research occurred.",
     }
+
+
+def taste_signal_summary_payload() -> dict:
+    return {
+        "signal_id": "taste-signal-001",
+        "status": "active",
+        "target": "design",
+        "scope": "project",
+        "source_kind": "preference_record",
+        "source_reference": "pref-project-001",
+        "provenance_level": "local-proven",
+        "evidence_class": "durable_preference",
+        "summary": "Project favors restrained, less glossy design direction.",
+        "rationale": "Repeated local confirmations established a durable project taste signal.",
+        "suppression_reason": None,
+        "precedence_reference": "precedence-design-001",
+        "warning_flags": [],
+    }
+
+
+def adaptation_decision_summary_payload() -> dict:
+    return {
+        "decision_id": "adaptation-decision-001",
+        "decision_status": "preserved",
+        "target": "design",
+        "decision_summary": "Preserve the restrained hero treatment that already matches confirmed project taste.",
+        "reason": "The prior design direction matched current project taste and the active spec did not require a change.",
+        "evidence_class": "accepted_behavior",
+        "source_reference": "taste-signal-001",
+        "provenance_level": "local-proven",
+        "route_mode": "local",
+        "warning_flags": [],
+    }
+
+
+def spec_precedence_summary_payload() -> dict:
+    return {
+        "precedence_id": "precedence-design-001",
+        "target": "design",
+        "winner_source": "active_spec",
+        "winner_summary": "Active website spec requires a documentation-first layout treatment.",
+        "suppressed_signal_id": "taste-signal-002",
+        "suppression_reason": "active_spec_override",
+        "reason": "The current project spec is more specific than the learned taste signal for this turn.",
+        "project_preference_applied": False,
+        "owner_preference_applied": False,
+        "feedback_applied": False,
+    }
+
+
+def taste_adaptation_record_payload() -> dict:
+    return {
+        "record_id": "taste-adaptation-record-001",
+        "schema_family": "s06_taste_adaptation_memory_boundary",
+        "design_teaching_research": design_teaching_research_record_payload(),
+        "active_taste_signals": [taste_signal_summary_payload()],
+        "suppressed_taste_signals": [
+            {
+                **taste_signal_summary_payload(),
+                "signal_id": "taste-signal-002",
+                "status": "suppressed",
+                "scope": "owner",
+                "source_kind": "feedback_ledger",
+                "source_reference": "fb-202",
+                "provenance_level": "hybrid-proven",
+                "evidence_class": "explicit_feedback",
+                "summary": "Owner often prefers more explanatory teaching during design passes.",
+                "rationale": "Recent owner feedback suggests a stronger teaching layer, but the current spec narrowed the deliverable.",
+                "suppression_reason": "active_spec_override",
+                "warning_flags": [],
+            }
+        ],
+        "preserved_decisions": [adaptation_decision_summary_payload()],
+        "changed_decisions": [
+            {
+                **adaptation_decision_summary_payload(),
+                "decision_id": "adaptation-decision-002",
+                "decision_status": "changed",
+                "target": "teaching",
+                "decision_summary": "Reduce explanatory teaching for this deliverable.",
+                "reason": "The active spec requested a concise output, so the owner teaching preference stayed visible but suppressed.",
+                "evidence_class": "spec_constraint",
+                "source_reference": "precedence-teaching-001",
+                "provenance_level": "hybrid-proven",
+                "route_mode": "hybrid",
+                "warning_flags": ["suppressed_by_spec"],
+            }
+        ],
+        "precedence_summaries": [
+            spec_precedence_summary_payload(),
+            {
+                **spec_precedence_summary_payload(),
+                "precedence_id": "precedence-teaching-001",
+                "target": "teaching",
+                "winner_summary": "Active deliverable scope limits teaching detail in this turn.",
+                "suppressed_signal_id": "taste-signal-002",
+            },
+        ],
+        "support_safe_summary": "Adaptation preserved confirmed restrained design taste, suppressed broader teaching taste because the active spec narrowed this deliverable, and kept provenance warnings explicit.",
+    }
+
+
+class TasteAdaptationParserTests(unittest.TestCase):
+    def test_load_taste_signal_summary_accepts_valid_payload(self) -> None:
+        result = load_taste_signal_summary(taste_signal_summary_payload())
+
+        self.assertEqual(result["status"], "active")
+        self.assertEqual(result["source_kind"], "preference_record")
+
+    def test_load_adaptation_decision_summary_accepts_valid_payload(self) -> None:
+        result = load_adaptation_decision_summary(adaptation_decision_summary_payload())
+
+        self.assertEqual(result["decision_status"], "preserved")
+        self.assertEqual(result["route_mode"], "local")
+
+    def test_load_spec_precedence_summary_accepts_valid_payload(self) -> None:
+        result = load_spec_precedence_summary(spec_precedence_summary_payload())
+
+        self.assertEqual(result["winner_source"], "active_spec")
+        self.assertEqual(result["suppression_reason"], "active_spec_override")
+
+    def test_load_taste_adaptation_record_accepts_valid_payload(self) -> None:
+        result = load_taste_adaptation_record(taste_adaptation_record_payload())
+
+        self.assertEqual(result["schema_family"], "s06_taste_adaptation_memory_boundary")
+        self.assertEqual(len(result["active_taste_signals"]), 1)
+        self.assertEqual(len(result["suppressed_taste_signals"]), 1)
+
+    def test_load_taste_signal_summary_rejects_raw_feedback_leak(self) -> None:
+        payload = taste_signal_summary_payload()
+        payload["raw_feedback_text"] = "less glossy. exact owner words."
+
+        with self.assertRaises(ValueError):
+            load_taste_signal_summary(payload)
+
+    def test_load_adaptation_decision_summary_rejects_invalid_warning_flag(self) -> None:
+        payload = adaptation_decision_summary_payload()
+        payload["warning_flags"] = ["mystery-warning"]
+
+        with self.assertRaises(ValueError):
+            load_adaptation_decision_summary(payload)
+
+    def test_load_spec_precedence_summary_rejects_invalid_suppression_reason(self) -> None:
+        payload = spec_precedence_summary_payload()
+        payload["suppression_reason"] = "mystery_reason"
+
+        with self.assertRaises(ValueError):
+            load_spec_precedence_summary(payload)
+
+    def test_load_taste_adaptation_record_rejects_private_memory_leak_field(self) -> None:
+        payload = taste_adaptation_record_payload()
+        payload["private_memory_payload"] = {"secret": "unsafe memory dump"}
+
+        with self.assertRaises(ValueError):
+            load_taste_adaptation_record(payload)
+
+    def test_load_taste_adaptation_record_accepts_spec_suppressed_example_fixture(self) -> None:
+        example_path = ROOT / "schemas" / "examples" / "taste-adaptation-record.spec-suppressed.example.json"
+        payload = json.loads(example_path.read_text(encoding="utf-8"))
+
+        result = load_taste_adaptation_record(payload)
+
+        self.assertEqual(result["suppressed_taste_signals"][0]["suppression_reason"], "active_spec_override")
+        self.assertEqual(result["precedence_summaries"][1]["winner_source"], "active_spec")
+
+    def test_load_taste_adaptation_record_accepts_preserved_decisions_example_fixture(self) -> None:
+        example_path = ROOT / "schemas" / "examples" / "taste-adaptation-record.preserved-decisions.example.json"
+        payload = json.loads(example_path.read_text(encoding="utf-8"))
+
+        result = load_taste_adaptation_record(payload)
+
+        self.assertEqual(result["preserved_decisions"][0]["decision_status"], "preserved")
+        self.assertEqual(result["changed_decisions"][0]["warning_flags"], ["suppressed_by_spec"])
+
+    def test_load_taste_adaptation_record_accepts_hybrid_guarded_example_fixture(self) -> None:
+        example_path = ROOT / "schemas" / "examples" / "taste-adaptation-record.hybrid-guarded.example.json"
+        payload = json.loads(example_path.read_text(encoding="utf-8"))
+
+        result = load_taste_adaptation_record(payload)
+
+        self.assertEqual(result["active_taste_signals"][0]["warning_flags"], ["promotion_guarded"])
+        self.assertIn("hybrid", result["support_safe_summary"].lower())
 
 
 class DesignTeachingResearchParserTests(unittest.TestCase):

@@ -1,0 +1,165 @@
+{
+  "record_id": "taste-adaptation-record-spec-suppressed-001",
+  "schema_family": "s06_taste_adaptation_memory_boundary",
+  "design_teaching_research": {
+    "record_id": "design-teaching-research-blocked-001",
+    "schema_family": "s05_design_teaching_research",
+    "harness": {
+      "harness_id": "ws-harness-local-success-001",
+      "request": {
+        "request_id": "ws-request-local-success-001",
+        "request_source": "telegram_voice_turn",
+        "request_status": "activation_ready",
+        "support_safe_request_summary": "Owner asked Cipher to continue with a website update once activation was confirmed.",
+        "desired_outcome_summary": "Handle the website-specialist step locally while preserving route honesty and bounded continuity markers.",
+        "activation_ready": true,
+        "activation_ref": "claim-concierge-001",
+        "voice_turn_ref": "tg-turn-ready-001",
+        "continuity_ref": "cipher-continuity-carryover-001",
+        "requested_capability": "website_update"
+      },
+      "execution": {
+        "execution_id": "ws-execution-local-success-001",
+        "specialist_status": "completed",
+        "task_phase": "fulfilled",
+        "route": {
+          "event_id": "route-local-success-001",
+          "provider": "local-runtime",
+          "model": "llama-local",
+          "mode": "local",
+          "route_reason": "Local website specialist completed the request without external help.",
+          "fallback_used": false,
+          "fallback_refused": false,
+          "learned_effect_allowed": true
+        },
+        "disclosure_level": "brief",
+        "disclosure_text": "This website request stayed on the local specialist path.",
+        "support_safe_status_summary": "Website-specialist work completed locally with bounded Cipher continuity markers preserved.",
+        "continuity_carryover_refs": [
+          "tg-session-042",
+          "cipher-continuity-carryover-001"
+        ],
+        "persona_markers": [
+          "cipher_bloodline",
+          "mission_control_governed",
+          "support_safe",
+          "calm_precision"
+        ],
+        "spoken_manner_markers": [
+          "warmth",
+          "measured_pacing",
+          "carryover_callback"
+        ],
+        "fallback_refused": false
+      },
+      "support_safe_outcome_summary": "Cipher completed the website-specialist step locally and preserved support-safe continuity truth.",
+      "activation_handoff_status": "handoff_complete"
+    },
+    "teaching": {
+      "teaching_status": "suppressed",
+      "lesson_summary": "Teaching output is intentionally suppressed until the operator requests a bounded lesson pass.",
+      "design_choice_explanation": "No design-choice explanation is emitted because the current support state should avoid over-teaching.",
+      "anti_slop_rationale": "Suppressing speculative critique prevents Cipher from inventing lessons when the runtime has no approved teaching pass.",
+      "next_step_guidance": "Ask for an explicit bounded teaching pass before requesting design-lesson output."
+    },
+    "research": {
+      "research_status": "blocked",
+      "provenance_mode": "local",
+      "freshness_label": "unknown",
+      "disclosure_level": "brief",
+      "disclosure_text": "Current-reference research is blocked for this record, so no freshness claim is made.",
+      "signal_summary": "No current-reference signal summary is available because research stayed blocked or suppressed.",
+      "provenance_summary": "The record honestly reports the blocked state instead of implying that web checking or live browsing happened."
+    },
+    "support_safe_summary": "Cipher preserves a support-safe blocked state by withholding teaching and freshness claims rather than bluffing unavailable research or critique output."
+  },
+  "active_taste_signals": [
+    {
+      "signal_id": "taste-signal-design-project-001",
+      "status": "active",
+      "target": "design",
+      "scope": "project",
+      "source_kind": "preference_record",
+      "source_reference": "pref-project-001",
+      "provenance_level": "local-proven",
+      "evidence_class": "durable_preference",
+      "summary": "Project taste still favors restrained, less glossy design work.",
+      "rationale": "Repeated local confirmations established a durable project preference that does not conflict with the current spec.",
+      "suppression_reason": null,
+      "precedence_reference": "precedence-design-project-001",
+      "warning_flags": []
+    }
+  ],
+  "suppressed_taste_signals": [
+    {
+      "signal_id": "taste-signal-teaching-owner-001",
+      "status": "suppressed",
+      "target": "teaching",
+      "scope": "owner",
+      "source_kind": "feedback_ledger",
+      "source_reference": "fb-202",
+      "provenance_level": "hybrid-proven",
+      "evidence_class": "explicit_feedback",
+      "summary": "Owner often prefers more explanatory teaching during design passes.",
+      "rationale": "That taste signal remains visible, but the active deliverable asked for a concise support-safe response instead of a fuller lesson pass.",
+      "suppression_reason": "active_spec_override",
+      "precedence_reference": "precedence-teaching-owner-001",
+      "warning_flags": ["suppressed_by_spec"]
+    }
+  ],
+  "preserved_decisions": [
+    {
+      "decision_id": "adaptation-decision-preserved-design-001",
+      "decision_status": "preserved",
+      "target": "design",
+      "decision_summary": "Preserve the restrained hero direction already aligned with project taste.",
+      "reason": "The confirmed project preference fit the current work and the active spec did not require a different direction.",
+      "evidence_class": "durable_preference",
+      "source_reference": "taste-signal-design-project-001",
+      "provenance_level": "local-proven",
+      "route_mode": "local",
+      "warning_flags": []
+    }
+  ],
+  "changed_decisions": [
+    {
+      "decision_id": "adaptation-decision-changed-teaching-001",
+      "decision_status": "changed",
+      "target": "teaching",
+      "decision_summary": "Hold back the broader teaching layer for this turn.",
+      "reason": "The active spec narrowed the response, so the owner teaching signal stayed inspectable but did not control the output.",
+      "evidence_class": "spec_constraint",
+      "source_reference": "precedence-teaching-owner-001",
+      "provenance_level": "hybrid-proven",
+      "route_mode": "hybrid",
+      "warning_flags": ["suppressed_by_spec"]
+    }
+  ],
+  "precedence_summaries": [
+    {
+      "precedence_id": "precedence-design-project-001",
+      "target": "design",
+      "winner_source": "project_preference",
+      "winner_summary": "Confirmed project preference for restrained design remains in force.",
+      "suppressed_signal_id": null,
+      "suppression_reason": null,
+      "reason": "No active spec conflict existed, so the stable project preference could stay active.",
+      "project_preference_applied": true,
+      "owner_preference_applied": false,
+      "feedback_applied": false
+    },
+    {
+      "precedence_id": "precedence-teaching-owner-001",
+      "target": "teaching",
+      "winner_source": "active_spec",
+      "winner_summary": "Active deliverable scope limits teaching detail for this turn.",
+      "suppressed_signal_id": "taste-signal-teaching-owner-001",
+      "suppression_reason": "active_spec_override",
+      "reason": "Current project intent outranks learned teaching taste when the deliverable requires a concise response.",
+      "project_preference_applied": false,
+      "owner_preference_applied": false,
+      "feedback_applied": false
+    }
+  ],
+  "support_safe_summary": "This S06 record preserves the restrained project design taste, keeps the owner teaching taste visible but suppressed by active spec, and exposes both outcomes without raw feedback text or private memory payloads."
+}

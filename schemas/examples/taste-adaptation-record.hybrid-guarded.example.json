@@ -1,0 +1,166 @@
+{
+  "record_id": "taste-adaptation-record-hybrid-guarded-001",
+  "schema_family": "s06_taste_adaptation_memory_boundary",
+  "design_teaching_research": {
+    "record_id": "design-teaching-research-hybrid-research-001",
+    "schema_family": "s05_design_teaching_research",
+    "harness": {
+      "harness_id": "ws-harness-hybrid-escalation-001",
+      "request": {
+        "request_id": "ws-request-hybrid-escalation-001",
+        "request_source": "telegram_voice_turn",
+        "request_status": "needs_route_decision",
+        "support_safe_request_summary": "Owner requested a website diagnostic review that may need hybrid help to complete safely.",
+        "desired_outcome_summary": "Escalate the specialist route honestly if local-only coverage is insufficient while keeping bounded continuity markers.",
+        "activation_ready": true,
+        "activation_ref": "claim-concierge-001",
+        "voice_turn_ref": "tg-turn-ready-001",
+        "continuity_ref": "cipher-continuity-activation-ready-001",
+        "requested_capability": "diagnostic_review"
+      },
+      "execution": {
+        "execution_id": "ws-execution-hybrid-escalation-001",
+        "specialist_status": "escalated",
+        "task_phase": "routing",
+        "route": {
+          "event_id": "route-hybrid-escalation-001",
+          "provider": "hybrid-runtime",
+          "model": "mixtral-support",
+          "mode": "hybrid",
+          "route_reason": "Local specialist required bounded hybrid help for the diagnostic review.",
+          "fallback_used": true,
+          "fallback_refused": false,
+          "learned_effect_allowed": false
+        },
+        "disclosure_level": "explicit",
+        "disclosure_text": "This website request used bounded hybrid help because the local specialist needed additional support for the diagnostic review.",
+        "support_safe_status_summary": "Website-specialist work escalated through a hybrid route and disclosed that choice explicitly.",
+        "continuity_carryover_refs": [
+          "tg-turn-ready-001",
+          "cipher-continuity-activation-ready-001"
+        ],
+        "persona_markers": [
+          "cipher_bloodline",
+          "mission_control_governed",
+          "support_safe",
+          "activation_ready",
+          "owner_guidance"
+        ],
+        "spoken_manner_markers": [
+          "warmth",
+          "measured_pacing",
+          "confident_guidance"
+        ],
+        "fallback_refused": false
+      },
+      "support_safe_outcome_summary": "Cipher preserved activation-ready continuity markers while honestly disclosing a hybrid website-specialist escalation.",
+      "activation_handoff_status": "activation_ready"
+    },
+    "teaching": {
+      "teaching_status": "available",
+      "lesson_summary": "Translates current-reference findings into bounded guidance about what feels stale, overdone, or appropriately current for the website.",
+      "design_choice_explanation": "The recommendation explains which structural and pacing signals matter for the product instead of telling Cipher to imitate any outside source.",
+      "anti_slop_rationale": "It uses current references to sharpen judgment while explicitly avoiding trend worship, mimicry, and generic startup-page sludge.",
+      "next_step_guidance": "Keep the concept and hierarchy, then selectively update only the sections whose treatment reads stale."
+    },
+    "research": {
+      "research_status": "hybrid_support",
+      "provenance_mode": "hybrid",
+      "freshness_label": "current",
+      "disclosure_level": "explicit",
+      "disclosure_text": "Bounded hybrid research support informed the freshness notes for this design pass.",
+      "signal_summary": "Current-reference synthesis highlighted which visual cues still feel contemporary and which ones now read as overused.",
+      "provenance_summary": "Signals were translated into implementation-facing guidance from bounded hybrid support rather than preserved as raw reference dumps."
+    },
+    "support_safe_summary": "Cipher can teach the design choices and disclose that bounded hybrid research informed freshness guidance without pretending a live browser session exists."
+  },
+  "active_taste_signals": [
+    {
+      "signal_id": "taste-signal-research-freshness-001",
+      "status": "active",
+      "target": "design",
+      "scope": "project",
+      "source_kind": "design_teaching_research",
+      "source_reference": "design-teaching-research-hybrid-research-001",
+      "provenance_level": "hybrid-proven",
+      "evidence_class": "derived_pattern",
+      "summary": "Freshness guidance can inform this project pass, but it remains tied to bounded hybrid provenance.",
+      "rationale": "Hybrid research produced useful bounded guidance for the current project without converting outside wins into generic owner memory.",
+      "suppression_reason": null,
+      "precedence_reference": "precedence-research-freshness-001",
+      "warning_flags": ["promotion_guarded"]
+    }
+  ],
+  "suppressed_taste_signals": [
+    {
+      "signal_id": "taste-signal-owner-memory-001",
+      "status": "suppressed",
+      "target": "design",
+      "scope": "owner",
+      "source_kind": "behavior_signal",
+      "source_reference": "sig-accepted-hybrid-001",
+      "provenance_level": "hybrid-proven",
+      "evidence_class": "behavior_signal",
+      "summary": "A hybrid-assisted design win might look like owner taste at first glance.",
+      "rationale": "Because the success depended on hybrid support, it cannot be laundered into durable owner memory without local confirmation.",
+      "suppression_reason": "route_provenance_guard",
+      "precedence_reference": "precedence-owner-memory-001",
+      "warning_flags": ["promotion_guarded", "hybrid_not_promoted"]
+    }
+  ],
+  "preserved_decisions": [
+    {
+      "decision_id": "adaptation-decision-freshness-preserved-001",
+      "decision_status": "preserved",
+      "target": "design",
+      "decision_summary": "Preserve the bounded freshness guidance for this specific project pass.",
+      "reason": "Hybrid research was disclosed and permitted for the current pass, so the derived project guidance could remain active without becoming owner memory.",
+      "evidence_class": "spec_constraint",
+      "source_reference": "taste-signal-research-freshness-001",
+      "provenance_level": "hybrid-proven",
+      "route_mode": "hybrid",
+      "warning_flags": ["promotion_guarded"]
+    }
+  ],
+  "changed_decisions": [
+    {
+      "decision_id": "adaptation-decision-owner-memory-changed-001",
+      "decision_status": "changed",
+      "target": "design",
+      "decision_summary": "Do not promote the hybrid-assisted success into durable owner taste.",
+      "reason": "Route provenance guarding keeps bounded hybrid wins inspectable while preventing them from masquerading as stable owner preference.",
+      "evidence_class": "accepted_behavior",
+      "source_reference": "precedence-owner-memory-001",
+      "provenance_level": "hybrid-proven",
+      "route_mode": "hybrid",
+      "warning_flags": ["promotion_guarded", "hybrid_not_promoted"]
+    }
+  ],
+  "precedence_summaries": [
+    {
+      "precedence_id": "precedence-research-freshness-001",
+      "target": "design",
+      "winner_source": "project_preference",
+      "winner_summary": "Bounded project-scoped freshness guidance may stay active for this design pass.",
+      "suppressed_signal_id": null,
+      "suppression_reason": null,
+      "reason": "Hybrid help can inform the current project when explicitly disclosed, but the resulting signal remains project-scoped and guarded.",
+      "project_preference_applied": true,
+      "owner_preference_applied": false,
+      "feedback_applied": false
+    },
+    {
+      "precedence_id": "precedence-owner-memory-001",
+      "target": "design",
+      "winner_source": "active_spec",
+      "winner_summary": "Memory-boundary policy blocks promotion of hybrid-assisted wins into owner taste without local proof.",
+      "suppressed_signal_id": "taste-signal-owner-memory-001",
+      "suppression_reason": "route_provenance_guard",
+      "reason": "The adaptation seam keeps hybrid provenance visible and useful without flattening it into generic owner memory.",
+      "project_preference_applied": false,
+      "owner_preference_applied": false,
+      "feedback_applied": false
+    }
+  ],
+  "support_safe_summary": "This S06 record keeps hybrid-derived freshness guidance visible for the current project, warns that promotion is guarded, and explicitly prevents hybrid-assisted success from becoming durable owner memory."
+}

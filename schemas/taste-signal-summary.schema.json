@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TasteSignalSummary",
+  "description": "Support-safe S06 taste-signal summary showing whether a bounded learned signal is active or suppressed, why it is trustworthy, and why it may be hidden by precedence without exposing raw feedback or memory payloads.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "signal_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["active", "suppressed"]
+    },
+    "target": {
+      "type": "string",
+      "enum": ["output", "tone", "design", "workflow", "routing", "teaching", "other"]
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["project", "owner"]
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": ["preference_record", "feedback_ledger", "behavior_signal", "design_teaching_research"]
+    },
+    "source_reference": { "type": "string" },
+    "provenance_level": {
+      "type": "string",
+      "enum": ["local-proven", "hybrid-proven", "external-only", "not-yet-proven"]
+    },
+    "evidence_class": {
+      "type": "string",
+      "enum": ["durable_preference", "explicit_feedback", "behavior_signal", "derived_pattern"]
+    },
+    "summary": { "type": "string" },
+    "rationale": { "type": "string" },
+    "suppression_reason": {
+      "type": ["string", "null"],
+      "enum": [
+        "active_spec_override",
+        "project_scope_override",
+        "owner_scope_override",
+        "route_provenance_guard",
+        "insufficient_evidence",
+        null
+      ]
+    },
+    "precedence_reference": { "type": "string" },
+    "warning_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["promotion_guarded", "provenance_warning", "suppressed_by_spec", "hybrid_not_promoted"]
+      }
+    }
+  },
+  "required": [
+    "signal_id",
+    "status",
+    "target",
+    "scope",
+    "source_kind",
+    "source_reference",
+    "provenance_level",
+    "evidence_class",
+    "summary",
+    "rationale",
+    "suppression_reason",
+    "precedence_reference",
+    "warning_flags"
+  ]
+}

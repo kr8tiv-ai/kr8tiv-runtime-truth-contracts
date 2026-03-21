@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from .contracts import (
+    AdaptationDecisionSummary,
     BehaviorSignalEntry,
     CipherContinuityRecord,
     CipherPersonaAnchorRecord,
@@ -17,6 +18,9 @@ from .contracts import (
     PromotionDecisionRecord,
     RoutingProvenanceEvent,
     RuntimeStepArtifacts,
+    SpecPrecedenceSummary,
+    TasteAdaptationRecord,
+    TasteSignalSummary,
     TelegramVoiceContinuityRecord,
     TelegramVoiceReplyRecord,
     TelegramVoiceTranscriptRecord,
@@ -181,4 +185,32 @@ def load_design_teaching_research_record(data: object) -> DesignTeachingResearch
     return cast(
         DesignTeachingResearchRecord,
         _load("design-teaching-research-record.schema.json", data, "DesignTeachingResearchRecord"),
+    )
+
+
+def load_taste_signal_summary(data: object) -> TasteSignalSummary:
+    return cast(
+        TasteSignalSummary,
+        _load("taste-signal-summary.schema.json", data, "TasteSignalSummary"),
+    )
+
+
+def load_adaptation_decision_summary(data: object) -> AdaptationDecisionSummary:
+    return cast(
+        AdaptationDecisionSummary,
+        _load("adaptation-decision-summary.schema.json", data, "AdaptationDecisionSummary"),
+    )
+
+
+def load_spec_precedence_summary(data: object) -> SpecPrecedenceSummary:
+    return cast(
+        SpecPrecedenceSummary,
+        _load("spec-precedence-summary.schema.json", data, "SpecPrecedenceSummary"),
+    )
+
+
+def load_taste_adaptation_record(data: object) -> TasteAdaptationRecord:
+    return cast(
+        TasteAdaptationRecord,
+        _load("taste-adaptation-record.schema.json", data, "TasteAdaptationRecord"),
     )

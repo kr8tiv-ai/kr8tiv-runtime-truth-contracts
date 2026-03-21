@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AdaptationDecisionSummary",
+  "description": "Support-safe S06 decision summary showing whether a prior decision was preserved or changed, what evidence justified that outcome, and whether provenance or precedence warnings remain in force.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision_id": { "type": "string" },
+    "decision_status": {
+      "type": "string",
+      "enum": ["preserved", "changed"]
+    },
+    "target": {
+      "type": "string",
+      "enum": ["output", "tone", "design", "workflow", "routing", "teaching", "other"]
+    },
+    "decision_summary": { "type": "string" },
+    "reason": { "type": "string" },
+    "evidence_class": {
+      "type": "string",
+      "enum": ["durable_preference", "explicit_feedback", "accepted_behavior", "spec_constraint"]
+    },
+    "source_reference": { "type": "string" },
+    "provenance_level": {
+      "type": "string",
+      "enum": ["local-proven", "hybrid-proven", "external-only", "not-yet-proven"]
+    },
+    "route_mode": {
+      "type": "string",
+      "enum": ["local", "hybrid", "external"]
+    },
+    "warning_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["promotion_guarded", "provenance_warning", "suppressed_by_spec", "hybrid_not_promoted"]
+      }
+    }
+  },
+  "required": [
+    "decision_id",
+    "decision_status",
+    "target",
+    "decision_summary",
+    "reason",
+    "evidence_class",
+    "source_reference",
+    "provenance_level",
+    "route_mode",
+    "warning_flags"
+  ]
+}

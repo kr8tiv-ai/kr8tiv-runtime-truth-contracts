@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TasteAdaptationRecord",
+  "description": "Top-level S06 support-safe adaptation record that layers bounded taste adaptation, preserved-decision learning, and precedence outcomes on top of canonical S05 design-teaching-research truth without mutating upstream seams.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "record_id": { "type": "string" },
+    "schema_family": {
+      "type": "string",
+      "enum": ["s06_taste_adaptation_memory_boundary"]
+    },
+    "design_teaching_research": { "$ref": "./design-teaching-research-record.schema.json" },
+    "active_taste_signals": {
+      "type": "array",
+      "items": { "$ref": "./taste-signal-summary.schema.json" }
+    },
+    "suppressed_taste_signals": {
+      "type": "array",
+      "items": { "$ref": "./taste-signal-summary.schema.json" }
+    },
+    "preserved_decisions": {
+      "type": "array",
+      "items": { "$ref": "./adaptation-decision-summary.schema.json" }
+    },
+    "changed_decisions": {
+      "type": "array",
+      "items": { "$ref": "./adaptation-decision-summary.schema.json" }
+    },
+    "precedence_summaries": {
+      "type": "array",
+      "items": { "$ref": "./spec-precedence-summary.schema.json" }
+    },
+    "support_safe_summary": { "type": "string" }
+  },
+  "required": [
+    "record_id",
+    "schema_family",
+    "design_teaching_research",
+    "active_taste_signals",
+    "suppressed_taste_signals",
+    "preserved_decisions",
+    "changed_decisions",
+    "precedence_summaries",
+    "support_safe_summary"
+  ]
+}

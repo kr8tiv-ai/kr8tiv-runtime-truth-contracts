@@ -105,6 +105,46 @@ DesignResearchStatus: TypeAlias = Literal["local_only", "hybrid_support", "block
 ResearchProvenanceMode: TypeAlias = Literal["local", "hybrid"]
 ResearchFreshnessLabel: TypeAlias = Literal["not_applicable", "current", "stale", "unknown"]
 S05SchemaFamily: TypeAlias = Literal["s05_design_teaching_research"]
+S06SchemaFamily: TypeAlias = Literal["s06_taste_adaptation_memory_boundary"]
+TasteSignalStatus: TypeAlias = Literal["active", "suppressed"]
+TasteSignalSourceKind: TypeAlias = Literal[
+    "preference_record",
+    "feedback_ledger",
+    "behavior_signal",
+    "design_teaching_research",
+]
+TasteEvidenceClass: TypeAlias = Literal[
+    "durable_preference",
+    "explicit_feedback",
+    "behavior_signal",
+    "derived_pattern",
+]
+AdaptationDecisionStatus: TypeAlias = Literal["preserved", "changed"]
+AdaptationDecisionEvidenceClass: TypeAlias = Literal[
+    "durable_preference",
+    "explicit_feedback",
+    "accepted_behavior",
+    "spec_constraint",
+]
+SpecPrecedenceWinnerSource: TypeAlias = Literal[
+    "active_spec",
+    "project_preference",
+    "owner_preference",
+    "explicit_feedback",
+]
+TasteSuppressionReason: TypeAlias = Literal[
+    "active_spec_override",
+    "project_scope_override",
+    "owner_scope_override",
+    "route_provenance_guard",
+    "insufficient_evidence",
+]
+AdaptationWarningFlag: TypeAlias = Literal[
+    "promotion_guarded",
+    "provenance_warning",
+    "suppressed_by_spec",
+    "hybrid_not_promoted",
+]
 
 
 class FeedbackLedgerEntry(TypedDict):
@@ -431,4 +471,58 @@ class DesignTeachingResearchRecord(TypedDict):
     harness: WebsiteSpecialistHarnessRecord
     teaching: DesignTeachingSummary
     research: DesignResearchSummary
+    support_safe_summary: str
+
+
+class TasteSignalSummary(TypedDict):
+    signal_id: str
+    status: TasteSignalStatus
+    target: FeedbackTarget
+    scope: PreferenceScope
+    source_kind: TasteSignalSourceKind
+    source_reference: str
+    provenance_level: ProvenanceLevel
+    evidence_class: TasteEvidenceClass
+    summary: str
+    rationale: str
+    suppression_reason: TasteSuppressionReason | None
+    precedence_reference: str
+    warning_flags: list[AdaptationWarningFlag]
+
+
+class AdaptationDecisionSummary(TypedDict):
+    decision_id: str
+    decision_status: AdaptationDecisionStatus
+    target: FeedbackTarget
+    decision_summary: str
+    reason: str
+    evidence_class: AdaptationDecisionEvidenceClass
+    source_reference: str
+    provenance_level: ProvenanceLevel
+    route_mode: RouteMode
+    warning_flags: list[AdaptationWarningFlag]
+
+
+class SpecPrecedenceSummary(TypedDict):
+    precedence_id: str
+    target: FeedbackTarget
+    winner_source: SpecPrecedenceWinnerSource
+    winner_summary: str
+    suppressed_signal_id: str | None
+    suppression_reason: TasteSuppressionReason | None
+    reason: str
+    project_preference_applied: bool
+    owner_preference_applied: bool
+    feedback_applied: bool
+
+
+class TasteAdaptationRecord(TypedDict):
+    record_id: str
+    schema_family: S06SchemaFamily
+    design_teaching_research: DesignTeachingResearchRecord
+    active_taste_signals: list[TasteSignalSummary]
+    suppressed_taste_signals: list[TasteSignalSummary]
+    preserved_decisions: list[AdaptationDecisionSummary]
+    changed_decisions: list[AdaptationDecisionSummary]
+    precedence_summaries: list[SpecPrecedenceSummary]
     support_safe_summary: str

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecPrecedenceSummary",
+  "description": "Support-safe S06 precedence summary that records which bounded truth source won, which learned taste signal was suppressed if any, and why spec or project intent took priority.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "precedence_id": { "type": "string" },
+    "target": {
+      "type": "string",
+      "enum": ["output", "tone", "design", "workflow", "routing", "teaching", "other"]
+    },
+    "winner_source": {
+      "type": "string",
+      "enum": ["active_spec", "project_preference", "owner_preference", "explicit_feedback"]
+    },
+    "winner_summary": { "type": "string" },
+    "suppressed_signal_id": {
+      "type": ["string", "null"]
+    },
+    "suppression_reason": {
+      "type": ["string", "null"],
+      "enum": [
+        "active_spec_override",
+        "project_scope_override",
+        "owner_scope_override",
+        "route_provenance_guard",
+        "insufficient_evidence",
+        null
+      ]
+    },
+    "reason": { "type": "string" },
+    "project_preference_applied": { "type": "boolean" },
+    "owner_preference_applied": { "type": "boolean" },
+    "feedback_applied": { "type": "boolean" }
+  },
+  "required": [
+    "precedence_id",
+    "target",
+    "winner_source",
+    "winner_summary",
+    "suppressed_signal_id",
+    "suppression_reason",
+    "reason",
+    "project_preference_applied",
+    "owner_preference_applied",
+    "feedback_applied"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "suppressed_signal_id": { "type": "string" }
+        },
+        "required": ["suppressed_signal_id"]
+      },
+      "then": {
+        "properties": {
+          "suppression_reason": {
+            "type": "string",
+            "enum": [
+              "active_spec_override",
+              "project_scope_override",
+              "owner_scope_override",
+              "route_provenance_guard",
+              "insufficient_evidence"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
