@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import runpy
 import sys
 import unittest
 from pathlib import Path
@@ -60,6 +63,60 @@ def truth_surface_payload(*, style_flags: list[str] | None = None, drift_signals
 
 class CipherContinuityCompositionTests(unittest.TestCase):
     maxDiff = None
+
+    def test_inspect_cipher_continuity_cli_stdout_is_stable(self) -> None:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            runpy.run_path(str(ROOT / "tools" / "inspect_cipher_continuity.py"), run_name="__main__")
+
+        self.assertEqual(
+            output.getvalue().strip(),
+            """Cipher continuity inspection
+Support-safe restore point for representative multi-surface identity continuity states.
+S02 remains the factual Telegram voice/session seam; this S03 surface layers identity continuity on top.
+
+SCENARIO activation_ready
+  continuity_id: cipher-continuity-activation-ready-001
+  continuity_status: activation_ready
+  continuity_source: telegram_voice_turn
+  identity_safety_status: identity_safe
+  drift_guard_triggered: no
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, activation_ready, owner_guidance
+  spoken_manner_markers: warmth, measured_pacing, confident_guidance
+  carryover_source_ref: tg-turn-ready-001
+  guardrail_reasons: none
+  policy_summary: Active policy permits support-safe activation guidance and bounded voice continuity markers.
+  continuity_marker_summary: Cipher persona markers and spoken manner both align with activation-ready support guidance.
+  support_safe_voice_summary: Warm, measured activation guidance with a clear next step.
+
+SCENARIO carryover
+  continuity_id: cipher-continuity-carryover-001
+  continuity_status: carryover
+  continuity_source: cross_surface_carryover
+  identity_safety_status: identity_safe
+  drift_guard_triggered: no
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, activation_ready, owner_guidance, calm_precision
+  spoken_manner_markers: warmth, measured_pacing, carryover_callback
+  carryover_source_ref: tg-session-042
+  guardrail_reasons: none
+  policy_summary: Active policy allows support-safe carryover summaries while keeping transcript and memory detail redacted.
+  continuity_marker_summary: Cipher identity carries across surfaces with calm guidance and an explicit bounded callback to prior context.
+  support_safe_voice_summary: Steady carryover posture that recalls the prior support-safe thread without exposing transcript detail.
+
+SCENARIO drift_guard
+  continuity_id: cipher-continuity-drift-guard-001
+  continuity_status: drift_guard
+  continuity_source: truth_surface_only
+  identity_safety_status: guarded
+  drift_guard_triggered: yes
+  persona_markers: cipher_bloodline, mission_control_governed, support_safe, owner_guidance, calm_precision
+  spoken_manner_markers: briskness, measured_pacing, guarded_boundaries
+  carryover_source_ref: none
+  guardrail_reasons: policy_style_restriction, voice_seam_guard, drift_detected
+  policy_summary: Active policy blocked broader style transfer and required identity-safe guard posture.
+  continuity_marker_summary: Cipher continuity is preserved via explicit guardrails instead of permissive carryover.
+  support_safe_voice_summary: Guarded delivery keeps boundaries explicit because persona continuity was at risk of generic drift.""",
+        )
 
     def test_activation_ready_voice_turn_composes_identity_safe_continuity(self) -> None:
         truth_surface = load_truth_surface(truth_surface_payload())

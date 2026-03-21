@@ -54,7 +54,7 @@ Run:
 - `python tools/runtime_scenarios.py`
 - `cd packages/node-runtime && npm test`
 
-## Telegram voice inspection seam
+## Telegram voice and Cipher continuity inspection seams
 S02 adds a support-safe Telegram voice-loop contract seam backed by schemas, parser loaders, and one authoritative restore point:
 - `runtime_types.telegram_voice_loop.derive_telegram_voice_turn(...)`
 - `tools/inspect_telegram_voice_loop.py`
@@ -63,6 +63,15 @@ S02 adds a support-safe Telegram voice-loop contract seam backed by schemas, par
 
 That seam proves blocked, activation-ready, and continuity-carryover Telegram voice scenarios without exposing raw transcript or private-memory detail.
 It intentionally does **not** claim live Telegram Bot API transport wiring yet; this repo currently proves the contract surface and restore-point behavior only.
+
+S03 layers a separate support-safe Cipher continuity seam on top of that factual S02 voice/session seam:
+- `runtime_types.cipher_continuity.derive_cipher_continuity(...)`
+- `tools/inspect_cipher_continuity.py`
+- `tests/test_cipher_continuity.py`
+- `schemas/examples/cipher-continuity-record.*.example.json`
+
+That seam composes `TruthSurface` persona/policy inputs with canonical `TelegramVoiceTurnRecord` state to show whether Cipher remains activation-ready, in bounded cross-surface carryover, or under drift guard.
+Use S02 to inspect what happened in the Telegram voice/session flow; use S03 to inspect whether the resulting text-and-voice identity still presents one governed Cipher continuity surface.
 
 ## Public-repo boundary
 This repo should stay public-safe.

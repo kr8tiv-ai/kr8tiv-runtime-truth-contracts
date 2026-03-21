@@ -215,6 +215,30 @@ Use this script first when a future agent needs to inspect whether a Telegram vo
 
 This is the authoritative S02 restore point for the Telegram voice-loop seam. It intentionally reuses the schema-backed derivation helper instead of maintaining a separate CLI-only formatter model, and it proves only the contract and support-safe inspection surface — not live Telegram Bot API transport wiring.
 
+## Cipher continuity restore point
+A dedicated Cipher continuity inspection restore point now exists at `tools/inspect_cipher_continuity.py`.
+
+It derives representative activation-ready, carryover, and drift-guard continuity records through `derive_cipher_continuity(...)` and prints a stable, support-safe summary for:
+- `continuity_status`
+- `continuity_source`
+- `identity_safety_status`
+- `drift_guard_triggered`
+- active persona markers
+- spoken-manner markers
+- carryover source reference
+- policy / guardrail summaries
+
+Run:
+- `python tools/inspect_cipher_continuity.py`
+
+Use this script when a future agent needs to inspect whether Cipher still presents one governed identity across truth-surface persona inputs and the canonical Telegram voice-turn seam.
+
+This is the authoritative S03 restore point for identity/personality continuity. It intentionally layers on top of the S02 Telegram voice restore point instead of replacing it:
+- S02 (`tools/inspect_telegram_voice_loop.py`) remains the factual voice/session seam for transcript, reply, and continuity-turn state.
+- S03 (`tools/inspect_cipher_continuity.py`) is the identity continuity seam that interprets those voice-turn facts together with `TruthSurface` persona/policy truth.
+
+Inspect S02 first when a bug might be in onboarding, reply readiness, or session carryover mechanics. Inspect S03 when the question is whether Cipher’s bounded persona markers, spoken posture, and drift guard behavior still read as one support-safe identity.
+
 ## Formal test restore points
 Stdlib test layers now exist at:
 - `tests/test_runtime_types.py`
