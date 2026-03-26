@@ -59,7 +59,10 @@ export async function createServer(config: ApiConfig = {}) {
   const resolvedConfig: Required<ApiConfig> = {
     port: config.port ?? parseInt(process.env.PORT ?? '3000', 10),
     host: config.host ?? process.env.HOST ?? '0.0.0.0',
-    jwtSecret: config.jwtSecret ?? process.env.JWT_SECRET ?? 'kin-dev-secret-change-in-prod',
+    jwtSecret: config.jwtSecret ?? process.env.JWT_SECRET ?? (() => {
+      if (environment === 'production') throw new Error('JWT_SECRET must be set in production');
+      return 'kin-dev-secret-DO-NOT-USE-IN-PROD';
+    })(),
     databasePath: config.databasePath ?? process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'kin.db'),
     corsOrigins: config.corsOrigins ?? (environment === 'development' ? ['http://localhost:3000', 'http://localhost:5173'] : []),
     rateLimitMax: config.rateLimitMax ?? 100,

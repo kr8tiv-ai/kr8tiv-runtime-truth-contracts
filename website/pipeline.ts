@@ -381,9 +381,9 @@ export async function startPreview(
   files: GeneratedFile[],
   port: number = 3000
 ): Promise<{ url: string; stop: () => void }> {
-  // Would create a temp directory, write files, and start a server
-  // For now, return a placeholder
-  
+  // STUB: Preview server not yet implemented
+  // TODO: Create temp directory, write files, start express/vite dev server
+
   const url = `http://localhost:${port}`;
   
   return {
@@ -402,9 +402,9 @@ export async function deploy(
   target: 'vercel' | 'netlify' | 'cloudflare',
   config: { token?: string; projectId?: string }
 ): Promise<{ url: string; deploymentId: string }> {
-  // Would use provider APIs or CLI
-  // For now, return placeholder
-  
+  // STUB: Deployment not yet wired to provider APIs
+  // TODO: Integrate Vercel/Netlify/Cloudflare APIs for real deployment
+
   const deploymentId = `deploy-${Date.now()}`;
   
   switch (target) {

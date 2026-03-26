@@ -130,10 +130,11 @@ export async function transcribeLocal(
   const whisperPath = process.env.LOCAL_WHISPER_PATH ?? 'whisper';
   const startTime = performance.now();
 
-  // This is a placeholder - actual implementation would use child_process
-  // or a native binding to whisper.cpp
-  
-  console.log('Local transcription not yet implemented, falling back to API');
+  // STUB: Local whisper.cpp integration not yet implemented
+  // Requires: whisper.cpp binary or Python whisper installed locally
+  // Would use child_process to run CLI, then parse output
+
+  console.log('[STUB] Local transcription not yet implemented, falling back to API');
   
   // Fall back to API
   return transcribeWithWhisper(audioBuffer, config);
@@ -345,8 +346,9 @@ export async function synthesizeLocal(
   const ttsPath = process.env.LOCAL_TTS_PATH ?? 'piper';
   const startTime = performance.now();
 
-  // Placeholder - actual implementation would use child_process
-  console.log('Local TTS not yet implemented, falling back to API');
+  // STUB: Local TTS (piper/Coqui) not yet implemented
+  // Requires: piper-tts binary or Coqui TTS installed locally
+  console.log('[STUB] Local TTS not yet implemented, falling back to API');
 
   // Fall back to OpenAI
   return synthesizeWithOpenAI(text, companionId, config);

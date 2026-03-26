@@ -75,10 +75,10 @@ const nftRoutes: FastifyPluginAsync = async (fastify) => {
       mintAddress: nft.mint_address,
       ownerWallet: nft.owner_wallet,
       acquiredAt: new Date(nft.acquired_at).toISOString(),
-      transferCount: n.transfer_count,
+      transferCount: nft.transfer_count,
       companion: {
         id: nft.companion_id,
-        name: n.companion_name,
+        name: nft.companion_name,
         type: nft.companion_type,
       },
     };

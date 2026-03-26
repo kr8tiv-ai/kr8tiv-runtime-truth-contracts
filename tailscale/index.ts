@@ -43,6 +43,7 @@ export {
   TailscaleError,
   RemoteAccessManager,
   DevicePairing,
+  EasyOnboarding,
   getTailscaleClient,
   getRemoteAccessManager,
   type TailscaleConfig,

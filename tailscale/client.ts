@@ -446,12 +446,8 @@ export class RemoteAccessManager {
    * Get user's trust level based on history and verification
    */
   async getUserTrustLevel(userId: string): Promise<number> {
-    // This would integrate with:
-    // - User account age
-    // - Previous session history
-    // - MFA verification status
-    // - Admin approval status
-    
+    // STUB: Trust level calculation not yet implemented
+    // TODO: Integrate with user account age, session history, MFA status
     // For now, default to Level 1 (Visitor)
     return 1;
   }
@@ -546,6 +542,153 @@ export class DevicePairing {
     }
 
     return cleaned;
+  }
+}
+
+// ============================================================================
+// Easy Onboarding (for non-technical users via Telegram)
+// ============================================================================
+
+/**
+ * Simplified onboarding flow for users who don't understand networking.
+ * Guides them step-by-step through Telegram messages.
+ */
+export class EasyOnboarding {
+  private pairing: DevicePairing;
+  private manager: RemoteAccessManager;
+
+  constructor(config: TailscaleConfig = {}) {
+    this.pairing = new DevicePairing(config);
+    this.manager = new RemoteAccessManager(config);
+  }
+
+  /**
+   * Get the welcome message explaining what Tailscale does in plain language
+   */
+  getWelcomeMessage(companionName: string = 'Cipher'): string {
+    return [
+      `Hey! So here's the deal — I can do way more for you if I can connect to your computer securely.`,
+      ``,
+      `Think of it like giving me a secure tunnel to your machine so I can:`,
+      `- Run tasks on your computer while you're away`,
+      `- Fix things without you having to copy-paste commands`,
+      `- Access your files to build websites or debug code`,
+      ``,
+      `It uses a tool called Tailscale — it's free, safe, and takes about 2 minutes to set up.`,
+      ``,
+      `Want me to walk you through it?`,
+    ].join('\n');
+  }
+
+  /**
+   * Get step-by-step setup instructions as individual messages
+   */
+  getSetupSteps(): string[] {
+    return [
+      // Step 1
+      [
+        `Step 1: Install Tailscale`,
+        ``,
+        `Go to https://tailscale.com/download and grab the installer for your computer.`,
+        ``,
+        `- Windows? Click the Windows button`,
+        `- Mac? Click the Mac button`,
+        `- It'll install in about 30 seconds`,
+        ``,
+        `Let me know when it's installed!`,
+      ].join('\n'),
+
+      // Step 2
+      [
+        `Step 2: Sign in to Tailscale`,
+        ``,
+        `Open Tailscale (it should be in your system tray or menu bar).`,
+        `Sign in with Google, Microsoft, or whatever you normally use.`,
+        ``,
+        `That's it — no passwords to create.`,
+        ``,
+        `Tell me when you're signed in!`,
+      ].join('\n'),
+
+      // Step 3
+      [
+        `Step 3: Connect your device`,
+        ``,
+        `I'm generating a secure link for you now...`,
+      ].join('\n'),
+    ];
+  }
+
+  /**
+   * Generate the pairing link and return the final step message
+   */
+  async generatePairingStep(): Promise<{ message: string; pairingCode: string }> {
+    const { pairingUrl, pairingCode } = await this.pairing.generatePairingUrl({
+      description: 'KIN Companion Device',
+      tags: ['tag:kin-device'],
+      expiresInSeconds: 3600,
+    });
+
+    return {
+      pairingCode,
+      message: [
+        `Click this link to connect your device to my network:`,
+        `${pairingUrl}`,
+        ``,
+        `Your pairing code is: ${pairingCode}`,
+        ``,
+        `Once you click the link and approve, I'll be able to help you from anywhere.`,
+        `This link expires in 1 hour.`,
+      ].join('\n'),
+    };
+  }
+
+  /**
+   * Check if pairing succeeded and return a friendly message
+   */
+  async checkPairingStatus(pairingCode: string): Promise<{
+    connected: boolean;
+    message: string;
+    deviceName?: string;
+  }> {
+    const result = await this.pairing.checkPairing(pairingCode);
+
+    if (result.complete && result.device) {
+      return {
+        connected: true,
+        deviceName: result.device.hostname,
+        message: [
+          `You're connected! I can see your device: ${result.device.hostname}`,
+          ``,
+          `I now have secure access to help you with tasks on your computer.`,
+          `You can disconnect anytime from the Tailscale app.`,
+          ``,
+          `What would you like me to help with?`,
+        ].join('\n'),
+      };
+    }
+
+    return {
+      connected: false,
+      message: `Not connected yet. Did you click the link and approve? Try again or let me know if you need help.`,
+    };
+  }
+
+  /**
+   * Get the trust level explanation in plain language
+   */
+  getTrustExplanation(): string {
+    return [
+      `Here's how my access works — I start with limited permissions and earn more as you trust me:`,
+      ``,
+      `Level 0 - Guest: I can check if your computer is online`,
+      `Level 1 - Visitor: I can look at logs and status`,
+      `Level 2 - Member: I can run read-only commands and view files`,
+      `Level 3 - Admin: I can make changes and run tasks`,
+      `Level 4 - Owner: Full access (only for you)`,
+      ``,
+      `Right now you're at Level 1. As we work together, you can give me more access.`,
+    ].join('\n');
   }
 }
 

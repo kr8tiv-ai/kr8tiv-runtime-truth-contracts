@@ -74,7 +74,7 @@ const conversationRoutes: FastifyPluginAsync = async (fastify) => {
       const params: (string | number)[] = [conversationId];
 
       if (before) {
-        query += ' AND id < (SELECT timestamp FROM messages WHERE id = ?)';
+        query += ' AND timestamp < (SELECT timestamp FROM messages WHERE id = ?)';
         params.push(before);
       }
 

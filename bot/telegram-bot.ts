@@ -131,15 +131,10 @@ export function createKINBot(config: BotConfig) {
       const history = await conversationStore.getHistory(userId, 20);
 
       // Build messages for the LLM
-      const systemPrompt = buildCipherPrompt({
-        userContext: {
-          name: ctx.from?.first_name ?? 'Friend',
-          telegramId: userId,
-        },
-        taskContext: {
-          mode: 'chat',
-          userMessage: message,
-        },
+      const systemPrompt = buildCipherPrompt(message, {
+        userName: ctx.from?.first_name ?? 'Friend',
+        taskContext: { type: 'chat' },
+        timeContext: new Date().toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' }),
       });
 
       const messages = [

@@ -212,14 +212,10 @@ export class SolanaNFTClient {
    * Upload metadata to Arweave/IPFS
    */
   async uploadMetadata(metadata: NFTMetadata): Promise<string> {
-    // In production, this would:
-    // 1. Upload to Arweave via Bundlr
-    // 2. Or upload to IPFS via Pinata/NFT.Storage
-    // 3. Return the URI
+    // STUB: Arweave/IPFS upload not yet implemented
+    // TODO: Integrate Bundlr (Arweave) or Pinata/NFT.Storage (IPFS)
 
-    console.log('Uploading metadata:', metadata.name);
-    
-    // Placeholder - return mock URI
+    console.log('[STUB] Uploading metadata:', metadata.name);
     const hash = Buffer.from(JSON.stringify(metadata)).toString('base64').slice(0, 43);
     return `https://arweave.net/${hash}`;
   }
@@ -236,12 +232,10 @@ export class SolanaNFTClient {
     ownerWallet: string,
     metadata: NFTMetadata
   ): Promise<MintResult> {
-    // In production, this would:
-    // 1. Upload metadata to Arweave
-    // 2. Call the Anchor program to mint
-    // 3. Transfer to owner wallet
+    // STUB: Solana minting not yet implemented
+    // TODO: Upload metadata to Arweave, call Anchor program, transfer to owner
 
-    console.log(`Minting ${companionId} for ${ownerWallet}`);
+    console.log(`[STUB] Minting ${companionId} for ${ownerWallet}`);
 
     // Placeholder
     const mintAddress = `mint_${companionId}_${Date.now()}`;
@@ -262,8 +256,8 @@ export class SolanaNFTClient {
     candyMachineId: string,
     wallet: string
   ): Promise<MintResult> {
-    // Would use Metaplex Candy Machine
-    console.log(`Minting from candy machine ${candyMachineId}`);
+    // STUB: Candy Machine minting not yet implemented
+    console.log(`[STUB] Minting from candy machine ${candyMachineId}`);
 
     return {
       mintAddress: `mint_${Date.now()}`,
@@ -285,12 +279,10 @@ export class SolanaNFTClient {
     fromWallet: string,
     toWallet: string
   ): Promise<TransferResult> {
-    // In production, this would:
-    // 1. Verify ownership
-    // 2. Create transfer instruction
-    // 3. Sign and send transaction
+    // STUB: Solana transfer not yet implemented
+    // TODO: Verify ownership, create transfer instruction, sign and send
 
-    console.log(`Transferring ${mintAddress} from ${fromWallet} to ${toWallet}`);
+    console.log(`[STUB] Transferring ${mintAddress} from ${fromWallet} to ${toWallet}`);
 
     return {
       signature: `sig_${Math.random().toString(36).substr(2, 87)}`,
@@ -312,8 +304,8 @@ export class SolanaNFTClient {
     companionId: string;
     metadata: NFTMetadata;
   }>> {
-    // Would use Metaplex to fetch NFTs
-    console.log(`Fetching NFTs for ${walletAddress}`);
+    // STUB: Metaplex NFT fetching not yet implemented
+    console.log(`[STUB] Fetching NFTs for ${walletAddress}`);
 
     return [];
   }
@@ -327,8 +319,8 @@ export class SolanaNFTClient {
     metadata: NFTMetadata;
     owner: string;
   } | null> {
-    // Would fetch from Solana
-    console.log(`Fetching NFT ${mintAddress}`);
+    // STUB: Solana NFT lookup not yet implemented
+    console.log(`[STUB] Fetching NFT ${mintAddress}`);
 
     return null;
   }
@@ -346,7 +338,8 @@ export class SolanaNFTClient {
     description: string;
     imageUrl: string;
   }): Promise<{ collectionMint: string; signature: string }> {
-    console.log(`Creating collection: ${options.name}`);
+    // STUB: Collection creation not yet implemented
+    console.log(`[STUB] Creating collection: ${options.name}`);
 
     return {
       collectionMint: `collection_${Date.now()}`,
