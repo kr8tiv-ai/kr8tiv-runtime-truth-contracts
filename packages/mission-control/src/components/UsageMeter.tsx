@@ -1,3 +1,5 @@
+import React from 'react';
+
 interface UsageMeterProps {
   /** Label for the meter */
   label: string;
@@ -17,7 +19,8 @@ interface UsageMeterProps {
  * UsageMeter - Progress bar visualization for usage metrics
  *
  * Features:
- * - Color-coded progress bar based on usage level
+ * - Color-coded progress bar based on usage level (cyan/gold/magenta)
+ * - Glow effect on bar fill matching accent color
  * - Current/limit display
  * - Unlimited support (limit = -1)
  * - Animated transitions
@@ -34,21 +37,48 @@ export function UsageMeter({
   const isUnlimited = limit === -1 || limit === undefined;
   const percentage = isUnlimited ? 0 : Math.min((current / limit) * 100, 100);
 
-  // Get color based on usage level
-  const getBarColor = (): string => {
-    if (isUnlimited) return 'bg-green-500';
-    if (percentage < 50) return 'bg-green-500';
-    if (percentage < 75) return 'bg-yellow-500';
-    if (percentage < 90) return 'bg-orange-500';
-    return 'bg-red-500';
+  // Get bar color and glow based on usage level
+  const getBarStyle = (): React.CSSProperties => {
+    let color: string;
+    let glow: string;
+
+    if (isUnlimited || percentage < 50) {
+      color = 'var(--cyan)';
+      glow = 'rgba(0, 240, 255, 0.3)';
+    } else if (percentage < 75) {
+      color = 'var(--gold)';
+      glow = 'rgba(255, 215, 0, 0.3)';
+    } else if (percentage < 90) {
+      // Gold to magenta blend zone
+      color = 'var(--gold)';
+      glow = 'rgba(255, 215, 0, 0.3)';
+    } else {
+      color = 'var(--magenta)';
+      glow = 'rgba(255, 0, 170, 0.3)';
+    }
+
+    return {
+      height: '100%',
+      width: isUnlimited ? '5%' : `${percentage}%`,
+      background: color,
+      boxShadow: `0 0 8px ${glow}, 0 0 4px ${glow}`,
+      borderRadius: '3px',
+      transition: 'all 0.3s ease-out',
+    };
   };
 
-  // Get text color for the percentage
-  const getTextColor = (): string => {
-    if (isUnlimited) return 'text-gray-600';
-    if (percentage < 75) return 'text-gray-600';
-    if (percentage < 90) return 'text-orange-600';
-    return 'text-red-600';
+  // Get value text color based on usage level
+  const getValueColor = (): string => {
+    if (isUnlimited || percentage < 90) {
+      return 'var(--text-muted)';
+    }
+    return 'var(--magenta)';
+  };
+
+  // Get percentage warning color
+  const getWarningColor = (): string => {
+    if (percentage < 90) return 'var(--gold)';
+    return 'var(--magenta)';
   };
 
   // Format numbers
@@ -71,28 +101,67 @@ export function UsageMeter({
     return `${currentStr}${unit} / ${limitStr}${unit}`;
   };
 
+  const labelStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.7rem',
+    fontWeight: 500,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+  };
+
+  const valueStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.7rem',
+    fontWeight: 500,
+    color: getValueColor(),
+  };
+
+  const trackStyle: React.CSSProperties = {
+    width: '100%',
+    height: '6px',
+    background: 'var(--surface)',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  };
+
+  const headerRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '0.25rem',
+  };
+
+  const warningRowStyle: React.CSSProperties = {
+    marginTop: '0.25rem',
+    display: 'flex',
+    justifyContent: 'flex-end',
+  };
+
+  const warningTextStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 500,
+    color: getWarningColor(),
+  };
+
   return (
-    <div className={`${className}`}>
+    <div className={className}>
       {/* Label and values */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-600">{label}</span>
-        <span className={`text-xs font-medium ${getTextColor()}`}>
-          {formatDisplay()}
-        </span>
+      <div style={headerRowStyle}>
+        <span style={labelStyle}>{label}</span>
+        <span style={valueStyle}>{formatDisplay()}</span>
       </div>
 
       {/* Progress bar */}
-      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${getBarColor()} transition-all duration-300 ease-out`}
-          style={{ width: isUnlimited ? '5%' : `${percentage}%` }}
-        />
+      <div style={trackStyle}>
+        <div style={getBarStyle()} />
       </div>
 
       {/* Percentage indicator for high usage */}
       {!isUnlimited && percentage >= 75 && (
-        <div className="mt-1 flex justify-end">
-          <span className={`text-xs ${getTextColor()}`}>
+        <div style={warningRowStyle}>
+          <span style={warningTextStyle}>
             {percentage.toFixed(0)}% used
           </span>
         </div>
