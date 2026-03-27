@@ -1,3 +1,0 @@
-# Health Monitor Dependencies
-aiohttp>=3.9.0
-pydantic>=2.5.0
