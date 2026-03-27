@@ -1,114 +1,149 @@
-# KIN Platform - Runtime Truth Contracts
+<div align="center">
 
-> A managed family of AI companions with persistent memory, local-first inference, and blockchain identity.
+# PinkBrain
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Node](https://img.shields.io/badge/Node-20%2B-green.svg)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+### Your AI. Your Rules. Your Hardware.
 
-## What is KIN?
+**A local-first AI companion platform with persistent memory, voice cloning, and on-chain identity.**
 
-KIN is a platform of persistent AI companions that feel like real friends. Each companion has:
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Solana](https://img.shields.io/badge/Solana-NFT-9945FF?style=flat-square&logo=solana&logoColor=white)](https://solana.com/)
+[![License](https://img.shields.io/badge/License-MIT-F472B6?style=flat-square)](LICENSE)
 
-- **Persistent Identity** - Remembers you across sessions
-- **Local-First Processing** - Runs on your hardware when possible
-- **Cloud Fallback** - Graceful degradation with transparency
-- **Blockchain Identity** - NFT-linked ownership and transferability
-- **Multi-Surface Presence** - Telegram, Mission Control dashboard, voice
+[Quick Start](#quick-start) | [Architecture](#architecture) | [The Genesis Six](#the-genesis-six) | [API](#api-endpoints) | [Contributing](#contributing)
 
-The first companion is **Cipher** (Code Kraken 🐙) - a web design specialist and creative technologist.
+</div>
+
+---
+
+## What is PinkBrain?
+
+PinkBrain is an open-source platform for building AI companions that actually belong to you. Not a chatbot wrapper. Not another API proxy. A full runtime for persistent, voice-enabled AI entities that run on your hardware first, escalate to the cloud only when needed, and carry their identity on-chain.
+
+Every companion has a **two-brain architecture**: a fast local LLM handles everyday conversation while a frontier cloud model (OpenAI, Anthropic) steps in for complex reasoning -- with a strict privacy contract governing what leaves your machine.
+
+### Why this exists
+
+Most AI products are rented. You talk to a model behind an API, and when the company changes terms, raises prices, or shuts down, your "relationship" disappears. PinkBrain flips that:
+
+- **You own the runtime.** It runs on your box. Your data stays local by default.
+- **You own the identity.** Each companion is an NFT on Solana -- transferable, provable, yours.
+- **You own the voice.** Local voice cloning (XTTS v2) means your companion sounds unique, and audio never leaves your network.
+- **You own the memory.** SQLite conversation store with full export. No vendor lock-in.
 
 ---
 
 ## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts.git
-cd kr8tiv-runtime-truth-contracts
+git clone https://github.com/kr8tiv-ai/PinkBrain-lp.git
+cd PinkBrain-lp
 
-# Install dependencies
 npm install
 
-# Configure environment
 cp .env.example .env
-# Edit .env with your API keys
+# Add your TELEGRAM_BOT_TOKEN and JWT_SECRET at minimum
 
-# Initialize database
 mkdir -p data && npm run db:migrate
 
-# Start development server
 npm run dev
 ```
 
-### Required Environment Variables
+That starts the Fastify API server and Telegram bot concurrently. Talk to your companion immediately.
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `TELEGRAM_BOT_TOKEN` | **Yes** | From [@BotFather](https://t.me/botfather) |
-| `JWT_SECRET` | **Yes** | Random string for JWT signing |
-| `OPENAI_API_KEY` | Recommended | Fallback LLM + Whisper transcription |
-| `ELEVENLABS_API_KEY` | Optional | Voice synthesis |
-| `TAILSCALE_API_KEY` | Optional | Remote access integration |
-| `OLLAMA_HOST` | Optional | Local LLM host (default: 127.0.0.1) |
+### Environment
+
+| Variable | Required | What it does |
+|----------|----------|--------------|
+| `TELEGRAM_BOT_TOKEN` | Yes | From [@BotFather](https://t.me/botfather) |
+| `JWT_SECRET` | Yes | Signs auth tokens |
+| `OPENAI_API_KEY` | Recommended | Cloud fallback LLM + Whisper STT |
+| `OLLAMA_HOST` | Optional | Local LLM endpoint (default: `127.0.0.1`) |
+| `ELEVENLABS_API_KEY` | Optional | Cloud voice synthesis |
+| `TAILSCALE_API_KEY` | Optional | Remote access mesh |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      KIN Platform                           │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   Telegram   │    │   Mission    │    │    Solana    │  │
-│  │     Bot      │◄──►│   Control    │◄──►│     NFT      │  │
-│  └──────┬───────┘    └──────┬───────┘    └──────────────┘  │
-│         │                   │                              │
-│         ▼                   ▼                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                    API Server                        │  │
-│  │         (Fastify + JWT + WebSocket)                  │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                           │                                │
-│         ┌─────────────────┼─────────────────┐             │
-│         ▼                 ▼                 ▼             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │  Inference   │  │   Memory     │  │   Health     │     │
-│  │  (Ollama)    │  │  (SQLite)    │  │  Monitor     │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+                        +-----------------------+
+                        |     User Surfaces     |
+                        |  Telegram | Web | Voice|
+                        +----------+------------+
+                                   |
+                        +----------v------------+
+                        |      API Server       |
+                        |  Fastify + JWT + WS   |
+                        +--+--------+--------+--+
+                           |        |        |
+               +-----------+   +----+----+   +-----------+
+               |               |         |               |
+        +------v------+  +----v----+  +--v-----------+  +--------+
+        |  Two-Brain  |  | Memory  |  |    Voice     |  | Solana |
+        |  Inference   |  | SQLite  |  |   Pipeline   |  |  NFT   |
+        |             |  |         |  |              |  |        |
+        | Local (Ollama)| | Conv.  |  | Whisper STT  |  | Mint   |
+        | + Supervisor |  | Store  |  | XTTS v2 TTS  |  | Xfer   |
+        +-------------+  +---------+  | Piper fallback| +--------+
+                                       +--------------+
 ```
 
-### Key Modules
+### The Two-Brain Model
 
-| Module | Path | Description |
-|--------|------|-------------|
-| **Telegram Bot** | `bot/` | Grammy-based bot with conversation memory |
-| **Inference** | `inference/` | Ollama client + cloud fallback |
-| **Voice** | `voice/` | Whisper transcription + TTS synthesis |
-| **Website** | `website/` | AI code generation + deployment |
-| **API** | `api/` | Fastify REST + WebSocket server |
-| **Tailscale** | `tailscale/` | Remote access with trust ladder |
-| **Solana** | `solana/` | NFT minting + transfer |
-| **Companions** | `companions/` | Personality definitions |
+Every companion runs a **dual-inference loop**:
+
+1. **Local Brain** (Ollama) -- Handles conversation, personality, casual tasks. Fast. Private. Always on.
+2. **Supervisor Brain** (OpenAI/Anthropic) -- Activated for architecture decisions, complex code, deep analysis. Governed by escalation rules per companion.
+
+The supervisor never sees raw audio, file paths, or database contents. Every cloud call is logged with timestamp and payload size. You can run fully local by setting `forceLocal: true`.
 
 ---
 
 ## The Genesis Six
 
-Six companion bloodlines, each with unique personality and specialization:
+Six companion bloodlines, each with a distinct personality, voice, and specialization:
 
-| Name | Type | Specialization | Personality |
-|------|------|----------------|-------------|
-| **Cipher** | Code Kraken 🐙 | Web design, frontend | Analytical, warm, playful |
-| **Mischief** | Glitch Pup 🐕 | Family companion, branding | Curious, energetic, loyal |
-| **Vortex** | Teal Dragon 🐉 | Marketing, social media | Wise, strategic, calm |
-| **Forge** | Cyber Unicorn 🦄 | Development, debugging | Confident, inspiring, precise |
-| **Aether** | Frost Ape 🦍 | Creative writing, art | Patient, methodical, deep |
-| **Catalyst** | Cosmic Blob 🫧 | Wealth coaching, habits | Enthusiastic, adaptive, supportive |
+| Companion | Species | Domain | Personality |
+|-----------|---------|--------|-------------|
+| **Cipher** | Code Kraken | Web design, frontend | Playful, sharp, design-obsessed |
+| **Mischief** | Glitch Pup | Family companion, branding | Curious, energetic, loyal |
+| **Vortex** | Teal Dragon | Marketing, social media | Wise, strategic, calm |
+| **Forge** | Cyber Unicorn | Development, debugging | Confident, inspiring, precise |
+| **Aether** | Frost Ape | Creative writing, art | Patient, methodical, deep |
+| **Catalyst** | Cosmic Blob | Wealth coaching, habits | Enthusiastic, adaptive, supportive |
+
+Each companion has:
+- A full personality definition (speech patterns, quirks, teaching style)
+- Independent escalation thresholds (Cipher escalates on "architecture" and "design system"; Forge escalates on "deploy" and "security")
+- Voice profile configuration for local TTS
+- Switchable mid-conversation via `/switch` in Telegram
+
+---
+
+## Key Features
+
+### Implemented
+
+- **Companion conversation loop** -- Grammy-based Telegram bot with session memory and personality switching
+- **Two-brain inference** -- Local Ollama + cloud supervisor with privacy-preserving escalation
+- **Local voice pipeline** -- Whisper.cpp STT, XTTS v2 voice cloning, Piper TTS fallback
+- **Production API** -- Fastify with JWT auth, WebSocket, CORS, rate limiting
+- **Persistent memory** -- SQLite conversation store with per-user, per-companion history
+- **Solana NFT scaffold** -- Metadata schemas, mint/transfer structures, devnet config
+- **Health monitoring** -- Python daemon with auto-restart and liveness/readiness probes
+- **Skills system** -- Plugin architecture for calculator, weather, web search, reminders
+- **Tailscale integration** -- 5-level trust ladder for remote machine access
+- **Website builder** -- AI code generation with quality validation pipeline
+- **Docker support** -- Multi-stage Dockerfile + compose for production deployment
+
+### On the Roadmap
+
+- Solana mainnet deployment (Anchor program)
+- ElevenLabs cloud voice integration
+- Mission Control web dashboard
+- Multi-companion group conversations
 
 ---
 
@@ -116,176 +151,131 @@ Six companion bloodlines, each with unique personality and specialization:
 
 ### Health
 ```
-GET  /health/live    # Liveness probe
-GET  /health/ready   # Readiness probe
-GET  /health/status  # Full system status
+GET  /health/live     Liveness probe
+GET  /health/ready    Readiness probe
+GET  /health/status   Full system status
 ```
 
-### Authentication
+### Auth & Identity
 ```
-POST /auth/telegram  # Telegram login widget auth
-```
-
-### Kin Management
-```
-GET  /kin            # List user's Kin
-POST /kin/claim      # Claim a companion
-GET  /kin/:id        # Get specific Kin status
+POST /auth/telegram   Telegram login widget auth
+GET  /kin             List user's companions
+POST /kin/claim       Claim a companion
+GET  /kin/:id         Companion status
 ```
 
 ### Conversations
 ```
-GET  /conversations  # Conversation history
-POST /conversations  # Add message
+GET  /conversations   History
+POST /conversations   Send message
 ```
 
 ### NFT
 ```
-GET  /nft            # User's NFTs
-POST /nft/mint       # Mint companion NFT
-POST /nft/transfer   # Transfer NFT
+GET  /nft             User's NFTs
+POST /nft/mint        Mint companion NFT
+POST /nft/transfer    Transfer ownership
 ```
 
 ### Support
 ```
-GET  /features       # Feature requests
-POST /features       # Submit feature request
-POST /tickets        # Create support ticket
+GET  /features        Feature requests
+POST /features        Submit request
+POST /tickets         Support ticket
+```
+
+---
+
+## Project Structure
+
+```
+PinkBrain-lp/
+  api/                   Fastify API server + route handlers
+  bot/                   Telegram bot (Grammy) + command handlers + skills
+  companions/            Personality definitions for all 6 companions
+  config/                Runtime configs (health, Solana, subscriptions, tiers)
+  db/                    SQLite schema
+  inference/             Two-brain inference engine (Ollama + cloud supervisor)
+  runtime/               Core runtime: sandbox, health probes, mission control
+  schemas/               JSON schemas for website specialist + validation
+  scripts/               Health daemon, startup scripts
+  solana/                NFT minting and transfer
+  tailscale/             Remote access client + trust ladder
+  tests/                 Integration + unit tests (Vitest + Python)
+  voice/                 Voice pipeline (STT + TTS + profiles)
+  website/               Website generation + quality pipeline
 ```
 
 ---
 
 ## Development
 
-### Scripts
-
 ```bash
-npm run dev          # Start API + bot in development
-npm run dev:api      # Start API server only
-npm run dev:bot      # Start Telegram bot only
-npm run build        # Build for production
-npm run test         # Run tests
-npm run typecheck    # TypeScript check
-npm run db:migrate   # Initialize database
-npm run health:check # Single health check
-```
-
-### Project Structure
-
-```
-├── api/                 # Fastify API server
-│   ├── server.ts        # Main server entry
-│   └── routes/          # API route handlers
-├── bot/                 # Telegram bot
-│   ├── telegram-bot.ts  # Bot entry point
-│   ├── handlers/        # Command handlers
-│   └── memory/          # Conversation store
-├── companions/          # Personality definitions
-├── db/                  # Database schema
-├── inference/           # LLM integration
-├── solana/              # NFT integration
-├── tailscale/           # Remote access
-├── voice/               # Voice processing
-├── website/             # Website building
-├── config/              # Configuration files
-├── scripts/             # Utility scripts
-└── tests/               # Test files
+npm run dev              # API + bot concurrent
+npm run dev:api          # API server only
+npm run dev:bot          # Telegram bot only
+npm run build            # TypeScript compile
+npm run test             # Vitest
+npm run typecheck        # Type check
+npm run db:migrate       # Init database
+npm run health:check     # One-shot health probe
 ```
 
 ---
 
-## Features
+## Trust Ladder
 
-### ✅ Implemented
+5-level permission system for remote machine access via Tailscale:
 
-- **Telegram Bot Core** - Full conversation loop with Cipher personality
-- **Local LLM Integration** - Ollama client with streaming + cloud fallback
-- **Voice Processing** - Whisper transcription + TTS synthesis
-- **Website Building** - AI code generation with quality validation
-- **Production API** - Fastify with JWT auth, WebSocket, rate limiting
-- **Database** - SQLite with complete schema
-- **Tailscale Integration** - Remote access with 5-level trust ladder
-- **Solana NFT Scaffold** - Metadata, minting, transfer structures
-- **Health Monitoring** - Python daemon with auto-restart
-- **All 6 Companions** - Full personality definitions
-
-### 🔄 Ready for Integration
-
-- Solana mainnet deployment (Anchor program)
-- ElevenLabs voice synthesis
-- Production hosting (Docker)
-
----
-
-## Trust Ladder (Remote Access)
-
-5-level permission system for remote computer access:
-
-| Level | Name | Permissions | Duration |
-|-------|------|-------------|----------|
-| 0 | Guest | View status only | 5 min |
+| Level | Role | Access | TTL |
+|-------|------|--------|-----|
+| 0 | Guest | Status only | 5 min |
 | 1 | Visitor | View logs | 15 min |
-| 2 | Member | Readonly commands, SSH view | 1 hour |
-| 3 | Admin | Full access, device management | 8 hours |
-| 4 | Owner | Unlimited | No limit |
+| 2 | Member | Readonly shell, SSH view | 1 hr |
+| 3 | Admin | Full access, device mgmt | 8 hr |
+| 4 | Owner | Unrestricted | None |
 
 ---
 
-## Requirements Coverage
+## Tech Stack
 
-| Category | Requirements | Status |
-|----------|--------------|--------|
-| Core Loop | R001, R002, R003 | ✅ Complete |
-| Local-First | R008, R009, R031, R032, R045 | ✅ Complete |
-| Voice | R038, R043 | ✅ Complete |
-| Website | R005, R006, R040 | ✅ Complete |
-| Remote Access | R004, R011 | ✅ Complete |
-| Memory | R013, R019 | ✅ Complete |
-| API/DB | R015, R016 | ✅ Complete |
-| NFT | R048, R049 | 🔄 Scaffold ready |
-| Production | R034, R035, R036 | ✅ Complete |
-
----
-
-## Technology Stack
-
-| Layer | Technology |
-|-------|------------|
+| Layer | Stack |
+|-------|-------|
 | Runtime | Node.js 20+, TypeScript 5.7 |
-| Bot Framework | Grammy |
-| API Framework | Fastify |
+| Bot | Grammy (Telegram) |
+| API | Fastify + JWT + WebSocket |
 | Database | SQLite (better-sqlite3) |
-| Local LLM | Ollama |
+| Local LLM | Ollama (llama3.2 default) |
 | Cloud LLM | OpenAI, Anthropic |
-| Voice | Whisper, ElevenLabs |
+| Voice | Whisper.cpp, XTTS v2, Piper, ElevenLabs |
 | Blockchain | Solana (Anchor) |
-| VPN | Tailscale |
-| Monitoring | Python daemon |
+| Mesh VPN | Tailscale |
+| Testing | Vitest + Python integration tests |
+| Deploy | Docker + Docker Compose |
 
 ---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/your-thing`)
+3. Commit your changes
+4. Push and open a PR
+
+We're building in public. Ideas, PRs, and feedback are all welcome.
 
 ---
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT -- see [LICENSE](LICENSE) for details.
 
 ---
 
-## Support
+<div align="center">
 
-- **Documentation:** `.gsd/` directory
-- **Issues:** [GitHub Issues](https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts/issues)
-- **Telegram:** Talk to @your_kin_bot
+**PinkBrain** -- AI companions that belong to you.
 
----
+Built by [kr8tiv.ai](https://github.com/kr8tiv-ai)
 
-*KIN - AI companions that feel like friends.*
+</div>

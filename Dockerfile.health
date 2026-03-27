@@ -1,0 +1,20 @@
+# Health Monitor Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements-health.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy health monitor
+COPY scripts/health_monitor_daemon.py ./health_monitor.py
+COPY runtime_types/ ./runtime_types/
+COPY config/kin-processes.json ./config/kin-processes.json
+
+# Create non-root user
+RUN useradd -m -u 1001 kin && chown -R kin:kin /app
+USER kin
+
+# Run health monitor
+CMD ["python", "health_monitor.py", "--interval", "30"]
