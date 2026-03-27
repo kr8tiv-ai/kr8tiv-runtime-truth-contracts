@@ -3,6 +3,7 @@
  */
 
 import { Context, SessionFlavor } from 'grammy';
+import { getCompanionConfig } from '../../companions/config.js';
 import type { conversationStore } from '../memory/conversation-store.js';
 
 interface SessionData {
@@ -73,15 +74,28 @@ export async function handleStart(
   }
 
   // Check if user has existing history
-  const messageCount = await store.getMessageCount(userId, 'cipher');
+  const companionId = ctx.session?.companionId ?? 'cipher';
+  const companion = getCompanionConfig(companionId);
+  const messageCount = await store.getMessageCount(userId, companionId);
 
   if (messageCount > 0) {
-    // Returning user
+    // Returning user — greet with their active companion
     ctx.session.userId = userId;
     ctx.session.conversationStarted = true;
     ctx.session.lastActivity = new Date();
 
-    await ctx.reply(RETURNING_MESSAGE, { parse_mode: 'Markdown' });
+    const returningMsg = `
+${companion.emoji} *Welcome back, friend!*
+
+You're talking to *${companion.name}* — ${companion.species}.
+
+• Want to continue where we left off?
+• Need help with something new?
+• Try /companions to meet the others
+
+What are we working on today?
+`;
+    await ctx.reply(returningMsg, { parse_mode: 'Markdown' });
   } else {
     // New user - full onboarding
     ctx.session.userId = userId;

@@ -3,6 +3,7 @@
  */
 
 import { Context, SessionFlavor } from 'grammy';
+import { getCompanionConfig } from '../../companions/config.js';
 import type { conversationStore } from '../memory/conversation-store.js';
 
 interface SessionData {
@@ -27,13 +28,15 @@ export async function handleStatus(
     return;
   }
 
-  const messageCount = await store.getMessageCount(userId, ctx.session?.companionId ?? 'cipher');
+  const companionId = ctx.session?.companionId ?? 'cipher';
+  const companion = getCompanionConfig(companionId);
+  const messageCount = await store.getMessageCount(userId, companionId);
   const lastActivity = ctx.session?.lastActivity;
 
   const statusMessage = `
-🐙 *Your Status*
+${companion.emoji} *Your Status*
 
-*Companion:* Cipher (Code Kraken)
+*Companion:* ${companion.name} (${companion.species})
 *Messages:* ${messageCount} in this conversation
 *Last active:* ${lastActivity ? formatDate(lastActivity) : 'Just now'}
 
@@ -42,11 +45,11 @@ export async function handleStatus(
 • Voice responses: ${ctx.session?.preferences?.voiceEnabled ? '✅ On' : '❌ Off'}
 
 *Quick actions:*
+/switch — Change companion
+/companions — See all six
 /reset — Start fresh
-/voice on — Enable voice replies
-/teaching off — Disable explanations
 
-_What would you like to work on?_ 🌊
+_What would you like to work on?_
 `;
 
   await ctx.reply(statusMessage, { parse_mode: 'Markdown' });

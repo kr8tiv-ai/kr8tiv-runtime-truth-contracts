@@ -15,54 +15,41 @@ interface SessionData {
 type BotContext = Context & SessionFlavor<SessionData>;
 
 const HELP_MESSAGE = `
-🐙 *Cipher's Command Reference*
+*KIN Command Reference*
 
 *Core Commands:*
-/start — Begin your journey with Cipher
+/start — Start or restart your KIN
 /help — Show this help message
-/status — See your current status and settings
+/status — See your current status
 /reset — Start a fresh conversation
+/health — Check what's running
 
-*How to work with me:*
+*Companions:*
+/companions — Meet the Genesis Six
+/switch — Change your active companion
 
-🎨 *Building Websites*
-Just describe what you want:
-• "Build me a portfolio site"
-• "Create a landing page for my coffee shop"
-• "I need a blog with a dark theme"
-
-💡 *Learning Design*
-Ask me anything:
-• "Why is whitespace important?"
-• "What makes a good color palette?"
-• "Explain responsive design"
-
-🔧 *Code Help*
-• "Debug this React component"
-• "How do I center a div?" (the eternal question 😄)
-• "Review my CSS for best practices"
+*What your KIN can do:*
+• Build websites, debug code, teach design
+• Answer questions, run calculations, set reminders
+• Search the web, check the weather
+• Listen to voice notes and reply with voice
 
 🗣️ *Voice Notes*
-Just send me a voice message! I'll transcribe it and reply with voice.
-
-*Settings:*
-• Teaching mode: I explain my design decisions
-• Voice responses: Toggle with /voice on/off
+Send a voice message — your KIN transcribes it locally and replies.
 
 *Need human help?*
-Contact support through Mission Control or use /support
-
-_— Cipher 🐙_
+Contact support through Mission Control.
 `;
 
 const QUICK_HELP = `
 *Quick help:*
-/start — Begin your journey
+/start — Start your KIN
 /help — Full command list
 /status — Your status
+/companions — Meet the Genesis Six
 /reset — Fresh conversation
 
-Just send me a message to start chatting! 🐙
+Just send a message to start chatting!
 `;
 
 export async function handleHelp(ctx: BotContext) {
