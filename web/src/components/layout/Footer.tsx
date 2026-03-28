@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 
 const FOOTER_LINKS = [
   { href: '/companions', label: 'Companions' },
@@ -126,6 +127,7 @@ export function Footer() {
           <p className="text-xs text-white/30">
             &copy; {new Date().getFullYear()} KIN. All rights reserved.
           </p>
+          <StatusBadge />
           <p className="text-xs text-white/30">
             Built by{' '}
             <span className="text-white/50 font-medium">KR8TIV</span>

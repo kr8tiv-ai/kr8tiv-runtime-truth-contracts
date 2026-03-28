@@ -10,6 +10,7 @@ import { useConversations } from '@/hooks/useConversations';
 import { OverviewStats } from '@/components/dashboard/OverviewStats';
 import { ActiveCompanion } from '@/components/dashboard/ActiveCompanion';
 import { RecentConversations } from '@/components/dashboard/RecentConversations';
+import { QuickStart } from '@/components/dashboard/QuickStart';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -30,6 +31,9 @@ export default function DashboardPage() {
           Here is what is happening with your KIN companion.
         </p>
       </div>
+
+      {/* Quick Start Guide (new users) */}
+      <QuickStart conversationCount={conversations.length} />
 
       {/* Stats Row */}
       <OverviewStats

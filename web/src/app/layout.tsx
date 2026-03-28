@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Outfit, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
+import { SupportWidget } from '@/components/ui/SupportWidget';
 import './globals.css';
 
 const outfit = Outfit({
@@ -44,6 +45,7 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </AuthProvider>
+        <SupportWidget />
         <div className="grain-overlay" aria-hidden="true" />
       </body>
     </html>
