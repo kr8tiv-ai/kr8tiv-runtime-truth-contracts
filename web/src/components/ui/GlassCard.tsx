@@ -10,9 +10,9 @@ interface GlassCardProps {
 }
 
 const glowShadows: Record<string, string> = {
-  cyan: '0 8px 32px rgba(0, 240, 255, 0.15)',
-  magenta: '0 8px 32px rgba(255, 0, 170, 0.15)',
-  gold: '0 8px 32px rgba(255, 215, 0, 0.15)',
+  cyan: '0 8px 32px rgba(0, 240, 255, 0.2), 0 0 60px rgba(0, 240, 255, 0.08)',
+  magenta: '0 8px 32px rgba(255, 0, 170, 0.2), 0 0 60px rgba(255, 0, 170, 0.08)',
+  gold: '0 8px 32px rgba(255, 215, 0, 0.2), 0 0 60px rgba(255, 215, 0, 0.08)',
   none: 'none',
 };
 
@@ -26,7 +26,8 @@ export function GlassCard({
     <div
       className={cn(
         'rounded-lg border border-white/10 bg-white/[0.02] backdrop-blur-[20px]',
-        hover && 'transition-all duration-300 hover:-translate-y-1',
+        hover && 'transition-all duration-300 ease-out hover:-translate-y-1',
+        hover && glow !== 'none' && 'hover:scale-[1.02]',
         className,
       )}
       style={
