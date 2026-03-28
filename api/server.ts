@@ -24,6 +24,10 @@ import nftRoutes from './routes/nft.js';
 import authRoutes from './routes/auth.js';
 import memoryRoutes from './routes/memory.js';
 import supportRoutes from './routes/support.js';
+import billingRoutes from './routes/billing.js';
+import projectRoutes from './routes/projects.js';
+import referralRoutes from './routes/referral.js';
+import adminRoutes from './routes/admin.js';
 
 // ============================================================================
 // Types
@@ -167,6 +171,24 @@ export async function createServer(config: ApiConfig = {}) {
     await protectedFastify.register(nftRoutes);
     await protectedFastify.register(memoryRoutes);
     await protectedFastify.register(supportRoutes);
+    await protectedFastify.register(billingRoutes);
+    await protectedFastify.register(projectRoutes);
+    await protectedFastify.register(referralRoutes);
+    await protectedFastify.register(adminRoutes);
+  });
+
+  // ==========================================================================
+  // Admin Dashboard (static HTML)
+  // ==========================================================================
+
+  fastify.get('/admin', async (_request, reply) => {
+    const dashboardPath = path.join(process.cwd(), 'admin', 'dashboard.html');
+    if (fs.existsSync(dashboardPath)) {
+      const html = fs.readFileSync(dashboardPath, 'utf-8');
+      reply.type('text/html').send(html);
+    } else {
+      reply.status(404).send({ error: 'Admin dashboard not found' });
+    }
   });
 
   // ==========================================================================

@@ -237,6 +237,131 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status);
 
 -- ============================================================================
+-- User Preferences (persistent across sessions)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  display_name TEXT,               -- What Cipher calls them
+  experience_level TEXT DEFAULT 'beginner' CHECK (experience_level IN ('beginner', 'intermediate', 'advanced')),
+  goals TEXT,                      -- JSON array of goals
+  language TEXT DEFAULT 'en',      -- ISO 639-1 language code
+  tone TEXT DEFAULT 'friendly' CHECK (tone IN ('friendly', 'professional', 'casual', 'technical')),
+  onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  UNIQUE(user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id);
+
+-- ============================================================================
+-- Website Projects
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  companion_id TEXT NOT NULL REFERENCES companions(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  project_type TEXT NOT NULL DEFAULT 'website' CHECK (project_type IN ('website', 'landing_page', 'portfolio', 'blog', 'other')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'preview', 'deployed', 'archived')),
+  files TEXT,                      -- JSON blob of generated files
+  preview_url TEXT,
+  deploy_url TEXT,
+  deploy_provider TEXT CHECK (deploy_provider IN ('vercel', 'netlify', 'cloudflare')),
+  deploy_config TEXT,              -- JSON blob of deploy settings
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+
+-- ============================================================================
+-- Progress Tracking (streaks, milestones)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS progress (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  longest_streak INTEGER NOT NULL DEFAULT 0,
+  total_messages INTEGER NOT NULL DEFAULT 0,
+  total_projects INTEGER NOT NULL DEFAULT 0,
+  total_voice_notes INTEGER NOT NULL DEFAULT 0,
+  last_active_date TEXT,           -- YYYY-MM-DD format for streak calc
+  level INTEGER NOT NULL DEFAULT 1,
+  xp INTEGER NOT NULL DEFAULT 0,
+  badges TEXT,                     -- JSON array of earned badges
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  UNIQUE(user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_progress_user ON progress(user_id);
+
+-- ============================================================================
+-- Billing / Subscriptions
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  stripe_subscription_id TEXT UNIQUE,
+  stripe_customer_id TEXT,
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'enterprise')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'past_due', 'canceled', 'trialing')),
+  current_period_start INTEGER,
+  current_period_end INTEGER,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  UNIQUE(user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe ON subscriptions(stripe_subscription_id);
+
+-- ============================================================================
+-- Referrals
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS referrals (
+  id TEXT PRIMARY KEY,
+  referrer_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  referred_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  referral_code TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'expired')),
+  reward_granted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  completed_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_user_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_code ON referrals(referral_code);
+
+-- ============================================================================
+-- Companion Customizations
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS companion_customizations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  companion_id TEXT NOT NULL REFERENCES companions(id) ON DELETE CASCADE,
+  custom_name TEXT,                -- User's nickname for the companion
+  tone_override TEXT CHECK (tone_override IN ('friendly', 'professional', 'casual', 'technical')),
+  personality_notes TEXT,          -- Freeform personality adjustments
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  UNIQUE(user_id, companion_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_companion_custom_user ON companion_customizations(user_id);
+
+-- ============================================================================
 -- Trigger for updated_at
 -- ============================================================================
 

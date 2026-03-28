@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIN Mission Control</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+    .header { background: #111118; border-bottom: 1px solid #222; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 18px; color: #fff; }
+    .header h1 span { color: #7c3aed; }
+    .header .status { font-size: 12px; color: #6b7280; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #111118; border: 1px solid #222; border-radius: 8px; padding: 20px; }
+    .stat-card .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 28px; font-weight: 600; color: #fff; margin-top: 4px; }
+    .stat-card .change { font-size: 12px; margin-top: 4px; }
+    .stat-card .change.up { color: #22c55e; }
+    .stat-card .change.down { color: #ef4444; }
+    .section { background: #111118; border: 1px solid #222; border-radius: 8px; margin-bottom: 24px; }
+    .section-header { padding: 16px 20px; border-bottom: 1px solid #222; font-weight: 600; }
+    .section-body { padding: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid #222; }
+    td { padding: 10px 12px; border-bottom: 1px solid #1a1a24; font-size: 13px; }
+    tr:hover td { background: #16161f; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    .badge-free { background: #1f2937; color: #9ca3af; }
+    .badge-pro { background: #312e81; color: #a5b4fc; }
+    .badge-enterprise { background: #7c2d12; color: #fdba74; }
+    .badge-online { background: #14532d; color: #86efac; }
+    .badge-offline { background: #1f2937; color: #6b7280; }
+    .companion-bar { display: flex; gap: 4px; height: 24px; border-radius: 4px; overflow: hidden; }
+    .companion-bar div { display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; }
+    #login-screen { display: none; position: fixed; inset: 0; background: #0a0a0f; z-index: 100; display: flex; align-items: center; justify-content: center; }
+    #login-screen.hidden { display: none; }
+    .login-box { background: #111118; border: 1px solid #222; border-radius: 12px; padding: 32px; width: 360px; text-align: center; }
+    .login-box h2 { margin-bottom: 8px; }
+    .login-box p { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+    .login-box input { width: 100%; padding: 10px 12px; background: #1a1a24; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 14px; margin-bottom: 12px; }
+    .login-box button { width: 100%; padding: 10px; background: #7c3aed; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+    .login-box button:hover { background: #6d28d9; }
+    .error-text { color: #ef4444; font-size: 12px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div id="login-screen">
+    <div class="login-box">
+      <h2>🐙 Mission Control</h2>
+      <p>Enter your admin API token to continue</p>
+      <div id="login-error" class="error-text" style="display:none"></div>
+      <input type="password" id="token-input" placeholder="JWT Token" />
+      <button onclick="login()">Sign In</button>
+    </div>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <div class="header">
+      <h1>🐙 <span>KIN</span> Mission Control</h1>
+      <div class="status">Last updated: <span id="last-updated">—</span></div>
+    </div>
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="label">Total Users</div><div class="value" id="stat-users">—</div></div>
+        <div class="stat-card"><div class="label">Active Today</div><div class="value" id="stat-active">—</div></div>
+        <div class="stat-card"><div class="label">Total Messages</div><div class="value" id="stat-messages">—</div></div>
+        <div class="stat-card"><div class="label">Total Projects</div><div class="value" id="stat-projects">—</div></div>
+        <div class="stat-card"><div class="label">Pro Users</div><div class="value" id="stat-pro">—</div></div>
+        <div class="stat-card"><div class="label">Companions Active</div><div class="value" id="stat-companions">—</div></div>
+      </div>
+      <div class="section">
+        <div class="section-header">Recent Users</div>
+        <div class="section-body"><table><thead><tr><th>Name</th><th>Tier</th><th>Messages</th><th>Last Active</th><th>Status</th></tr></thead><tbody id="users-table"></tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-header">Companion Usage</div>
+        <div class="section-body" id="companion-stats"></div>
+      </div>
+      <div class="section">
+        <div class="section-header">Recent Errors</div>
+        <div class="section-body"><table><thead><tr><th>Time</th><th>Companion</th><th>Error</th></tr></thead><tbody id="errors-table"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('kin_admin_token');
+    const API_BASE = window.location.origin + '/api/admin';
+
+    async function api(path) {
+      const res = await fetch(API_BASE + path, { headers: { Authorization: 'Bearer ' + token } });
+      if (res.status === 401 || res.status === 403) { logout(); throw new Error('Unauthorized'); }
+      return res.json();
+    }
+
+    function login() {
+      token = document.getElementById('token-input').value;
+      if (!token) return;
+      localStorage.setItem('kin_admin_token', token);
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard').style.display = 'block';
+      loadDashboard();
+    }
+
+    function logout() {
+      localStorage.removeItem('kin_admin_token');
+      token = null;
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('dashboard').style.display = 'none';
+    }
+
+    async function loadDashboard() {
+      try {
+        const [stats, users, companions, errors] = await Promise.all([
+          api('/stats'), api('/users?limit=20'), api('/companions'), api('/errors'),
+        ]);
+        document.getElementById('stat-users').textContent = stats.totalUsers ?? 0;
+        document.getElementById('stat-active').textContent = stats.activeToday ?? 0;
+        document.getElementById('stat-messages').textContent = (stats.totalMessages ?? 0).toLocaleString();
+        document.getElementById('stat-projects').textContent = stats.totalProjects ?? 0;
+        document.getElementById('stat-pro').textContent = stats.proUsers ?? 0;
+        document.getElementById('stat-companions').textContent = companions.companions?.length ?? 6;
+
+        const tbody = document.getElementById('users-table');
+        tbody.innerHTML = (users.users ?? []).map(u => `<tr>
+          <td>${u.firstName ?? 'Unknown'} ${u.lastName ?? ''}</td>
+          <td><span class="badge badge-${u.tier}">${u.tier}</span></td>
+          <td>${u.messageCount ?? 0}</td>
+          <td>${u.lastActive ? new Date(u.lastActive).toLocaleDateString() : '—'}</td>
+          <td><span class="badge ${u.online ? 'badge-online' : 'badge-offline'}">${u.online ? 'Online' : 'Offline'}</span></td>
+        </tr>`).join('');
+
+        const compDiv = document.getElementById('companion-stats');
+        compDiv.innerHTML = (companions.companions ?? []).map(c =>
+          `<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #1a1a24">
+            <span style="font-size:20px">${c.emoji ?? '🐙'}</span>
+            <span style="width:100px;font-weight:500">${c.name}</span>
+            <div style="flex:1;background:#1a1a24;height:20px;border-radius:4px;overflow:hidden">
+              <div style="background:#7c3aed;height:100%;width:${Math.min(100, (c.usageCount / Math.max(1, stats.totalUsers)) * 100)}%;border-radius:4px"></div>
+            </div>
+            <span style="font-size:12px;color:#6b7280">${c.usageCount ?? 0} users</span>
+          </div>`
+        ).join('');
+
+        const errBody = document.getElementById('errors-table');
+        errBody.innerHTML = (errors.errors ?? []).map(e => `<tr>
+          <td>${new Date(e.recordedAt).toLocaleString()}</td>
+          <td>${e.companionId}</td>
+          <td style="color:#ef4444">${e.lastError ?? 'Unknown'}</td>
+        </tr>`).join('') || '<tr><td colspan="3" style="color:#6b7280;text-align:center">No recent errors</td></tr>';
+
+        document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+      } catch (e) { console.error('Dashboard load error:', e); }
+    }
+
+    // Auto-login if token exists
+    if (token) {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('dashboard').style.display = 'block';
+      loadDashboard();
+      setInterval(loadDashboard, 30000);
+    }
+  </script>
+</body>
+</html>

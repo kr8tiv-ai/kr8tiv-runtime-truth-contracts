@@ -429,3 +429,89 @@ export async function isPiperAvailable(): Promise<boolean> {
     proc.on('error', () => resolve(false));
   });
 }
+
+/**
+ * Synthesize speech with local XTTS first, falling back to ElevenLabs API.
+ *
+ * Local path: XTTS v2 server (voice cloning, zero API cost) → Piper (fast preset)
+ * Cloud path: POST https://api.elevenlabs.io/v1/text-to-speech/{voiceId}
+ *             (requires ELEVENLABS_API_KEY; default voice: Rachel)
+ *
+ * @param text    - Text to speak
+ * @param voiceId - ElevenLabs voice ID to use for the cloud fallback.
+ *                  Falls back to ELEVENLABS_VOICE_ID env var, then the Rachel preset.
+ * @returns Audio buffer (MP3 from ElevenLabs, WAV from local) or null on total failure
+ */
+export async function synthesizeSpeech(
+  text: string,
+  voiceId?: string,
+): Promise<Buffer | null> {
+  const resolvedVoiceId =
+    voiceId ?? process.env.ELEVENLABS_VOICE_ID ?? '21m00Tcm4TlvDq8ikWAM'; // Rachel
+
+  // 1. Try local XTTS (voice cloning server)
+  const xttsUp = await isXttsAvailable();
+  if (xttsUp) {
+    try {
+      // Use a generic companion ID; XTTS will use its default reference audio
+      const result = await synthesizeWithXtts(text, 'cipher');
+      return result.audioBuffer;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[tts] XTTS failed, trying Piper next: ${msg}`);
+    }
+  }
+
+  // 2. Try local Piper (fast preset voices)
+  const piperUp = await isPiperAvailable();
+  if (piperUp) {
+    try {
+      const result = await synthesizeWithPiper(text, 'cipher');
+      return result.audioBuffer;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[tts] Piper failed, falling back to ElevenLabs API: ${msg}`);
+    }
+  }
+
+  // 3. Cloud fallback: ElevenLabs API
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    console.error('[tts] No ELEVENLABS_API_KEY set and no local TTS available');
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(resolvedVoiceId)}`,
+      {
+        method: 'POST',
+        headers: {
+          'xi-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg',
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+        signal: AbortSignal.timeout(30_000),
+      },
+    );
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`ElevenLabs API error ${response.status}: ${errText.slice(0, 200)}`);
+    }
+
+    return Buffer.from(await response.arrayBuffer());
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[tts] ElevenLabs API failed: ${msg}`);
+    return null;
+  }
+}

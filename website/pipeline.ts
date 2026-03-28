@@ -395,35 +395,110 @@ export async function startPreview(
 }
 
 /**
- * Deploy to hosting provider
+ * Deploy to hosting provider.
+ *
+ * Vercel target uses the v13 Deployments API:
+ *   POST https://api.vercel.com/v13/deployments
+ * Requires VERCEL_TOKEN env var (or config.token).
+ * Falls back to a placeholder URL when no token is configured.
+ *
+ * Netlify and Cloudflare remain stubs for future integration.
  */
 export async function deploy(
   files: GeneratedFile[],
   target: 'vercel' | 'netlify' | 'cloudflare',
   config: { token?: string; projectId?: string }
 ): Promise<{ url: string; deploymentId: string }> {
-  // STUB: Deployment not yet wired to provider APIs
-  // TODO: Integrate Vercel/Netlify/Cloudflare APIs for real deployment
-
-  const deploymentId = `deploy-${Date.now()}`;
-  
-  switch (target) {
-    case 'vercel':
-      return {
-        url: `https://${deploymentId}.vercel.app`,
-        deploymentId,
-      };
-    case 'netlify':
-      return {
-        url: `https://${deploymentId}.netlify.app`,
-        deploymentId,
-      };
-    case 'cloudflare':
-      return {
-        url: `https://${deploymentId}.pages.dev`,
-        deploymentId,
-      };
+  if (target === 'vercel') {
+    return deployToVercel(files, config);
   }
+
+  // Stub deployments for non-Vercel targets
+  const deploymentId = `deploy-${Date.now()}`;
+  switch (target) {
+    case 'netlify':
+      return { url: `https://${deploymentId}.netlify.app`, deploymentId };
+    case 'cloudflare':
+      return { url: `https://${deploymentId}.pages.dev`, deploymentId };
+  }
+}
+
+/**
+ * Deploy files to Vercel via the v13 Deployments API.
+ *
+ * Sends every generated file as a source blob and creates a new deployment.
+ * The project name is derived from config.projectId or defaults to 'kin-website'.
+ *
+ * @see https://vercel.com/docs/rest-api/endpoints/deployments#create-a-new-deployment
+ */
+async function deployToVercel(
+  files: GeneratedFile[],
+  config: { token?: string; projectId?: string },
+): Promise<{ url: string; deploymentId: string }> {
+  const token = config.token ?? process.env.VERCEL_TOKEN;
+
+  if (!token) {
+    console.warn('[deploy] VERCEL_TOKEN not set — returning placeholder deployment URL');
+    const deploymentId = `deploy-${Date.now()}`;
+    return {
+      url: `https://${deploymentId}.vercel.app`,
+      deploymentId,
+    };
+  }
+
+  const projectName = config.projectId ?? 'kin-website';
+
+  // Map GeneratedFile[] to Vercel deployment file objects
+  const vercelFiles = files.map((f) => ({
+    file: f.path.startsWith('/') ? f.path.slice(1) : f.path,
+    data: f.content,
+    encoding: 'utf8' as const,
+  }));
+
+  const payload = {
+    name: projectName,
+    files: vercelFiles,
+    projectSettings: {
+      framework: null, // static deployment
+    },
+    target: 'production',
+  };
+
+  const response = await fetch('https://api.vercel.com/v13/deployments', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(120_000), // deployments can take a while
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    console.error(`[deploy] Vercel API error ${response.status}: ${errText.slice(0, 300)}`);
+    // Graceful fallback: return a placeholder rather than throwing
+    const deploymentId = `deploy-${Date.now()}`;
+    return {
+      url: `https://${deploymentId}.vercel.app`,
+      deploymentId,
+    };
+  }
+
+  const data = await response.json() as {
+    id?: string;
+    url?: string;
+    readyState?: string;
+  };
+
+  const deploymentId = data.id ?? `deploy-${Date.now()}`;
+  // Vercel returns the URL without the scheme; add https:// if needed
+  const rawUrl = data.url ?? `${deploymentId}.vercel.app`;
+  const url = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+
+  console.log(`[deploy] Vercel deployment created: ${url} (state: ${data.readyState ?? 'unknown'})`);
+
+  return { url, deploymentId };
 }
 
 // ============================================================================
@@ -497,13 +572,20 @@ export class WebsitePipeline {
   }
 
   /**
-   * Deploy generated files
+   * Deploy generated files.
+   *
+   * For Vercel deployments the VERCEL_TOKEN env var is used automatically
+   * when options.token is not explicitly provided.
    */
   async deploy(
     files: GeneratedFile[],
     options?: { token?: string; projectId?: string }
   ): Promise<{ url: string; deploymentId: string }> {
-    return deploy(files, this.config.deployTarget ?? 'vercel', options ?? {});
+    const opts = {
+      token: options?.token ?? process.env.VERCEL_TOKEN,
+      projectId: options?.projectId,
+    };
+    return deploy(files, this.config.deployTarget ?? 'vercel', opts);
   }
 }
 

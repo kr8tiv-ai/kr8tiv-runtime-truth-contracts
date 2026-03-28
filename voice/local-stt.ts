@@ -183,3 +183,78 @@ export async function isWhisperCppAvailable(): Promise<boolean> {
     proc.on('error', () => resolve(false));
   });
 }
+
+/**
+ * Transcribe audio with local whisper.cpp first, falling back to OpenAI Whisper API.
+ *
+ * Local path: whisper.cpp binary + GGML model (zero cost, ~100-500ms)
+ * Cloud path: POST https://api.openai.com/v1/audio/transcriptions (requires OPENAI_API_KEY)
+ *
+ * @param audioBuffer - Raw audio bytes (OGG/Opus from Telegram, WAV, MP3, etc.)
+ * @param format      - MIME-level format hint passed to OpenAI API ('ogg', 'wav', 'mp3', ...)
+ * @returns Transcribed text, or a graceful fallback message on total failure
+ */
+export async function transcribeAudio(
+  audioBuffer: Buffer,
+  format: string = 'ogg',
+): Promise<string> {
+  // 1. Try local whisper.cpp first (free, low latency)
+  const localAvailable = await isWhisperCppAvailable();
+  if (localAvailable) {
+    try {
+      const result = await transcribeWithWhisperCpp(audioBuffer);
+      return result.text;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[stt] whisper.cpp failed, falling back to OpenAI API: ${msg}`);
+    }
+  }
+
+  // 2. Cloud fallback: OpenAI Whisper API
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.error('[stt] No OPENAI_API_KEY set and local whisper.cpp unavailable');
+    return '[Voice transcription unavailable — set OPENAI_API_KEY or install whisper.cpp]';
+  }
+
+  try {
+    // Build multipart/form-data manually so we don't require FormData globals
+    const boundary = `----KinWhisper${Date.now()}`;
+    const filename = `audio.${format}`;
+
+    const preamble = Buffer.from(
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+      `Content-Type: audio/${format}\r\n\r\n`,
+    );
+    const modelField = Buffer.from(
+      `\r\n--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="model"\r\n\r\n` +
+      `whisper-1\r\n` +
+      `--${boundary}--\r\n`,
+    );
+    const body = Buffer.concat([preamble, audioBuffer, modelField]);
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`OpenAI Whisper API error ${response.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const json = await response.json() as { text?: string };
+    return json.text?.trim() ?? '';
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[stt] OpenAI Whisper API failed: ${msg}`);
+    return '[Voice transcription failed — please try again]';
+  }
+}

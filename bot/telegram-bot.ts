@@ -19,10 +19,18 @@ import { handleHealth } from './handlers/health.js';
 import { handleSwitch } from './handlers/switch.js';
 import { handleCompanions } from './handlers/companions.js';
 import { handleSupport, handleSupportCallback } from './handlers/support.js';
+import { handleOnboarding, advanceOnboardingToGoal, handleOnboardingCallback, isAwaitingName } from './handlers/onboarding.js';
+import { handleProjects, handleNewProject, createProject, handleProjectCallback } from './handlers/projects.js';
+import { handleExport } from './handlers/export.js';
+import { handleProgress, handleProgressCallback, recordActivity } from './handlers/progress.js';
+import { handleCustomize, handleCustomizeCallback, handleCustomizePendingInput } from './handlers/customize.js';
+import { handleRefer, handleReferCallback } from './handlers/refer.js';
+import { handleUpgrade, handleUpgradeCallback } from './handlers/upgrade.js';
 import { handleVoice } from './handlers/voice.js';
 import { createSkillRouter, onReminderFired } from './skills/index.js';
 import type { SkillContext } from './skills/index.js';
 import { sanitizeInput, escapeMarkdown } from './utils/sanitize.js';
+import { detectLanguage, getLanguagePromptAddition } from './utils/language.js';
 
 // Suggestion buttons shown after Cipher responses
 const SUGGESTION_BUTTONS = new InlineKeyboard()
@@ -156,6 +164,34 @@ export function createKINBot(config: BotConfig) {
     await handleSupport(ctx);
   });
 
+  bot.command('projects', async (ctx) => {
+    await handleProjects(ctx);
+  });
+
+  bot.command('newproject', async (ctx) => {
+    await handleNewProject(ctx);
+  });
+
+  bot.command('export', async (ctx) => {
+    await handleExport(ctx, conversationStore);
+  });
+
+  bot.command('progress', async (ctx) => {
+    await handleProgress(ctx);
+  });
+
+  bot.command('customize', async (ctx) => {
+    await handleCustomize(ctx);
+  });
+
+  bot.command('refer', async (ctx) => {
+    await handleRefer(ctx);
+  });
+
+  bot.command('upgrade', async (ctx) => {
+    await handleUpgrade(ctx);
+  });
+
   // ==========================================================================
   // Callback Query Handlers (Inline Button Presses)
   // ==========================================================================
@@ -236,6 +272,42 @@ export function createKINBot(config: BotConfig) {
       return;
     }
 
+    // Onboarding buttons
+    if (data.startsWith('onboard:')) {
+      await handleOnboardingCallback(ctx, data, conversationStore);
+      return;
+    }
+
+    // Project buttons
+    if (data.startsWith('project:')) {
+      await handleProjectCallback(ctx, data);
+      return;
+    }
+
+    // Progress buttons
+    if (data.startsWith('progress:')) {
+      await handleProgressCallback(ctx, data);
+      return;
+    }
+
+    // Customization buttons
+    if (data.startsWith('custom:')) {
+      await handleCustomizeCallback(ctx, data);
+      return;
+    }
+
+    // Referral buttons
+    if (data.startsWith('refer:')) {
+      await handleReferCallback(ctx, data);
+      return;
+    }
+
+    // Upgrade buttons
+    if (data.startsWith('upgrade:')) {
+      await handleUpgradeCallback(ctx, data);
+      return;
+    }
+
     // Unknown callback — acknowledge silently
     await ctx.answerCallbackQuery();
   });
@@ -288,6 +360,20 @@ export function createKINBot(config: BotConfig) {
     ctx.session.lastActivity = new Date();
     ctx.session.conversationStarted = true;
 
+    // Track activity for progress/gamification
+    recordActivity(userId);
+
+    // Intercept onboarding name input
+    if (isAwaitingName(userId)) {
+      await advanceOnboardingToGoal(ctx, message, conversationStore);
+      return;
+    }
+
+    // Intercept customization pending input (nickname, personality notes)
+    if (await handleCustomizePendingInput(ctx, message)) {
+      return;
+    }
+
     // Show typing indicator
     await ctx.api.sendChatAction(ctx.chat.id, 'typing');
 
@@ -316,12 +402,16 @@ export function createKINBot(config: BotConfig) {
       // Get conversation history
       const history = await conversationStore.getHistory(userId, 20);
 
+      // Detect language for multi-language support
+      const lang = detectLanguage(message);
+      const langAddition = getLanguagePromptAddition(lang);
+
       // Build messages for the LLM
       const systemPrompt = buildCipherPrompt(message, {
         userName: ctx.from?.first_name ?? 'Friend',
         taskContext: { type: 'chat' },
         timeContext: new Date().toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' }),
-      });
+      }) + langAddition;
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
