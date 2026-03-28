@@ -8,6 +8,9 @@ coverage/
 .env
 .env.*
 *.log
+data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # ── GSD baseline (auto-generated) ──
 .gsd
@@ -29,6 +32,10 @@ target/
 vendor/
 .cache/
 tmp/
+
+# Separate projects (not part of KIN)
+brain-fund/
+check_gsd.py
 
 # IDE / AI tool configs
 .agents/

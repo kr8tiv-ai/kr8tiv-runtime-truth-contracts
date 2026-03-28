@@ -258,20 +258,6 @@ export function createKINBot(config: BotConfig) {
       return;
     }
 
-    // Companion switch buttons
-    if (data.startsWith('switch:')) {
-      const companionId = data.slice('switch:'.length);
-      ctx.session.companionId = companionId;
-      const { getCompanionConfig } = await import('../companions/config.js');
-      const config = getCompanionConfig(companionId);
-      await ctx.answerCallbackQuery({ text: `Switched to ${config.name}!` });
-      await ctx.reply(
-        `${config.emoji} *Switched to ${config.name}* — ${config.species}\n\n${config.tagline}\n\n_Say hi! ${config.name} is ready to chat._`,
-        { parse_mode: 'Markdown' },
-      );
-      return;
-    }
-
     // Onboarding buttons
     if (data.startsWith('onboard:')) {
       await handleOnboardingCallback(ctx, data, conversationStore);
