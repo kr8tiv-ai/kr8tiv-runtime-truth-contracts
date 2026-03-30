@@ -4,6 +4,7 @@
 // StepReady — Onboarding Step 5: Completion + launch.
 // ============================================================================
 
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getCompanion, getCompanionColor } from '@/lib/companions';
 import { track } from '@/lib/analytics';
@@ -57,6 +58,161 @@ function ConfettiDots({ color }: { color: string }) {
         />
       ))}
     </>
+  );
+}
+
+// ============================================================================
+// ChatPreview — Animated mock chat window shown on the ready step
+// ============================================================================
+
+interface ChatPreviewProps {
+  companionName: string;
+  companionEmoji: string;
+  companionColor: string;
+  companionTagline: string;
+  companionDescription: string;
+}
+
+type ChatMessage =
+  | { id: string; role: 'user' | 'companion'; text: string }
+  | { id: string; role: 'typing' };
+
+function ChatPreview({
+  companionName,
+  companionEmoji,
+  companionColor,
+  companionTagline,
+  companionDescription,
+}: ChatPreviewProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const firstSentence = companionDescription.split(/(?<=[.!?])\s+/)[0] ?? companionDescription;
+
+  useEffect(() => {
+    function schedule(fn: () => void, delay: number) {
+      const id = setTimeout(fn, delay);
+      timeoutsRef.current.push(id);
+    }
+
+    // 0ms — user opens with a greeting
+    schedule(() => {
+      setMessages([{ id: 'u1', role: 'user', text: 'Hey, nice to meet you!' }]);
+    }, 0);
+
+    // 800ms — companion starts typing
+    schedule(() => {
+      setMessages((prev) => [...prev, { id: 'typing-1', role: 'typing' }]);
+    }, 800);
+
+    // 1800ms — companion replies
+    schedule(() => {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== 'typing-1'),
+        {
+          id: 'c1',
+          role: 'companion',
+          text: `Hey! So excited to meet you! I'm ${companionName}, and I'm all about ${companionTagline}.`,
+        },
+      ]);
+    }, 1800);
+
+    // 2800ms — user follow-up
+    schedule(() => {
+      setMessages((prev) => [
+        ...prev,
+        { id: 'u2', role: 'user', text: 'What can you help me with?' },
+      ]);
+    }, 2800);
+
+    // 3600ms — companion typing again
+    schedule(() => {
+      setMessages((prev) => [...prev, { id: 'typing-2', role: 'typing' }]);
+    }, 3600);
+
+    // 4600ms — companion pitch
+    schedule(() => {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== 'typing-2'),
+        { id: 'c2', role: 'companion', text: firstSentence },
+      ]);
+    }, 4600);
+
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="w-full max-w-sm mx-auto rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10">
+        <span className="text-base">{companionEmoji}</span>
+        <span className="text-sm font-medium text-white">{companionName}</span>
+        <span
+          className="ml-auto h-2 w-2 rounded-full"
+          style={{ backgroundColor: '#22c55e' }}
+        />
+      </div>
+
+      {/* Messages */}
+      <div className="px-4 py-3 space-y-3 min-h-[140px]">
+        {messages.map((msg) => {
+          if (msg.role === 'typing') {
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-1 bg-white/[0.04] rounded-2xl rounded-tl-sm px-3 py-2 w-fit"
+              >
+                {[0, 0.15, 0.3].map((delay, i) => (
+                  <span
+                    key={i}
+                    className="inline-block h-1.5 w-1.5 rounded-full bg-white/30 animate-bounce"
+                    style={{ animationDelay: `${delay}s` }}
+                  />
+                ))}
+              </motion.div>
+            );
+          }
+
+          if (msg.role === 'user') {
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-end"
+              >
+                <span
+                  className="max-w-[75%] rounded-2xl rounded-tr-sm px-3 py-2 text-xs text-white"
+                  style={{ backgroundColor: 'rgba(0,240,255,0.10)' }}
+                >
+                  {msg.text}
+                </span>
+              </motion.div>
+            );
+          }
+
+          // companion message
+          return (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <span className="max-w-[75%] rounded-2xl rounded-tl-sm bg-white/[0.04] px-3 py-2 text-xs text-white/80">
+                {msg.text}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -126,6 +282,22 @@ export function StepReady({
           >
             {companion.emoji} {companion.name} is ready to meet you!
           </motion.p>
+
+          {/* Live chat preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="mt-6 w-full"
+          >
+            <ChatPreview
+              companionName={companion.name}
+              companionEmoji={companion.emoji}
+              companionColor={companionColor}
+              companionTagline={companion.tagline}
+              companionDescription={companion.description}
+            />
+          </motion.div>
         </motion.div>
       )}
 

@@ -16,11 +16,12 @@ const STEPS = [
   { label: 'Welcome', time: '30s' },
   { label: 'Companion', time: '1 min' },
   { label: 'Personalize', time: '1 min' },
+  { label: 'Soul', time: '1 min' },
   { label: 'Memory', time: '30s' },
   { label: 'Ready', time: '' },
 ];
 
-export function OnboardProgress({ currentStep, totalSteps = 5 }: OnboardProgressProps) {
+export function OnboardProgress({ currentStep, totalSteps = 6 }: OnboardProgressProps) {
   return (
     <div className="flex flex-col items-center py-8">
       {/* Step dots and lines */}

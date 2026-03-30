@@ -288,3 +288,153 @@ export function buildCompanionPrompt(
 export function getAvailableCompanions(): string[] {
   return Object.keys(COMPANION_SYSTEM_PROMPTS);
 }
+
+// ============================================================================
+// Soul Prompt Builder — converts a user-defined soul config into a markdown
+// section that can be injected into any companion system prompt.
+// ============================================================================
+
+/**
+ * Build a "## Your Soul" markdown section from a soul configuration object.
+ * Only sections with content are included. The resulting string is intended to
+ * be appended to a companion system prompt before sending to the LLM.
+ */
+export function buildSoulPrompt(soulConfig: {
+  customName?: string;
+  traits: {
+    warmth: number;
+    formality: number;
+    humor: number;
+    directness: number;
+    creativity: number;
+    depth: number;
+  };
+  values: string[];
+  style: {
+    vocabulary: 'simple' | 'moderate' | 'advanced';
+    responseLength: 'concise' | 'balanced' | 'detailed';
+    useEmoji: boolean;
+  };
+  customInstructions: string;
+  boundaries: string[];
+  antiPatterns: string[];
+}): string {
+  const { customName, traits, values, style, customInstructions, boundaries, antiPatterns } =
+    soulConfig;
+
+  const lines: string[] = [];
+
+  // ── Header ────────────────────────────────────────────────────────────────
+
+  lines.push('## Your Soul (customized by your human)');
+  lines.push('');
+
+  // ── Custom name ───────────────────────────────────────────────────────────
+
+  if (customName && customName.trim().length > 0) {
+    lines.push(
+      `Your human has named you ${customName.trim()}. Use this name when referring to yourself.`,
+    );
+    lines.push('');
+  }
+
+  // ── Trait-derived behavioral instructions ─────────────────────────────────
+
+  const traitInstructions: string[] = [];
+
+  if (traits.warmth > 70) {
+    traitInstructions.push('Be warm, encouraging, and emotionally present.');
+  } else if (traits.warmth < 30) {
+    traitInstructions.push('Be reserved and matter-of-fact. Skip pleasantries.');
+  }
+
+  if (traits.humor > 70) {
+    traitInstructions.push('Use humor freely. Jokes, wordplay, and wit are welcome.');
+  } else if (traits.humor < 30) {
+    traitInstructions.push('Stay serious and focused. Humor only if truly appropriate.');
+  }
+
+  if (traits.directness > 70) {
+    traitInstructions.push('Be blunt and direct. No hedging or softening.');
+  } else if (traits.directness < 30) {
+    traitInstructions.push("Be diplomatic. Soften feedback with 'perhaps' and 'consider'.");
+  }
+
+  if (traits.formality > 70) {
+    traitInstructions.push('Use professional, polished language.');
+  } else if (traits.formality < 30) {
+    traitInstructions.push('Keep it chill and conversational. Slang is fine.');
+  }
+
+  if (traits.depth > 70) {
+    traitInstructions.push('Give thorough, detailed explanations.');
+  } else if (traits.depth < 30) {
+    traitInstructions.push('Keep responses brief. One paragraph max unless asked for more.');
+  }
+
+  if (traits.creativity > 70) {
+    traitInstructions.push('Think outside the box. Suggest unconventional approaches.');
+  } else if (traits.creativity < 30) {
+    traitInstructions.push('Stick to proven, practical approaches.');
+  }
+
+  if (traitInstructions.length > 0) {
+    for (const instruction of traitInstructions) {
+      lines.push(`- ${instruction}`);
+    }
+    lines.push('');
+  }
+
+  // ── Core Values ───────────────────────────────────────────────────────────
+
+  if (values.length > 0) {
+    lines.push('### Core Values');
+    for (const value of values) {
+      lines.push(`- ${value}`);
+    }
+    lines.push('');
+  }
+
+  // ── Communication Style ───────────────────────────────────────────────────
+
+  lines.push('### Communication Style');
+  lines.push(`- Vocabulary: ${style.vocabulary}`);
+  lines.push(`- Response length: ${style.responseLength}`);
+  lines.push(`- Emoji: ${style.useEmoji ? 'use sparingly' : 'avoid emoji'}`);
+  lines.push('');
+
+  // ── Custom Instructions ───────────────────────────────────────────────────
+
+  if (customInstructions && customInstructions.trim().length > 0) {
+    lines.push('### Custom Instructions');
+    lines.push(customInstructions.trim());
+    lines.push('');
+  }
+
+  // ── Anti-Patterns ─────────────────────────────────────────────────────────
+
+  if (antiPatterns.length > 0) {
+    lines.push('### Never Do These');
+    for (const pattern of antiPatterns) {
+      lines.push(`- ${pattern}`);
+    }
+    lines.push('');
+  }
+
+  // ── Boundaries ────────────────────────────────────────────────────────────
+
+  if (boundaries.length > 0) {
+    lines.push('### Boundaries');
+    for (const boundary of boundaries) {
+      lines.push(`- ${boundary}`);
+    }
+    lines.push('');
+  }
+
+  // Trim trailing blank line
+  while (lines.length > 0 && lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+
+  return lines.join('\n');
+}

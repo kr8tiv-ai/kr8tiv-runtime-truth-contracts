@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 
 interface StepWelcomeProps {
   onNext: () => void;
+  onSkip?: () => void;
 }
 
 const FEATURES = [
@@ -43,7 +44,7 @@ const FEATURES = [
   },
 ];
 
-export function StepWelcome({ onNext }: StepWelcomeProps) {
+export function StepWelcome({ onNext, onSkip }: StepWelcomeProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -112,6 +113,18 @@ export function StepWelcome({ onNext }: StepWelcomeProps) {
       <Button size="lg" onClick={onNext}>
         Let&apos;s Get Started
       </Button>
+
+      {/* Quick-start skip link */}
+      <motion.button
+        type="button"
+        onClick={() => onSkip?.()}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
+        className="mt-4 text-[11px] text-white/25 hover:text-white/50 transition-colors underline underline-offset-2"
+      >
+        Already know what you want? Skip ahead →
+      </motion.button>
     </motion.div>
   );
 }

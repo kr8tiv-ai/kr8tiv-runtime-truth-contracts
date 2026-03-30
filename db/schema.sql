@@ -588,3 +588,29 @@ CREATE TABLE IF NOT EXISTS nft_transfers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_nft_transfers_mint ON nft_transfers(nft_mint_address);
+
+-- ============================================================================
+-- Companion Souls (user-authored personality configs with drift detection)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS companion_souls (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  companion_id TEXT NOT NULL,
+  custom_name TEXT,
+  traits TEXT NOT NULL DEFAULT '{}',
+  soul_values TEXT NOT NULL DEFAULT '[]',
+  style TEXT NOT NULL DEFAULT '{}',
+  custom_instructions TEXT DEFAULT '',
+  boundaries TEXT NOT NULL DEFAULT '[]',
+  anti_patterns TEXT NOT NULL DEFAULT '[]',
+  soul_hash TEXT,
+  drift_score REAL NOT NULL DEFAULT 1.0,
+  last_calibrated_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  UNIQUE(user_id, companion_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_companion_souls_user ON companion_souls(user_id);
+CREATE INDEX IF NOT EXISTS idx_companion_souls_companion ON companion_souls(companion_id);

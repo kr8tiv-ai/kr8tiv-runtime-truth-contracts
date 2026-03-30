@@ -7,7 +7,8 @@
 import { useCallback, useState } from 'react';
 import { kinApi } from '@/lib/api';
 import { track } from '@/lib/analytics';
-import type { UserPreferences } from '@/lib/types';
+import type { UserPreferences, SoulConfig } from '@/lib/types';
+import { DEFAULT_SOUL_CONFIG } from '@/lib/types';
 
 export interface OnboardingPreferences {
   displayName: string;
@@ -29,12 +30,13 @@ interface OnboardingState {
   step: number;
   selectedCompanionId: string | null;
   preferences: OnboardingPreferences;
+  soulConfig: SoulConfig;
   memories: OnboardingMemories;
   completing: boolean;
   error: string | null;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const DEFAULT_PREFERENCES: OnboardingPreferences = {
   displayName: '',
@@ -57,6 +59,7 @@ export function useOnboarding() {
     step: 1,
     selectedCompanionId: null,
     preferences: DEFAULT_PREFERENCES,
+    soulConfig: { ...DEFAULT_SOUL_CONFIG },
     memories: DEFAULT_MEMORIES,
     completing: false,
     error: null,
@@ -88,11 +91,22 @@ export function useOnboarding() {
     }));
   }, []);
 
+  const setSoulConfig = useCallback((soul: Partial<SoulConfig>) => {
+    setState((prev) => ({
+      ...prev,
+      soulConfig: { ...prev.soulConfig, ...soul },
+    }));
+  }, []);
+
   const setMemories = useCallback((mems: Partial<OnboardingMemories>) => {
     setState((prev) => ({
       ...prev,
       memories: { ...prev.memories, ...mems },
     }));
+  }, []);
+
+  const goToStep = useCallback((step: number) => {
+    setState((prev) => ({ ...prev, step: Math.max(1, Math.min(step, TOTAL_STEPS)) }));
   }, []);
 
   const complete = useCallback(async () => {
@@ -119,7 +133,10 @@ export function useOnboarding() {
         onboardingComplete: true,
       });
 
-      // 3. Save initial memories (only non-empty fields)
+      // 3. Save soul config
+      await kinApi.put(`/soul/${state.selectedCompanionId}`, state.soulConfig);
+
+      // 4. Save initial memories (only non-empty fields)
       const memoryEntries: { type: string; content: string }[] = [];
 
       if (state.memories.occupation.trim()) {
@@ -173,20 +190,23 @@ export function useOnboarding() {
       setState((prev) => ({ ...prev, completing: false, error: message }));
       throw err;
     }
-  }, [state.selectedCompanionId, state.preferences, state.memories]);
+  }, [state.selectedCompanionId, state.preferences, state.soulConfig, state.memories]);
 
   return {
     step: state.step,
     totalSteps: TOTAL_STEPS,
     selectedCompanionId: state.selectedCompanionId,
     preferences: state.preferences,
+    soulConfig: state.soulConfig,
     memories: state.memories,
     completing: state.completing,
     error: state.error,
     nextStep,
     prevStep,
+    goToStep,
     setCompanion,
     setPreferences,
+    setSoulConfig,
     setMemories,
     complete,
   };

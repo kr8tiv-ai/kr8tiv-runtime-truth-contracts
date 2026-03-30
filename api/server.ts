@@ -38,6 +38,7 @@ import skillsRoutes from './routes/skills.js';
 import heartbeatRoutes from './routes/heartbeat.js';
 import supportChatRoutes from './routes/support-chat.js';
 import companionSkillsRoutes from './routes/companion-skills.js';
+import soulRoutes from './routes/soul.js';
 
 // ============================================================================
 // Types
@@ -208,6 +209,7 @@ export async function createServer(config: ApiConfig = {}) {
     await protectedFastify.register(heartbeatRoutes);
     await protectedFastify.register(supportChatRoutes);
     await protectedFastify.register(companionSkillsRoutes);
+    await protectedFastify.register(soulRoutes);
   });
 
   // ==========================================================================

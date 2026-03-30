@@ -228,6 +228,62 @@ export interface CompanionSnapshot {
   createdAt: string;
 }
 
+// ── Soul System ──────────────────────────────────────────────────────────────
+
+export interface SoulTraits {
+  warmth: number;
+  formality: number;
+  humor: number;
+  directness: number;
+  creativity: number;
+  depth: number;
+}
+
+export interface SoulStyle {
+  vocabulary: 'simple' | 'moderate' | 'advanced';
+  responseLength: 'concise' | 'balanced' | 'detailed';
+  useEmoji: boolean;
+}
+
+export interface SoulConfig {
+  customName?: string;
+  traits: SoulTraits;
+  values: string[];
+  style: SoulStyle;
+  customInstructions: string;
+  boundaries: string[];
+  antiPatterns: string[];
+}
+
+export interface CompanionSoul {
+  id: string;
+  companionId: string;
+  config: SoulConfig;
+  soulHash: string;
+  driftScore: number;
+  lastCalibratedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const DEFAULT_SOUL_TRAITS: SoulTraits = {
+  warmth: 50,
+  formality: 50,
+  humor: 50,
+  directness: 50,
+  creativity: 50,
+  depth: 50,
+};
+
+export const DEFAULT_SOUL_CONFIG: SoulConfig = {
+  traits: { ...DEFAULT_SOUL_TRAITS },
+  values: [],
+  style: { vocabulary: 'moderate', responseLength: 'balanced', useEmoji: true },
+  customInstructions: '',
+  boundaries: [],
+  antiPatterns: [],
+};
+
 export interface NftTransfer {
   id: string;
   nftMintAddress: string;

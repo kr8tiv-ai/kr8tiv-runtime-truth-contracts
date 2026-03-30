@@ -14,8 +14,9 @@ import { FastifyPluginAsync } from 'fastify';
 import crypto from 'crypto';
 import { supervisedChat } from '../../inference/supervisor.js';
 import { FallbackHandler, type Message } from '../../inference/fallback-handler.js';
-import { buildCompanionPrompt } from '../../inference/companion-prompts.js';
+import { buildCompanionPrompt, buildSoulPrompt } from '../../inference/companion-prompts.js';
 import { getCompanionConfig } from '../../companions/config.js';
+import { scoreDrift, needsReinforcement, buildReinforcementPrefix } from '../../inference/soul-drift.js';
 
 // ============================================================================
 // Types
@@ -113,6 +114,43 @@ const chatBodySchema = {
   additionalProperties: false,
 };
 
+// ── Soul injection helper ─────────────────────────────────────────────────
+
+interface SoulRow {
+  traits: string;
+  soul_values: string;
+  style: string;
+  custom_instructions: string | null;
+  boundaries: string;
+  anti_patterns: string;
+  drift_score: number;
+  custom_name: string | null;
+}
+
+function loadSoulConfig(db: any, userId: string, companionId: string) {
+  const row = db.prepare(`
+    SELECT traits, soul_values, style, custom_instructions, boundaries,
+           anti_patterns, drift_score, custom_name
+    FROM companion_souls
+    WHERE user_id = ? AND companion_id = ?
+  `).get(userId, companionId) as SoulRow | undefined;
+
+  if (!row) return null;
+
+  return {
+    config: {
+      customName: row.custom_name ?? undefined,
+      traits: JSON.parse(row.traits),
+      values: JSON.parse(row.soul_values),
+      style: JSON.parse(row.style),
+      customInstructions: row.custom_instructions ?? '',
+      boundaries: JSON.parse(row.boundaries),
+      antiPatterns: JSON.parse(row.anti_patterns),
+    },
+    driftScore: row.drift_score,
+  };
+}
+
 const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── POST /chat ─────────────────────────────────────────────────────────
@@ -147,7 +185,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Build message array: system prompt + history + new message
     // Memory injection + Supermemory storage handled centrally by supervisor
-    const systemPrompt = buildCompanionPrompt(companionId, {
+    const basePrompt = buildCompanionPrompt(companionId, {
       userName: userId,
       timeContext: new Date().toLocaleString('en-US', {
         weekday: 'long',
@@ -155,6 +193,16 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         minute: '2-digit',
       }),
     });
+
+    // Inject soul config if user has customized companion personality
+    const soul = loadSoulConfig(fastify.context.db, userId, companionId);
+    let systemPrompt = basePrompt;
+    if (soul) {
+      systemPrompt += '\n\n' + buildSoulPrompt(soul.config);
+      if (needsReinforcement(soul.driftScore)) {
+        systemPrompt = buildReinforcementPrefix(soul.config) + '\n\n' + systemPrompt;
+      }
+    }
 
     const messages: Message[] = [
       { role: 'system', content: systemPrompt },
@@ -201,6 +249,24 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
     `).run(conversationId);
 
+    // Drift scoring every 10 assistant messages
+    if (soul) {
+      const aCount = (fastify.context.db.prepare(
+        `SELECT COUNT(*) as count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
+      ).get(conversationId) as { count: number }).count;
+
+      if (aCount > 0 && aCount % 10 === 0) {
+        const recent = fastify.context.db.prepare(
+          `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 10`,
+        ).all(conversationId) as Array<{ content: string }>;
+
+        const newDrift = scoreDrift(soul.config, recent);
+        fastify.context.db.prepare(
+          `UPDATE companion_souls SET drift_score = ?, updated_at = (strftime('%s','now')*1000) WHERE user_id = ? AND companion_id = ?`,
+        ).run(newDrift, userId, companionId);
+      }
+    }
+
     const response: ChatResponse = {
       response: result.content,
       conversationId,
@@ -245,7 +311,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     `).all(conversationId) as Array<{ role: string; content: string }>;
 
     // Build message array: system prompt + history + new message
-    const systemPrompt = buildCompanionPrompt(companionId, {
+    const basePrompt = buildCompanionPrompt(companionId, {
       userName: userId,
       timeContext: new Date().toLocaleString('en-US', {
         weekday: 'long',
@@ -253,6 +319,16 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         minute: '2-digit',
       }),
     });
+
+    // Inject soul config if user has customized companion personality
+    const soul = loadSoulConfig(fastify.context.db, userId, companionId);
+    let systemPrompt = basePrompt;
+    if (soul) {
+      systemPrompt += '\n\n' + buildSoulPrompt(soul.config);
+      if (needsReinforcement(soul.driftScore)) {
+        systemPrompt = buildReinforcementPrefix(soul.config) + '\n\n' + systemPrompt;
+      }
+    }
 
     const messages: Message[] = [
       { role: 'system', content: systemPrompt },
@@ -303,6 +379,24 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.context.db.prepare(`
           UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
         `).run(conversationId);
+
+        // Drift scoring every 10 assistant messages
+        if (soul) {
+          const aCount = (fastify.context.db.prepare(
+            `SELECT COUNT(*) as count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
+          ).get(conversationId) as { count: number }).count;
+
+          if (aCount > 0 && aCount % 10 === 0) {
+            const recent = fastify.context.db.prepare(
+              `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 10`,
+            ).all(conversationId) as Array<{ content: string }>;
+
+            const newDrift = scoreDrift(soul.config, recent);
+            fastify.context.db.prepare(
+              `UPDATE companion_souls SET drift_score = ?, updated_at = (strftime('%s','now')*1000) WHERE user_id = ? AND companion_id = ?`,
+            ).run(newDrift, userId, companionId);
+          }
+        }
       }
 
       // Send final SSE event with metadata
