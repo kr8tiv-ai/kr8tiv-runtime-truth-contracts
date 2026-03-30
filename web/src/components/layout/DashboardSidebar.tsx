@@ -22,6 +22,8 @@ const NAV_ITEMS = [
   { href: '/dashboard/collection', label: 'Collection', icon: '\u2728' },
   { href: '/dashboard/projects', label: 'Projects', icon: '\uD83D\uDCC1' },
   { href: '/dashboard/progress', label: 'Progress', icon: '\uD83D\uDCCA' },
+  { href: '/dashboard/skills', label: 'Skills', icon: '\uD83E\uDDE9' },
+  { href: '/dashboard/health', label: 'Health', icon: '\uD83D\uDC9A' },
   { href: '/dashboard/billing', label: 'Billing', icon: '\uD83D\uDCB3' },
   { href: '/dashboard/refer', label: 'Refer', icon: '\uD83C\uDF81' },
   { href: '/dashboard/settings', label: 'Settings', icon: '\u2699\uFE0F' },

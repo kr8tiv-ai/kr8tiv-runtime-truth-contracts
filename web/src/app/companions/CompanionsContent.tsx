@@ -106,9 +106,19 @@ function CompanionCard({ companion, index }: { companion: CompanionData; index: 
               {companion.tagline}
             </p>
 
-            <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-6">
+            <p className="text-sm sm:text-base text-white/50 leading-relaxed mb-4">
               {companion.description}
             </p>
+
+            {/* Frontier model badge */}
+            <div className="flex items-center gap-2 mb-6">
+              <span className="inline-flex items-center rounded-md bg-white/5 border border-white/10 px-2.5 py-1 text-[11px] font-mono text-white/60">
+                Powered by {companion.frontierModel.provider} {companion.frontierModel.modelName}
+              </span>
+              <span className="text-[10px] text-white/30 font-mono">
+                {(companion.frontierModel.contextWindow / 1000).toFixed(0)}K ctx
+              </span>
+            </div>
 
             {/* Creature image thumbnails */}
             <div className="flex gap-2 mb-6">

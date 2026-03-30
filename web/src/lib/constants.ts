@@ -7,8 +7,9 @@
 export interface PricingTier {
   id: string;
   name: string;
-  price: number; // monthly price in dollars
+  price: number; // price in dollars (one-time or monthly)
   priceCents: number;
+  priceLabel?: string; // e.g. "one-time per companion", "/month"
   features: string[];
   companionLimit: number;
   messagesPerDay: number | null; // null = unlimited
@@ -24,44 +25,62 @@ export const PRICING_TIERS: PricingTier[] = [
     companionLimit: 1,
     messagesPerDay: 50,
     features: [
-      '1 companion',
+      '1 companion (Qwen 3 32B)',
       '50 messages per day',
       'Basic web builder',
       'Community support',
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'genesis',
+    name: 'Genesis Mint',
     price: 9.99,
     priceCents: 999,
-    companionLimit: 3,
+    priceLabel: 'one-time per companion',
+    companionLimit: 1,
     messagesPerDay: null,
     highlighted: true,
     features: [
-      '3 companions',
+      'Frontier AI brain (unique per companion)',
       'Unlimited messages',
+      'Supermemory intelligent context',
+      'Yours forever (NFT)',
+      'Voice chat',
+      'Priority support',
+    ],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 19.99,
+    priceCents: 1999,
+    priceLabel: '/month',
+    companionLimit: 3,
+    messagesPerDay: null,
+    features: [
+      '3 companions with frontier brains',
+      'Unlimited messages',
+      'Supermemory for each companion',
       'Full web builder',
       'Priority support',
-      'Memory & context',
       'Project export',
     ],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 29.99,
-    priceCents: 2999,
+    price: 49.99,
+    priceCents: 4999,
+    priceLabel: '/month',
     companionLimit: 6,
     messagesPerDay: null,
     features: [
-      'All 6 companions',
+      'All 6 companions with frontier brains',
       'Unlimited everything',
       'API access',
-      'Dedicated support',
-      'Custom integrations',
-      'Advanced analytics',
       'Team collaboration',
+      'Dedicated support',
+      'Advanced analytics',
     ],
   },
 ];

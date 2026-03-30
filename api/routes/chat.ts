@@ -2,7 +2,9 @@
  * Chat Routes — Real-time AI chat for the web dashboard.
  *
  * POST /chat         Send a message and get a companion response
- * POST /chat/stream  (future) SSE streaming endpoint
+ * POST /chat/stream  SSE streaming endpoint (real token-by-token via provider API)
+ * GET  /chat/status  Provider availability check
+ * GET  /chat/export  GDPR data export (conversations + memories)
  *
  * Uses the two-brain supervisor architecture:
  *   Local Ollama → Groq (free) → Anthropic/OpenAI (paid fallback)
@@ -31,6 +33,38 @@ interface ChatResponse {
   companionId: string;
   route: string;
   latencyMs: number;
+}
+
+// -- Data export types (GDPR) -------------------------------------------------
+
+interface ExportConversation {
+  id: string;
+  companionId: string;
+  title: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages: ExportMessage[];
+}
+
+interface ExportMessage {
+  id: string;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+interface ExportMemory {
+  id: string;
+  companionId: string | null;
+  category: string | null;
+  content: string;
+  createdAt: string;
+}
+
+interface DataExportResponse {
+  user: { id: string; exportedAt: string };
+  conversations: ExportConversation[];
+  memories: ExportMemory[];
 }
 
 // ============================================================================
@@ -64,20 +98,30 @@ function getFallback(): FallbackHandler {
 // Routes
 // ============================================================================
 
+// ============================================================================
+// Fastify JSON Schemas (validation + documentation)
+// ============================================================================
+
+const chatBodySchema = {
+  type: 'object' as const,
+  required: ['message'],
+  properties: {
+    companionId: { type: 'string' as const, minLength: 1, maxLength: 64 },
+    message: { type: 'string' as const, minLength: 1, maxLength: 4000 },
+    conversationId: { type: 'string' as const, maxLength: 128 },
+  },
+  additionalProperties: false,
+};
+
 const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
   // ── POST /chat ─────────────────────────────────────────────────────────
-  fastify.post<{ Body: ChatBody }>('/chat', async (request, reply) => {
+  fastify.post<{ Body: ChatBody }>('/chat', {
+    schema: { body: chatBodySchema },
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  } as any, async (request, reply) => {
     const userId = (request.user as { userId: string }).userId;
     const { companionId = 'cipher', message, conversationId: existingConvoId } = request.body;
-
-    if (!message || typeof message !== 'string' || message.trim().length === 0) {
-      return reply.badRequest('Message is required');
-    }
-
-    if (message.length > 4000) {
-      return reply.badRequest('Message too long (max 4000 characters)');
-    }
 
     // Validate companion exists
     const config = getCompanionConfig(companionId);
@@ -101,19 +145,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       LIMIT 20
     `).all(conversationId) as Array<{ role: string; content: string }>;
 
-    // Load user memories for context injection
-    const memories = fastify.context.db.prepare(`
-      SELECT category, content FROM memories
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-      LIMIT 20
-    `).all(userId) as Array<{ category: string; content: string }>;
-
-    const memoryBlock = memories.length > 0
-      ? `\n\nYou remember these things about the user:\n${memories.map((m) => `- [${m.category}] ${m.content}`).join('\n')}`
-      : '';
-
-    // Build message array: system prompt + memories + history + new message
+    // Build message array: system prompt + history + new message
+    // Memory injection + Supermemory storage handled centrally by supervisor
     const systemPrompt = buildCompanionPrompt(companionId, {
       userName: userId,
       timeContext: new Date().toLocaleString('en-US', {
@@ -121,7 +154,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         hour: 'numeric',
         minute: '2-digit',
       }),
-    }) + memoryBlock;
+    });
 
     const messages: Message[] = [
       { role: 'system', content: systemPrompt },
@@ -144,6 +177,17 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       messages,
       companionId,
       getFallback(),
+      {
+        taskType: 'chat',
+        userId,
+        memoryFallback: async () => {
+          const rows = fastify.context.db.prepare(`
+            SELECT category, content FROM memories
+            WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+          `).all(userId) as Array<{ category: string; content: string }>;
+          return rows.map(m => `[${m.category}] ${m.content}`);
+        },
+      },
     );
 
     // Store assistant response
@@ -168,6 +212,166 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     return response;
   });
 
+  // ── POST /chat/stream ────────────────────────────────────────────────
+  // Real SSE streaming — tokens are yielded from the provider API as they
+  // are generated. Falls back to buffered word-by-word if streaming fails.
+  fastify.post<{ Body: ChatBody }>('/chat/stream', {
+    schema: { body: chatBodySchema },
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  } as any, async (request, reply) => {
+    const userId = (request.user as { userId: string }).userId;
+    const { companionId = 'cipher', message, conversationId: existingConvoId } = request.body;
+
+    // Validate companion exists
+    const config = getCompanionConfig(companionId);
+
+    // Resolve or create conversation
+    let conversationId = existingConvoId;
+    if (!conversationId) {
+      conversationId = crypto.randomUUID();
+      fastify.context.db.prepare(`
+        INSERT INTO conversations (id, user_id, companion_id, title, created_at, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(conversationId, userId, companionId, message.slice(0, 80));
+    }
+
+    // Load recent messages for context
+    const recentMessages = fastify.context.db.prepare(`
+      SELECT role, content
+      FROM messages
+      WHERE conversation_id = ?
+      ORDER BY created_at DESC
+      LIMIT 20
+    `).all(conversationId) as Array<{ role: string; content: string }>;
+
+    // Build message array: system prompt + history + new message
+    const systemPrompt = buildCompanionPrompt(companionId, {
+      userName: userId,
+      timeContext: new Date().toLocaleString('en-US', {
+        weekday: 'long',
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    });
+
+    const messages: Message[] = [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages.reverse().map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+      { role: 'user', content: message.trim() },
+    ];
+
+    // Store user message
+    fastify.context.db.prepare(`
+      INSERT INTO messages (id, conversation_id, role, content, created_at)
+      VALUES (?, ?, 'user', ?, datetime('now'))
+    `).run(crypto.randomUUID(), conversationId, message.trim());
+
+    // Set SSE headers
+    const start = performance.now();
+    reply.raw.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    try {
+      // Real token streaming via provider API (Groq/OpenAI/Anthropic)
+      const handler = getFallback();
+      let fullResponse = '';
+
+      for await (const token of handler.chatStream(messages, {
+        maxTokens: 4096,
+        temperature: 0.8,
+      })) {
+        fullResponse += token;
+        const chunk = JSON.stringify({ content: token, done: false });
+        reply.raw.write(`data: ${chunk}\n\n`);
+      }
+
+      // Store assistant response
+      if (fullResponse) {
+        fastify.context.db.prepare(`
+          INSERT INTO messages (id, conversation_id, role, content, created_at)
+          VALUES (?, ?, 'assistant', ?, datetime('now'))
+        `).run(crypto.randomUUID(), conversationId, fullResponse);
+
+        // Update conversation timestamp
+        fastify.context.db.prepare(`
+          UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
+        `).run(conversationId);
+      }
+
+      // Send final SSE event with metadata
+      const finalChunk = JSON.stringify({
+        content: '',
+        done: true,
+        conversationId,
+        companionId,
+        route: 'streaming',
+        latencyMs: Math.round(performance.now() - start),
+      });
+      reply.raw.write(`data: ${finalChunk}\n\n`);
+    } catch (err) {
+      // Streaming failed — fall back to non-streaming supervisor call
+      try {
+        const result = await supervisedChat(
+          messages,
+          companionId,
+          getFallback(),
+          {
+            taskType: 'chat',
+            userId,
+            memoryFallback: async () => {
+              const rows = fastify.context.db.prepare(`
+                SELECT category, content FROM memories
+                WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+              `).all(userId) as Array<{ category: string; content: string }>;
+              return rows.map(m => `[${m.category}] ${m.content}`);
+            },
+          },
+        );
+
+        // Store and stream the buffered response word-by-word
+        fastify.context.db.prepare(`
+          INSERT INTO messages (id, conversation_id, role, content, created_at)
+          VALUES (?, ?, 'assistant', ?, datetime('now'))
+        `).run(crypto.randomUUID(), conversationId, result.content);
+
+        fastify.context.db.prepare(`
+          UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
+        `).run(conversationId);
+
+        const words = result.content.split(/(\s+)/);
+        for (const word of words) {
+          if (word) {
+            reply.raw.write(`data: ${JSON.stringify({ content: word, done: false })}\n\n`);
+          }
+        }
+
+        reply.raw.write(`data: ${JSON.stringify({
+          content: '',
+          done: true,
+          conversationId,
+          companionId,
+          route: result.route,
+          latencyMs: Math.round(performance.now() - start),
+        })}\n\n`);
+      } catch (innerErr) {
+        reply.raw.write(`data: ${JSON.stringify({
+          content: '',
+          done: true,
+          error: innerErr instanceof Error ? innerErr.message : 'Internal server error',
+        })}\n\n`);
+      }
+    }
+
+    reply.raw.end();
+  });
+
   // ── GET /chat/status ───────────────────────────────────────────────────
   // Returns which LLM providers are configured and available
   fastify.get('/chat/status', async () => {
@@ -185,6 +389,89 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         : process.env.OPENAI_API_KEY ? 'openai'
         : 'none',
     };
+  });
+
+  // ── GET /chat/export ──────────────────────────────────────────────────
+  // GDPR data export — returns all conversations, messages, and memories
+  // belonging to the authenticated user as a single JSON payload.
+  fastify.get('/chat/export', async (request) => {
+    const userId = (request.user as { userId: string }).userId;
+
+    // Fetch all conversations for the user
+    const rawConversations = fastify.context.db.prepare(`
+      SELECT id, companion_id, title, created_at, updated_at
+      FROM conversations
+      WHERE user_id = ?
+      ORDER BY created_at ASC
+    `).all(userId) as Array<{
+      id: string;
+      companion_id: string;
+      title: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+    // Fetch messages for each conversation
+    const conversations: ExportConversation[] = rawConversations.map((c) => {
+      const rawMessages = fastify.context.db.prepare(`
+        SELECT id, role, content, created_at
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY created_at ASC
+      `).all(c.id) as Array<{
+        id: string;
+        role: string;
+        content: string;
+        created_at: string;
+      }>;
+
+      return {
+        id: c.id,
+        companionId: c.companion_id,
+        title: c.title,
+        createdAt: new Date(c.created_at).toISOString(),
+        updatedAt: new Date(c.updated_at).toISOString(),
+        messages: rawMessages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          createdAt: new Date(m.created_at).toISOString(),
+        })),
+      };
+    });
+
+    // Fetch all memories for the user
+    const rawMemories = fastify.context.db.prepare(`
+      SELECT id, companion_id, category, content, created_at
+      FROM memories
+      WHERE user_id = ?
+      ORDER BY created_at ASC
+    `).all(userId) as Array<{
+      id: string;
+      companion_id: string | null;
+      category: string | null;
+      content: string;
+      created_at: string;
+    }>;
+
+    const memories: ExportMemory[] = rawMemories.map((m) => ({
+      id: m.id,
+      companionId: m.companion_id,
+      category: m.category,
+      content: m.content,
+      createdAt: new Date(m.created_at).toISOString(),
+    }));
+
+    const response: DataExportResponse = {
+      user: {
+        id: userId,
+        exportedAt: new Date().toISOString(),
+      },
+      conversations,
+      memories,
+    };
+
+    return response;
   });
 };
 

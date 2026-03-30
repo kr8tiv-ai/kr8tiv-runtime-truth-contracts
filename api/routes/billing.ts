@@ -10,6 +10,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import crypto from 'crypto';
 import { mintCompanionNFT } from '../lib/solana-mint.js';
+import { mintRateLimit } from '../middleware/rate-limit.js';
 
 // ---------------------------------------------------------------------------
 // Lightweight Stripe HTTP helpers (no SDK dependency)
@@ -361,6 +362,20 @@ const billingRoutes: FastifyPluginAsync = async (fastify) => {
             break;
           }
 
+          // ── Handle skill request payments ──
+          if (session.metadata?.type === 'skill_request') {
+            const skillRequestId: string = session.metadata.skill_request_id ?? '';
+            if (kinUserId && skillRequestId) {
+              db.prepare(`
+                UPDATE skill_requests
+                SET status = 'paid', updated_at = strftime('%s', 'now') * 1000
+                WHERE id = ? AND user_id = ? AND status = 'payment_required'
+              `).run(skillRequestId, kinUserId);
+              console.log(`[Skills] Request ${skillRequestId} paid by user ${kinUserId}`);
+            }
+            break;
+          }
+
           if (!kinUserId || !subscriptionId) break;
 
           // Fetch the subscription to get period dates and plan
@@ -469,7 +484,7 @@ const billingRoutes: FastifyPluginAsync = async (fastify) => {
   // On payment success, webhook mints NFT to the user's auto-generated wallet.
   // Users don't need crypto knowledge — they just pay and get their companion.
   // -------------------------------------------------------------------------
-  fastify.post<{ Body: MintCheckoutBody }>('/billing/mint-checkout', async (request, reply) => {
+  fastify.post<{ Body: MintCheckoutBody }>('/billing/mint-checkout', { preHandler: [mintRateLimit()] }, async (request, reply) => {
     const key = stripeKey();
     if (!key) {
       return { url: null, message: 'Payments coming soon' };

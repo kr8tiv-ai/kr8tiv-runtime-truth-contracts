@@ -103,8 +103,11 @@ export async function handleVoice(
     ];
 
     // Generate response via two-brain architecture (local + supervisor)
+    // Memory injection + Supermemory storage handled centrally by supervisor
     const result = await supervisedChat(messages, companionId, fallback, {
       taskType: 'voice',
+      userId,
+      memoryFallback: async () => (await conversationStore.getMemories?.(userId)) ?? [],
     });
     const response = result.content;
 

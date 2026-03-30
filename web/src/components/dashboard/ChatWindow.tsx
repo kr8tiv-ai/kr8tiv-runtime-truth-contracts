@@ -247,7 +247,7 @@ export function ChatWindow({ companionId, className }: ChatWindowProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4" aria-live="polite" aria-label="Chat messages">
         {/* Empty state */}
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -477,12 +477,15 @@ function ChatBubble({
           )}
 
           {/* Timestamp */}
-          <p className="mt-1.5 text-[10px] text-white/20">
+          <time
+            dateTime={message.timestamp.toISOString()}
+            className="mt-1.5 block text-[10px] text-white/20 font-mono"
+          >
             {message.timestamp.toLocaleTimeString([], {
-              hour: '2-digit',
+              hour: 'numeric',
               minute: '2-digit',
             })}
-          </p>
+          </time>
 
           {/* Copy button (assistant only) */}
           {isAssistant && isDone && (

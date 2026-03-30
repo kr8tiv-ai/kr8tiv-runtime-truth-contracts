@@ -3,6 +3,13 @@
 // Must stay in sync with companions/config.ts in the parent repo.
 // ============================================================================
 
+export interface CompanionFrontierModel {
+  provider: string;
+  modelId: string;
+  modelName: string;
+  contextWindow: number;
+}
+
 export interface CompanionData {
   id: string;
   name: string;
@@ -21,6 +28,8 @@ export interface CompanionData {
   modelReady: boolean;
   /** Arweave URI for the GLB model (set after Irys upload) */
   arweaveModelUri?: string;
+  /** Frontier AI model powering this companion (for NFT owners) */
+  frontierModel: CompanionFrontierModel;
 }
 
 const COLOR_MAP: Record<string, string> = {
@@ -47,6 +56,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/cipher.glb',
     modelReady: false,
+    frontierModel: { provider: 'OpenAI', modelId: 'gpt-5.4', modelName: 'GPT-5.4', contextWindow: 1_050_000 },
   },
 
   mischief: {
@@ -66,6 +76,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/mischief.glb',
     modelReady: false,
+    frontierModel: { provider: 'Google', modelId: 'gemini-3.1-pro', modelName: 'Gemini 3.1 Pro', contextWindow: 128_000 },
   },
 
   vortex: {
@@ -85,6 +96,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/vortex.glb',
     modelReady: false,
+    frontierModel: { provider: 'Anthropic', modelId: 'claude-opus-4-6', modelName: 'Claude Opus 4.6', contextWindow: 1_000_000 },
   },
 
   forge: {
@@ -104,6 +116,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/forge.glb',
     modelReady: false,
+    frontierModel: { provider: 'xAI', modelId: 'grok-4.20', modelName: 'Grok 4.20', contextWindow: 2_000_000 },
   },
 
   aether: {
@@ -123,6 +136,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/aether.glb',
     modelReady: false,
+    frontierModel: { provider: 'Moonshot', modelId: 'kimi-k2.5', modelName: 'Kimi K2.5', contextWindow: 256_000 },
   },
 
   catalyst: {
@@ -142,6 +156,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/catalyst.glb',
     modelReady: false,
+    frontierModel: { provider: 'Z.ai', modelId: 'glm-4.6', modelName: 'GLM-4.6', contextWindow: 200_000 },
   },
 };
 

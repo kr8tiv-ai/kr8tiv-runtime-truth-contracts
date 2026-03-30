@@ -1,0 +1,2348 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KIN API",
+    "version": "1.0.0",
+    "description": "KIN AI Companion Platform — We Build You A Friend\n\nThe KIN API powers Mission Control (web dashboard), Telegram/Discord/WhatsApp bots, local KIN instances, and third-party integrations. It provides:\n\n- **Auth** — Telegram Login Widget + JWT-based sessions\n- **Chat** — Multi-companion AI chat with a two-brain supervisor (Local Ollama → Groq → Anthropic/OpenAI fallback)\n- **Skills Marketplace** — Browse, install, and custom-submit companion skill extensions\n- **Companion Skills** — NFT-portable XP/leveling system for companion skill trees\n- **Heartbeat & Recovery** — Local KIN health monitoring and snapshot-based recovery\n- **Billing** — Stripe subscription checkout, portal, and webhook handling\n- **Support** — AI-powered support chat with human escalation, FAQ, tickets, and feature requests\n\nAll protected routes require a JWT bearer token obtained via `POST /auth/telegram` or `POST /auth/dev-login` (development only).",
+    "contact": {
+      "name": "KIN Support",
+      "url": "https://www.meetyourkin.com/support",
+      "email": "support@meetyourkin.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts/blob/main/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development"
+    },
+    {
+      "url": "https://api.meetyourkin.com",
+      "description": "Production"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token. Obtain via `POST /auth/telegram` or `POST /auth/dev-login`. Token expires after 2 hours. Algorithm: HS256."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "properties": {
+                  "message": { "type": "string" },
+                  "statusCode": { "type": "integer" }
+                }
+              }
+            ]
+          }
+        },
+        "example": { "error": "Unauthorized" }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "example": { "error": "Bad Request", "message": "Message is required" }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "user-abc123" },
+          "telegramId": { "type": "integer", "example": 123456789 },
+          "username": { "type": "string", "nullable": true, "example": "alice" },
+          "firstName": { "type": "string", "example": "Alice" },
+          "lastName": { "type": "string", "nullable": true, "example": "Smith" },
+          "tier": {
+            "type": "string",
+            "enum": ["free", "pro", "enterprise"],
+            "example": "pro"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-01-15T09:00:00.000Z"
+          },
+          "onboardingComplete": { "type": "boolean", "example": true }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "required": ["token", "user"],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT bearer token. Valid for 2 hours.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "user": { "$ref": "#/components/schemas/UserProfile" }
+        }
+      },
+      "CompanionId": {
+        "type": "string",
+        "enum": ["cipher", "mischief", "vortex", "forge", "aether", "catalyst"],
+        "description": "Companion identifier. Each companion has a distinct personality and specialisation.",
+        "example": "cipher"
+      },
+      "ChatResponse": {
+        "type": "object",
+        "required": ["response", "conversationId", "companionId", "route", "latencyMs"],
+        "properties": {
+          "response": { "type": "string", "description": "Companion reply text." },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the conversation. Reuse to maintain context."
+          },
+          "companionId": { "$ref": "#/components/schemas/CompanionId" },
+          "route": {
+            "type": "string",
+            "description": "Which inference provider handled the request.",
+            "example": "groq"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "description": "End-to-end latency in milliseconds.",
+            "example": 342
+          }
+        }
+      },
+      "Skill": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "skill-uuid" },
+          "name": { "type": "string", "example": "code_review" },
+          "displayName": { "type": "string", "example": "Code Review" },
+          "description": { "type": "string", "example": "Reviews code for bugs, style, and performance." },
+          "category": { "type": "string", "example": "development" },
+          "sourceType": {
+            "type": "string",
+            "enum": ["built_in", "community", "custom"],
+            "example": "built_in"
+          },
+          "author": { "type": "string", "nullable": true, "example": "KIN Team" },
+          "installCount": { "type": "integer", "example": 1024 },
+          "version": { "type": "string", "example": "1.0.0" },
+          "isInstalled": { "type": "boolean" },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "CompanionSkillEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "companionId": { "$ref": "#/components/schemas/CompanionId" },
+          "skillId": { "type": "string" },
+          "skillName": { "type": "string" },
+          "skillDisplayName": { "type": "string" },
+          "skillLevel": { "type": "integer", "minimum": 1, "maximum": 99 },
+          "xp": { "type": "integer" },
+          "xpToNextLevel": { "type": "integer" },
+          "isPortable": {
+            "type": "boolean",
+            "description": "Portable skills travel with the NFT when the companion is transferred."
+          },
+          "usageCount": { "type": "integer" },
+          "accruedAt": { "type": "string", "format": "date-time" },
+          "lastUsedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "HeartbeatStatus": {
+        "type": "object",
+        "properties": {
+          "overallStatus": {
+            "type": "string",
+            "enum": ["healthy", "degraded", "offline"]
+          },
+          "lastHeartbeat": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "latencyMs": { "type": "integer" },
+          "kinVersion": { "type": "string", "nullable": true },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "status": { "type": "string", "enum": ["ok", "warn", "error"] },
+                "detail": { "type": "string" },
+                "label": { "type": "string" }
+              }
+            }
+          },
+          "system": {
+            "type": "object",
+            "properties": {
+              "cpuUsagePercent": { "type": "number" },
+              "memUsedMB": { "type": "integer" },
+              "memTotalMB": { "type": "integer" },
+              "diskFreeMB": { "type": "integer" },
+              "uptimeSeconds": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "RecoverySnapshot": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "kinId": { "type": "string" },
+          "snapshotType": {
+            "type": "string",
+            "enum": ["manual", "auto", "pre_restore"]
+          },
+          "conversationCount": { "type": "integer" },
+          "messageCount": { "type": "integer" },
+          "memoryCount": { "type": "integer" },
+          "status": {
+            "type": "string",
+            "enum": ["valid", "restoring", "restored", "corrupt"]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "metadata": { "type": "object", "nullable": true }
+        }
+      },
+      "SupportTicket": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "tkt-uuid" },
+          "subject": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["open", "in_progress", "resolved", "closed"]
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "normal", "high", "urgent"]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FaqEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "question": { "type": "string" },
+          "answer": { "type": "string" },
+          "category": { "type": "string" }
+        }
+      },
+      "FeatureRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "planned", "in_progress", "shipped", "rejected"]
+          },
+          "votes": { "type": "integer" },
+          "userVoted": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid JWT token.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Unauthorized" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Invalid request body or parameters.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ValidationError" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Not Found" }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Rate limit exceeded. Default: 100 requests/minute per IP in production.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "statusCode": { "type": "integer", "example": 429 },
+                "error": { "type": "string", "example": "Too Many Requests" },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflict — resource already exists.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication via Telegram Login Widget and JWT token management."
+    },
+    {
+      "name": "Chat",
+      "description": "Real-time AI chat with companions. Uses a two-brain supervisor architecture: Local Ollama → Groq (free) → Anthropic/OpenAI (paid fallback). Includes SSE streaming and GDPR data export."
+    },
+    {
+      "name": "Skills",
+      "description": "Companion skills marketplace. Browse built-in and community skills, toggle them per companion, and submit custom GitHub repositories for review."
+    },
+    {
+      "name": "Companions",
+      "description": "NFT-portable companion skill accrual system. Skills level up through use and travel with the companion NFT when transferred on Solana."
+    },
+    {
+      "name": "Health",
+      "description": "System health checks and local KIN instance heartbeat monitoring."
+    },
+    {
+      "name": "Recovery",
+      "description": "Snapshot-based recovery for local KIN instances. Creates and restores data snapshots without deleting user data."
+    },
+    {
+      "name": "Support",
+      "description": "AI-powered customer support chat, FAQ, ticket management, and feature voting."
+    },
+    {
+      "name": "Billing",
+      "description": "Stripe subscription management. Checkout sessions, customer portal, and webhook event processing. Companion NFT mint payments also flow through here."
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "operationId": "getHealth",
+        "summary": "System health check",
+        "description": "Returns overall system health including database, memory, and storage checks. Returns HTTP 503 if the system is degraded.",
+        "responses": {
+          "200": {
+            "description": "System is healthy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["healthy", "degraded", "unhealthy"]
+                    },
+                    "version": { "type": "string", "example": "1.0.0" },
+                    "uptime": { "type": "integer", "description": "Uptime in seconds." },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "database": {
+                          "type": "object",
+                          "properties": {
+                            "status": { "type": "boolean" },
+                            "latencyMs": { "type": "integer" },
+                            "error": { "type": "string" }
+                          }
+                        },
+                        "memory": {
+                          "type": "object",
+                          "properties": {
+                            "status": { "type": "boolean" },
+                            "usedMB": { "type": "integer" },
+                            "totalMB": { "type": "integer" }
+                          }
+                        },
+                        "storage": {
+                          "type": "object",
+                          "properties": {
+                            "status": { "type": "boolean" },
+                            "usedGB": { "type": "number" },
+                            "totalGB": { "type": "number" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "status": "healthy",
+                  "version": "1.0.0",
+                  "uptime": 3600,
+                  "checks": {
+                    "database": { "status": true, "latencyMs": 1 },
+                    "memory": { "status": true, "usedMB": 64, "totalMB": 256 },
+                    "storage": { "status": true, "usedGB": 0.5, "totalGB": 10 }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "System is degraded — one or more checks failed.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HeartbeatStatus" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": ["Health"],
+        "operationId": "getReady",
+        "summary": "Readiness probe",
+        "description": "Kubernetes-style readiness check. Returns 503 if the database is unavailable.",
+        "responses": {
+          "200": {
+            "description": "Service is ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "ready": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          },
+          "503": { "description": "Service is not ready." }
+        }
+      }
+    },
+    "/live": {
+      "get": {
+        "tags": ["Health"],
+        "operationId": "getLive",
+        "summary": "Liveness probe",
+        "description": "Kubernetes-style liveness check. Always returns 200 if the process is alive.",
+        "responses": {
+          "200": {
+            "description": "Process is alive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "alive": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/telegram": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "authTelegram",
+        "summary": "Telegram Login Widget authentication",
+        "description": "Verifies the Telegram Login Widget payload using HMAC-SHA256 with the bot token secret key. Creates a new user account on first login. Returns a signed JWT valid for 2 hours.\n\nThe `hash` field must be a valid Telegram login hash and the `auth_date` must be within 24 hours.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["id", "first_name", "auth_date", "hash"],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Telegram user ID.",
+                    "example": 123456789
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "description": "User's first name from Telegram.",
+                    "example": "Alice"
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "description": "User's last name (optional).",
+                    "example": "Smith"
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "Telegram username without @ (optional).",
+                    "example": "alice_smith"
+                  },
+                  "photo_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Profile photo URL (optional)."
+                  },
+                  "auth_date": {
+                    "type": "integer",
+                    "description": "Unix timestamp of authentication. Must be within 24 hours.",
+                    "example": 1704067200
+                  },
+                  "hash": {
+                    "type": "string",
+                    "description": "HMAC-SHA256 verification hash computed by Telegram.",
+                    "example": "a3f9d2c1..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid Telegram hash or expired auth_date.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "Invalid Telegram authentication" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" },
+          "500": {
+            "description": "Server misconfiguration — bot token not set.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify": {
+      "get": {
+        "tags": ["Auth"],
+        "operationId": "authVerify",
+        "summary": "Verify JWT token",
+        "description": "Decodes the bearer token and returns the associated user profile. Returns `{valid: false}` for expired or malformed tokens without raising an error — safe to poll from the client.",
+        "responses": {
+          "200": {
+            "description": "Token verification result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "valid": { "type": "boolean", "enum": [true] },
+                        "userId": { "type": "string" },
+                        "user": { "$ref": "#/components/schemas/UserProfile" }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "valid": { "type": "boolean", "enum": [false] }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/auth/dev-login": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "authDevLogin",
+        "summary": "Dev-only login (development environment only)",
+        "description": "Creates or finds a user by Telegram ID without hash verification. **Only available when `NODE_ENV=development`.** This endpoint does not exist in production. Useful for local testing and smoke tests.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["telegramId", "firstName"],
+                "properties": {
+                  "telegramId": {
+                    "type": "integer",
+                    "description": "Any Telegram-style numeric ID to use as test identity.",
+                    "example": 999001
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "description": "Display name for the test user.",
+                    "example": "DevUser"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Endpoint not found (production environment).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/chat": {
+      "post": {
+        "tags": ["Chat"],
+        "operationId": "chatSend",
+        "summary": "Send message to companion",
+        "description": "Sends a user message to the specified companion and returns the AI response. Automatically creates a new conversation or continues an existing one. The two-brain supervisor tries providers in order: Local Ollama → Groq → Anthropic/OpenAI.\n\nMessages are persisted for context continuity. The `conversationId` is a UUID — provide it on subsequent requests to maintain conversation thread context (up to 20 recent messages are included).",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "companionId": {
+                    "$ref": "#/components/schemas/CompanionId",
+                    "default": "cipher"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "User message text. Maximum 4000 characters.",
+                    "minLength": 1,
+                    "maxLength": 4000,
+                    "example": "Can you review this Python function for edge cases?"
+                  },
+                  "conversationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Existing conversation ID to continue. Omit to start a new conversation.",
+                    "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Companion response.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/chat/stream": {
+      "post": {
+        "tags": ["Chat"],
+        "operationId": "chatStream",
+        "summary": "SSE streaming chat",
+        "description": "Same as `POST /chat` but streams the response word-by-word as Server-Sent Events. The connection stays open until the full response is delivered.\n\nEvent format: `data: {content: string, done: boolean, ...metadata}`\n\nThe final event has `done: true` and includes `conversationId`, `companionId`, `route`, and `latencyMs`. On error, `done: true` is set with an `error` field.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "companionId": {
+                    "$ref": "#/components/schemas/CompanionId",
+                    "default": "cipher"
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "example": "Explain Rust's ownership model."
+                  },
+                  "conversationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of companion response tokens.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Newline-delimited SSE events. Each event is a JSON payload prefixed with `data: `.",
+                  "example": "data: {\"content\": \"Rust\", \"done\": false}\n\ndata: {\"content\": \" ownership\", \"done\": false}\n\ndata: {\"content\": \"\", \"done\": true, \"conversationId\": \"...\", \"route\": \"groq\", \"latencyMs\": 312}\n\n"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/chat/status": {
+      "get": {
+        "tags": ["Chat"],
+        "operationId": "chatStatus",
+        "summary": "Provider availability check",
+        "description": "Returns which LLM providers are configured and available. Useful for the dashboard to show which inference path will be used.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Provider status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "providers": {
+                      "type": "object",
+                      "properties": {
+                        "groq": {
+                          "type": "object",
+                          "properties": {
+                            "configured": { "type": "boolean" },
+                            "model": { "type": "string", "example": "qwen/qwen3-32b" }
+                          }
+                        },
+                        "openai": {
+                          "type": "object",
+                          "properties": { "configured": { "type": "boolean" } }
+                        },
+                        "anthropic": {
+                          "type": "object",
+                          "properties": { "configured": { "type": "boolean" } }
+                        }
+                      }
+                    },
+                    "preferredProvider": {
+                      "type": "string",
+                      "enum": ["groq", "anthropic", "openai", "none"],
+                      "example": "groq"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/chat/export": {
+      "get": {
+        "tags": ["Chat"],
+        "operationId": "chatExport",
+        "summary": "GDPR data export",
+        "description": "Returns all conversations, messages, and memories belonging to the authenticated user as a single JSON payload. Compliant with GDPR Article 20 (data portability).",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User data export.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "exportedAt": { "type": "string", "format": "date-time" }
+                      }
+                    },
+                    "conversations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "companionId": { "type": "string" },
+                          "title": { "type": "string", "nullable": true },
+                          "createdAt": { "type": "string", "format": "date-time" },
+                          "updatedAt": { "type": "string", "format": "date-time" },
+                          "messages": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": { "type": "string" },
+                                "role": { "type": "string", "enum": ["user", "assistant", "system"] },
+                                "content": { "type": "string" },
+                                "createdAt": { "type": "string", "format": "date-time" }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "memories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "companionId": { "type": "string", "nullable": true },
+                          "category": { "type": "string", "nullable": true },
+                          "content": { "type": "string" },
+                          "createdAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills": {
+      "get": {
+        "tags": ["Skills"],
+        "operationId": "skillsList",
+        "summary": "List skill catalog",
+        "description": "Returns all approved skills in the marketplace. Each skill includes an `isInstalled` and `isActive` flag relative to the authenticated user. Optionally filter by category or search term.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter by skill category (e.g. `development`, `productivity`, `creative`).",
+            "schema": { "type": "string", "example": "development" }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Full-text search across skill name and description.",
+            "schema": { "type": "string", "example": "code review" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of skills.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Skill" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills/mine": {
+      "get": {
+        "tags": ["Skills"],
+        "operationId": "skillsMine",
+        "summary": "User's installed skills",
+        "description": "Returns all skills installed by the authenticated user, including which companion each skill is assigned to and when it was installed.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User's installed skills with companion assignment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "allOf": [
+                      { "$ref": "#/components/schemas/Skill" },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "companionId": {
+                            "$ref": "#/components/schemas/CompanionId",
+                            "nullable": true
+                          },
+                          "installedAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills/{id}/toggle": {
+      "post": {
+        "tags": ["Skills"],
+        "operationId": "skillToggle",
+        "summary": "Toggle skill on/off",
+        "description": "Installs a skill for the first time (if not yet installed) and sets its active state. If the skill is already installed, only the `is_active` flag is toggled. On first install, the skill's global install count is incremented.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Skill ID.",
+            "schema": { "type": "string", "example": "skill-abc123" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["active"],
+                "properties": {
+                  "active": {
+                    "type": "boolean",
+                    "description": "Desired active state for the skill."
+                  },
+                  "companionId": {
+                    "$ref": "#/components/schemas/CompanionId",
+                    "description": "Companion to associate the skill with. Optional.",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Toggle successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "active": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills/request": {
+      "post": {
+        "tags": ["Skills"],
+        "operationId": "skillRequestCreate",
+        "summary": "Submit GitHub repo for review",
+        "description": "Submit a GitHub repository URL for custom skill review. A $4.99 review fee is charged via Stripe. The repository is reviewed by the KIN team and, if approved, published to the marketplace.\n\nReturns the request ID and `amountCents`. Follow up with `POST /skills/request/{id}/checkout` to pay the review fee.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["githubRepoUrl"],
+                "properties": {
+                  "githubRepoUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Full GitHub repository URL. Must be a public repository.",
+                    "example": "https://github.com/alice/my-kin-skill"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill request created. Proceed to checkout.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string", "example": "sr-uuid" },
+                    "status": { "type": "string", "enum": ["payment_required"], "example": "payment_required" },
+                    "amountCents": { "type": "integer", "example": 499 }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills/request/{id}/checkout": {
+      "post": {
+        "tags": ["Skills"],
+        "operationId": "skillRequestCheckout",
+        "summary": "Stripe checkout for $4.99 review fee",
+        "description": "Creates a Stripe Checkout session for the one-time $4.99 skill review fee. Returns the Stripe Checkout URL to redirect the user to. On successful payment, the webhook updates the skill request status to `paid` and triggers the review queue.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Skill request ID returned from `POST /skills/request`.",
+            "schema": { "type": "string", "example": "sr-uuid" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "successUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to redirect to after payment. Defaults to the KIN dashboard.",
+                    "example": "https://www.meetyourkin.com/dashboard/skills?request=submitted"
+                  },
+                  "cancelUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to redirect to on payment cancellation.",
+                    "example": "https://www.meetyourkin.com/dashboard/skills"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stripe Checkout URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri",
+                      "nullable": true,
+                      "description": "Redirect the user to this URL. Null if Stripe is not configured."
+                    },
+                    "message": { "type": "string", "description": "Present if Stripe is not configured." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/skills/request/mine": {
+      "get": {
+        "tags": ["Skills"],
+        "operationId": "skillRequestsMine",
+        "summary": "User's skill requests",
+        "description": "Returns all skill requests submitted by the authenticated user, ordered by submission date descending.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of skill requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "githubRepoUrl": { "type": "string", "format": "uri" },
+                      "repoOwner": { "type": "string" },
+                      "repoName": { "type": "string" },
+                      "skillName": { "type": "string", "nullable": true },
+                      "skillDescription": { "type": "string", "nullable": true },
+                      "status": {
+                        "type": "string",
+                        "enum": ["payment_required", "paid", "under_review", "approved", "rejected", "installed"]
+                      },
+                      "rejectionReason": { "type": "string", "nullable": true },
+                      "amountCents": { "type": "integer" },
+                      "createdAt": { "type": "string", "format": "date-time" },
+                      "updatedAt": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/{companionId}": {
+      "get": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsGet",
+        "summary": "Get companion skills",
+        "description": "Returns all accrued skills for a specific companion, ordered by level descending. Each skill entry includes XP, level, and portability status.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "companionId",
+            "in": "path",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/CompanionId" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Companion's skill entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CompanionSkillEntry" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/{companionId}/accrue": {
+      "post": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsAccrue",
+        "summary": "Award XP to companion",
+        "description": "Awards experience points (XP) to a companion's skill. Automatically handles level-up when XP crosses the threshold. XP values follow the curve: [0, 100, 300, 600, 1000...] per level.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "companionId",
+            "in": "path",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/CompanionId" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["skillId"],
+                "properties": {
+                  "skillId": {
+                    "type": "string",
+                    "description": "Skill ID to award XP to.",
+                    "example": "skill-abc123"
+                  },
+                  "xpGained": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 10,
+                    "description": "XP to award. Capped at 100 per call."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated skill state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skillLevel": { "type": "integer" },
+                    "xp": { "type": "integer" },
+                    "xpToNextLevel": { "type": "integer" },
+                    "leveledUp": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/snapshot": {
+      "post": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsSnapshot",
+        "summary": "Create skill snapshot",
+        "description": "Creates a SHA-256-hashed snapshot of a companion's portable skills. Used before NFT transfers and for IPFS/on-chain skill state attestation. Private memories and conversation history are never included.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["companionId"],
+                "properties": {
+                  "companionId": { "$ref": "#/components/schemas/CompanionId" },
+                  "snapshotType": {
+                    "type": "string",
+                    "enum": ["skill_state", "personality", "full", "transfer"],
+                    "default": "skill_state"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Snapshot created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "contentHash": { "type": "string", "description": "SHA-256 hex digest of the skill payload." },
+                    "skillCount": { "type": "integer" },
+                    "totalLevels": { "type": "integer" },
+                    "snapshotType": { "type": "string" },
+                    "ipfsCid": { "type": "string", "nullable": true },
+                    "isOnChain": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/snapshots": {
+      "get": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsSnapshots",
+        "summary": "List snapshots",
+        "description": "Lists skill snapshots for the authenticated user, optionally filtered by companion. Returns up to 50 most recent snapshots.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "companionId",
+            "in": "query",
+            "schema": { "$ref": "#/components/schemas/CompanionId" },
+            "description": "Filter snapshots to a specific companion."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of snapshots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "companionId": { "type": "string" },
+                      "snapshotType": { "type": "string" },
+                      "contentHash": { "type": "string" },
+                      "ipfsCid": { "type": "string", "nullable": true },
+                      "solanaTxSig": { "type": "string", "nullable": true },
+                      "isOnChain": { "type": "boolean" },
+                      "createdAt": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/transfer": {
+      "post": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsTransfer",
+        "summary": "Prepare NFT transfer",
+        "description": "Prepares a companion's portable skills for NFT transfer. Creates a transfer snapshot, logs the transfer, and—if `toUserId` is provided—replicates the portable skills to the new owner. Private memories and conversation history remain with the original owner and are never transferred.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["companionId", "nftMintAddress"],
+                "properties": {
+                  "companionId": { "$ref": "#/components/schemas/CompanionId" },
+                  "nftMintAddress": {
+                    "type": "string",
+                    "description": "Solana mint address of the companion NFT.",
+                    "example": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+                  },
+                  "toUserId": {
+                    "type": "string",
+                    "description": "KIN user ID of the recipient. If provided, skills are replicated to the new owner.",
+                    "example": "user-xyz789"
+                  },
+                  "transferTxSig": {
+                    "type": "string",
+                    "description": "Solana transaction signature for the NFT transfer (for audit log).",
+                    "example": "5VfYjH..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer prepared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transferId": { "type": "string" },
+                    "snapshotId": { "type": "string" },
+                    "contentHash": { "type": "string" },
+                    "skillsTransferred": { "type": "integer" },
+                    "totalLevels": { "type": "integer" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": {
+            "description": "Forbidden — caller does not own this companion NFT.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/companion-skills/transfer-log": {
+      "get": {
+        "tags": ["Companions"],
+        "operationId": "companionSkillsTransferLog",
+        "summary": "Transfer history",
+        "description": "Returns all NFT transfer events where the authenticated user is either sender or recipient. Limited to 50 most recent records.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Transfer log entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": { "type": "string" },
+                      "nftMintAddress": { "type": "string" },
+                      "companionId": { "type": "string" },
+                      "fromUserId": { "type": "string" },
+                      "toUserId": { "type": "string", "nullable": true },
+                      "skillsTransferred": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "skillId": { "type": "string" },
+                            "level": { "type": "integer" },
+                            "xp": { "type": "integer" },
+                            "name": { "type": "string" }
+                          }
+                        }
+                      },
+                      "transferTxSig": { "type": "string", "nullable": true },
+                      "createdAt": { "type": "string", "format": "date-time" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/heartbeat": {
+      "post": {
+        "tags": ["Health"],
+        "operationId": "heartbeatPost",
+        "summary": "Receive heartbeat from local KIN",
+        "description": "Receives a periodic heartbeat from a local KIN instance. The local agent should POST every 30 seconds. After 3 missed beats (90 seconds), the KIN is marked offline. Upserts heartbeat state — multiple KIN IDs per user are supported.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["kinId", "timestamp", "services"],
+                "properties": {
+                  "kinId": {
+                    "type": "string",
+                    "description": "Unique identifier for this KIN instance.",
+                    "example": "kin-alice-home"
+                  },
+                  "timestamp": {
+                    "type": "integer",
+                    "description": "Unix timestamp (ms) from the local agent.",
+                    "example": 1704067200000
+                  },
+                  "services": {
+                    "type": "object",
+                    "description": "Map of service name to health status.",
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": ["ok", "warn", "error"]
+                    },
+                    "example": {
+                      "ollama": "ok",
+                      "whisper": "warn",
+                      "telegram": "ok"
+                    }
+                  },
+                  "ollamaModel": {
+                    "type": "string",
+                    "description": "Currently loaded Ollama model.",
+                    "example": "llama3.2:3b"
+                  },
+                  "systemInfo": {
+                    "type": "object",
+                    "properties": {
+                      "os": { "type": "string", "example": "Ubuntu 24.04" },
+                      "cpuUsagePercent": { "type": "number", "example": 42.5 },
+                      "memUsedMB": { "type": "integer", "example": 6144 },
+                      "memTotalMB": { "type": "integer", "example": 16384 },
+                      "diskFreeMB": { "type": "integer", "example": 51200 },
+                      "uptimeSeconds": { "type": "integer", "example": 86400 }
+                    }
+                  },
+                  "version": {
+                    "type": "string",
+                    "description": "Local KIN agent version.",
+                    "example": "0.9.2"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Heartbeat acknowledged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ack": { "type": "boolean", "example": true },
+                    "serverTime": { "type": "integer", "description": "Server Unix time (ms)." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/heartbeat/status": {
+      "get": {
+        "tags": ["Health"],
+        "operationId": "heartbeatStatus",
+        "summary": "Health dashboard",
+        "description": "Returns the current health status of the user's most recently active local KIN instance. Includes service statuses, system resource metrics, and overall health assessment.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Health dashboard data.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HeartbeatStatus" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/heartbeat/history": {
+      "get": {
+        "tags": ["Health"],
+        "operationId": "heartbeatHistory",
+        "summary": "Heartbeat history",
+        "description": "Returns the last 100 heartbeat records for the authenticated user, ordered by time descending. Useful for trend analysis and uptime monitoring.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Heartbeat history records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "maxItems": 100,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kinId": { "type": "string" },
+                      "lastSeenAt": { "type": "string", "format": "date-time" },
+                      "services": {
+                        "type": "object",
+                        "additionalProperties": { "type": "string", "enum": ["ok", "warn", "error"] }
+                      },
+                      "version": { "type": "string", "nullable": true }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/recovery/snapshot": {
+      "post": {
+        "tags": ["Recovery"],
+        "operationId": "recoverySnapshot",
+        "summary": "Create recovery snapshot",
+        "description": "Creates a manual recovery snapshot. Counts conversations, messages, and memories and stores metadata for the restore point. The actual data is never duplicated — only counts and metadata are stored.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Recovery snapshot created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/RecoverySnapshot" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/recovery/snapshots": {
+      "get": {
+        "tags": ["Recovery"],
+        "operationId": "recoverySnapshots",
+        "summary": "List snapshots",
+        "description": "Returns all recovery snapshots for the authenticated user, ordered by creation date descending. Limited to 50 snapshots.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of recovery snapshots.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/RecoverySnapshot" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/recovery/restore/{id}": {
+      "post": {
+        "tags": ["Recovery"],
+        "operationId": "recoveryRestore",
+        "summary": "Restore from snapshot",
+        "description": "Restores from a recovery snapshot by resetting error counters and marking the KIN heartbeat as healthy. **No user data is ever deleted.** Conversations, memories, and messages are preserved. This operation clears the service error state so the dashboard shows a clean health status.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Recovery snapshot ID.",
+            "schema": { "type": "string", "example": "snap-uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restore complete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Recovery complete. Error counters reset. All data preserved." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/chat": {
+      "post": {
+        "tags": ["Support"],
+        "operationId": "supportChatSend",
+        "summary": "AI support chat",
+        "description": "Sends a message to the AI-powered KIN Support bot. The bot searches the FAQ database first, then generates a response using the inference stack if no FAQ match is found. Returns the AI response and whether a FAQ match was found.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["message"],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "User message. Maximum 2000 characters.",
+                    "maxLength": 2000,
+                    "example": "How do I upgrade to the Pro plan?"
+                  },
+                  "chatId": {
+                    "type": "string",
+                    "description": "Existing support chat session ID. Omit to start a new session.",
+                    "example": "sc-uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI support response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": { "type": "string" },
+                    "chatId": { "type": "string" },
+                    "faqMatched": { "type": "boolean", "description": "True if the response was sourced from the FAQ database." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/chat/escalate": {
+      "post": {
+        "tags": ["Support"],
+        "operationId": "supportChatEscalate",
+        "summary": "Escalate to human support",
+        "description": "Escalates the support conversation to the human support team. Creates a high-priority support ticket, sends an alert via Slack webhook (if configured), and adds a system message to the chat thread. Returns the generated ticket ID.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["chatId"],
+                "properties": {
+                  "chatId": {
+                    "type": "string",
+                    "description": "Support chat session ID to escalate.",
+                    "example": "sc-uuid"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Optional reason for escalation (for the support agent's context).",
+                    "example": "Billing issue not resolved by AI"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Escalated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "ticketId": { "type": "string", "example": "tkt-uuid" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/chat/history": {
+      "get": {
+        "tags": ["Support"],
+        "operationId": "supportChatHistory",
+        "summary": "Chat history",
+        "description": "Returns the message history for a support chat session. If `chatId` is not provided, returns the most recent active session. Returns an empty message list if no active session exists.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "chatId",
+            "in": "query",
+            "description": "Support chat session ID. Omit for the latest active session.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chat history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chatId": { "type": "string", "nullable": true },
+                    "status": { "type": "string", "nullable": true, "enum": ["active", "escalated", "resolved", null] },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string" },
+                          "role": { "type": "string", "enum": ["user", "assistant"] },
+                          "content": { "type": "string" },
+                          "createdAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/support/faq": {
+      "get": {
+        "tags": ["Support"],
+        "operationId": "supportFaq",
+        "summary": "FAQ entries",
+        "description": "Returns FAQ entries. Supports optional search and category filtering. Used by the support chat widget and the standalone FAQ page.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Full-text search across question and answer.",
+            "schema": { "type": "string", "example": "billing" }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter by FAQ category.",
+            "schema": { "type": "string", "example": "getting_started" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "FAQ entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/FaqEntry" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/tickets": {
+      "get": {
+        "tags": ["Support"],
+        "operationId": "ticketsList",
+        "summary": "Support tickets",
+        "description": "Returns all support tickets for the authenticated user, ordered by creation date descending. Limited to 50 tickets.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User's support tickets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tickets": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SupportTicket" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "post": {
+        "tags": ["Support"],
+        "operationId": "ticketsCreate",
+        "summary": "Create ticket",
+        "description": "Creates a new support ticket for the authenticated user.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["subject"],
+                "properties": {
+                  "subject": {
+                    "type": "string",
+                    "description": "Brief description of the issue.",
+                    "example": "Cannot connect companion to Discord"
+                  },
+                  "companionId": {
+                    "$ref": "#/components/schemas/CompanionId",
+                    "nullable": true
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": ["low", "normal", "high", "urgent"],
+                    "default": "normal"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "ticket": { "$ref": "#/components/schemas/SupportTicket" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/features": {
+      "get": {
+        "tags": ["Support"],
+        "operationId": "featuresList",
+        "summary": "Feature requests",
+        "description": "Returns the top 50 feature requests sorted by vote count descending. Each entry includes whether the authenticated user has voted.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Feature request list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "features": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/FeatureRequest" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "post": {
+        "tags": ["Support"],
+        "operationId": "featuresCreate",
+        "summary": "Create feature request",
+        "description": "Creates a new feature request. The request starts with 0 votes.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "description"],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Short feature title.",
+                    "example": "Voice message support in web dashboard"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Detailed description of the requested feature.",
+                    "example": "Allow users to send voice notes directly from the web chat interface."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feature request created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "feature": { "$ref": "#/components/schemas/FeatureRequest" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/features/{featureId}/vote": {
+      "post": {
+        "tags": ["Support"],
+        "operationId": "featuresVote",
+        "summary": "Vote for feature",
+        "description": "Casts an upvote for a feature request. Each user can vote once per feature. Returns 409 if the user has already voted.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "description": "Feature request ID.",
+            "schema": { "type": "string", "example": "feat-uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vote cast.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "success": { "type": "boolean" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/billing/status": {
+      "get": {
+        "tags": ["Billing"],
+        "operationId": "billingStatus",
+        "summary": "Subscription status",
+        "description": "Returns the current subscription plan, status, billing period, and live usage statistics (messages today, active companions, total API calls).",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Billing status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "type": "string",
+                      "enum": ["free", "pro", "enterprise"],
+                      "example": "pro"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["active", "past_due", "canceled", "trialing"],
+                      "example": "active"
+                    },
+                    "currentPeriodStart": { "type": "string", "format": "date-time", "nullable": true },
+                    "currentPeriodEnd": { "type": "string", "format": "date-time", "nullable": true },
+                    "cancelAtPeriodEnd": { "type": "boolean" },
+                    "stripeSubscriptionId": { "type": "string", "nullable": true },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "messagesToday": { "type": "integer", "example": 12 },
+                        "activeCompanions": { "type": "integer", "example": 2 },
+                        "apiCalls": { "type": "integer", "example": 347 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "tags": ["Billing"],
+        "operationId": "billingCheckout",
+        "summary": "Stripe checkout",
+        "description": "Creates a Stripe Checkout session for subscription purchase. Returns the Stripe-hosted checkout URL. If `STRIPE_SECRET_KEY` is not configured, returns `{url: null, message: 'Payments coming soon'}`.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["priceId"],
+                "properties": {
+                  "priceId": {
+                    "type": "string",
+                    "description": "Stripe Price ID for the subscription plan.",
+                    "example": "price_1OaBcDEfGhIjKlMnOpQrStUv"
+                  },
+                  "successUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Redirect URL after successful payment.",
+                    "default": "https://www.meetyourkin.com/billing/success"
+                  },
+                  "cancelUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Redirect URL on payment cancellation.",
+                    "default": "https://www.meetyourkin.com/billing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "format": "uri", "nullable": true },
+                    "message": { "type": "string", "description": "Present only when Stripe is not configured." }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/billing/mint-checkout": {
+      "post": {
+        "tags": ["Billing"],
+        "operationId": "billingMintCheckout",
+        "summary": "Companion NFT mint checkout",
+        "description": "Creates a Stripe Checkout session for a one-time companion NFT mint ($9.99). On payment success, the Stripe webhook triggers the Candy Machine mint and records NFT ownership. Users do not need any crypto knowledge — they simply pay and the NFT is minted to their wallet.\n\nRate limited to prevent minting abuse.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["companionId", "walletAddress"],
+                "properties": {
+                  "companionId": { "$ref": "#/components/schemas/CompanionId" },
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "Solana wallet address to receive the minted NFT.",
+                    "example": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+                  },
+                  "successUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "default": "https://www.meetyourkin.com/dashboard?minted=true"
+                  },
+                  "cancelUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "default": "https://www.meetyourkin.com/companions"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mint checkout URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "format": "uri", "nullable": true },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "tags": ["Billing"],
+        "operationId": "billingPortal",
+        "summary": "Stripe portal",
+        "description": "Creates a Stripe Customer Portal session. Allows users to manage their subscription, update payment methods, view invoices, and cancel. Requires an existing Stripe customer record — the user must have subscribed at least once.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "returnUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL to return to after leaving the portal.",
+                    "default": "https://www.meetyourkin.com/billing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stripe portal URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string", "format": "uri", "nullable": true },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/billing/webhook": {
+      "post": {
+        "tags": ["Billing"],
+        "operationId": "billingWebhook",
+        "summary": "Stripe webhook",
+        "description": "Receives and processes Stripe webhook events. Signature is verified using `STRIPE_WEBHOOK_SECRET` (HMAC-SHA256 with 5-minute tolerance). Handles:\n\n- `checkout.session.completed` — Activates subscriptions and processes companion mint payments\n- `customer.subscription.updated` — Syncs subscription status and period dates\n- `customer.subscription.deleted` — Downgrades user to free tier\n\nThe request body must be the raw Stripe JSON payload (not parsed). Register this URL in your Stripe dashboard.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Raw Stripe event payload. Do not transform.",
+                "properties": {
+                  "id": { "type": "string", "example": "evt_1OaBcDEfGhIjKlMn" },
+                  "type": {
+                    "type": "string",
+                    "example": "checkout.session.completed",
+                    "enum": [
+                      "checkout.session.completed",
+                      "customer.subscription.updated",
+                      "customer.subscription.deleted"
+                    ]
+                  },
+                  "data": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "stripe-signature",
+            "in": "header",
+            "required": false,
+            "description": "Stripe-Signature header for webhook verification.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event acknowledged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "received": { "type": "boolean", "example": true } }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Stripe signature or malformed JSON.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

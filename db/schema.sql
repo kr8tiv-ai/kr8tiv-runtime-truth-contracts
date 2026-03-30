@@ -370,3 +370,221 @@ AFTER UPDATE ON users
 BEGIN
   UPDATE users SET updated_at = strftime('%s', 'now') * 1000 WHERE id = NEW.id;
 END;
+
+-- ============================================================================
+-- Skills Marketplace
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general'
+    CHECK (category IN ('general','productivity','creative','developer',
+                        'marketing','analytics','lifestyle','custom')),
+  author TEXT NOT NULL DEFAULT 'kin',
+  source_type TEXT NOT NULL DEFAULT 'builtin'
+    CHECK (source_type IN ('builtin','companion','custom')),
+  github_repo_url TEXT,
+  triggers TEXT NOT NULL DEFAULT '[]',
+  config TEXT,
+  version TEXT NOT NULL DEFAULT '1.0.0',
+  install_count INTEGER NOT NULL DEFAULT 0,
+  is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
+CREATE INDEX IF NOT EXISTS idx_skills_source ON skills(source_type);
+
+CREATE TABLE IF NOT EXISTS user_skills (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skill_id TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+  companion_id TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  installed_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  UNIQUE(user_id, skill_id, companion_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_skills_user ON user_skills(user_id);
+
+CREATE TABLE IF NOT EXISTS skill_requests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  github_repo_url TEXT NOT NULL,
+  repo_owner TEXT,
+  repo_name TEXT,
+  skill_name TEXT,
+  skill_description TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending','payment_required','paid',
+                      'reviewing','approved','installed','rejected')),
+  rejection_reason TEXT,
+  stripe_payment_intent_id TEXT,
+  amount_cents INTEGER NOT NULL DEFAULT 499,
+  skill_id TEXT REFERENCES skills(id),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_skill_requests_user ON skill_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_skill_requests_status ON skill_requests(status);
+
+-- Seed built-in skills
+INSERT OR IGNORE INTO skills (id, name, display_name, description, category, source_type, triggers, is_approved) VALUES
+  ('skill-calculator', 'calculator', 'Calculator', 'Safe math evaluation — supports arithmetic, parentheses, and exponents', 'productivity', 'builtin', '["calculate","compute","math","\\d+\\s*[+\\-*/^]\\s*\\d+"]', TRUE),
+  ('skill-weather', 'weather', 'Weather', 'Real-time weather and forecasts from any city worldwide', 'lifestyle', 'builtin', '["weather","forecast","temperature"]', TRUE),
+  ('skill-reminder', 'reminder', 'Reminders', 'Set timed reminders with natural language — "remind me in 5 minutes to..."', 'productivity', 'builtin', '["remind me","set reminder","reminders"]', TRUE),
+  ('skill-web-search', 'web-search', 'Web Search', 'Search the web for current information powered by Tavily', 'general', 'builtin', '["search\\\\s+","look\\\\s*up","google","find\\\\s+info"]', TRUE),
+  ('skill-code-gen', 'code-gen', 'Code Generation', 'Generate, review, and debug code — exclusive to Cipher', 'developer', 'companion', '["generate code","write.*function","review.*code"]', TRUE),
+  ('skill-social-content', 'social-content', 'Social Content', 'Create social media posts and brand content — exclusive to Mischief', 'marketing', 'companion', '["create.*post","social.*media","brand.*content"]', TRUE),
+  ('skill-data-analysis', 'data-analysis', 'Data Analysis', 'Analyze data, market research, and trends — exclusive to Vortex', 'analytics', 'companion', '["analyze.*data","market.*research","trend"]', TRUE),
+  ('skill-architecture-review', 'architecture-review', 'Architecture Review', 'System design and code review — exclusive to Forge', 'developer', 'companion', '["architecture","system.*design","code.*review"]', TRUE),
+  ('skill-creative-writing', 'creative-writing', 'Creative Writing', 'Stories, worldbuilding, and prose editing — exclusive to Aether', 'creative', 'companion', '["write.*story","creative.*writing","worldbuild"]', TRUE),
+  ('skill-habit-coaching', 'habit-coaching', 'Habit Coaching', 'Goal setting, habit tracking, and accountability — exclusive to Catalyst', 'lifestyle', 'companion', '["habit","goal.*setting","routine","accountability"]', TRUE);
+
+-- ============================================================================
+-- Heartbeat & Offline Detection
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS heartbeats (
+  id TEXT PRIMARY KEY,
+  kin_id TEXT NOT NULL UNIQUE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_seen_at INTEGER NOT NULL,
+  ip_address TEXT,
+  services TEXT NOT NULL DEFAULT '{}',
+  ollama_model TEXT,
+  system_info TEXT,
+  version TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_heartbeats_user ON heartbeats(user_id);
+CREATE INDEX IF NOT EXISTS idx_heartbeats_last_seen ON heartbeats(last_seen_at);
+
+CREATE TABLE IF NOT EXISTS recovery_snapshots (
+  id TEXT PRIMARY KEY,
+  kin_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  snapshot_type TEXT NOT NULL CHECK (snapshot_type IN ('auto','manual','pre_recovery')),
+  conversation_count INTEGER NOT NULL DEFAULT 0,
+  message_count INTEGER NOT NULL DEFAULT 0,
+  memory_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'valid' CHECK (status IN ('valid','restoring','restored','corrupt')),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  metadata TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_recovery_user ON recovery_snapshots(user_id);
+
+-- ============================================================================
+-- Support Chat (AI-powered customer service)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS support_chats (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','escalated','resolved')),
+  escalated_at INTEGER,
+  resolved_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+  id TEXT PRIMARY KEY,
+  chat_id TEXT NOT NULL REFERENCES support_chats(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user','assistant','agent')),
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_chats_user ON support_chats(user_id);
+CREATE INDEX IF NOT EXISTS idx_support_messages_chat ON support_messages(chat_id);
+
+-- Seeded FAQ entries for the AI support bot
+CREATE TABLE IF NOT EXISTS support_faq (
+  id TEXT PRIMARY KEY,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+-- Seed FAQ entries
+INSERT OR IGNORE INTO support_faq (id, question, answer, category) VALUES
+  ('faq-1', 'What is KIN?', 'KIN is an AI companion platform. Each KIN is a unique AI personality powered by frontier models that learns and grows with you. Your KIN lives on the Solana blockchain as an NFT, making it truly yours.', 'general'),
+  ('faq-2', 'How do I get started?', 'Sign up, complete onboarding, and claim your first companion. Free tier includes 1 companion with 50 messages per day. Upgrade to Pro for unlimited messages and up to 3 companions.', 'getting-started'),
+  ('faq-3', 'What companions are available?', 'There are 6 companions: Cipher (code), Mischief (social media), Vortex (data analysis), Forge (architecture), Aether (creative writing), and Catalyst (habit coaching). Each is powered by a different frontier AI model.', 'companions'),
+  ('faq-4', 'How does the NFT work?', 'Each companion is minted as a Solana NFT. Your companion''s skills, personality, and experience are linked to the NFT. When you sell the NFT, the skills transfer with it but your private memories stay with you.', 'nft'),
+  ('faq-5', 'What is the free tier?', 'Free tier includes 1 companion, 50 messages per day, basic web builder, and community support. All powered by Groq Qwen 3 32B at zero cost.', 'pricing'),
+  ('faq-6', 'How do skills work?', 'Skills are add-on capabilities for your companions. Built-in skills include calculator, weather, reminders, and web search. You can also request custom skills from GitHub repos for a $4.99 review fee.', 'skills'),
+  ('faq-7', 'Can I use KIN on Telegram?', 'Yes! KIN works on Telegram, Discord, WhatsApp, and the web dashboard. Your conversations and memories sync across all platforms.', 'platforms'),
+  ('faq-8', 'What happens if my local KIN goes offline?', 'The system automatically detects offline status via heartbeat monitoring. Your KIN falls back to cloud providers (Groq free tier → paid frontier models). All your data is preserved and will sync when you come back online.', 'reliability'),
+  ('faq-9', 'How do I cancel my subscription?', 'Go to Dashboard → Billing → Manage Subscription. You can cancel anytime and will retain access until the end of your billing period.', 'billing'),
+  ('faq-10', 'Is my data private?', 'Yes. Your conversations and memories are encrypted and stored securely. When a companion NFT is transferred, only the companion''s skills and personality transfer — your private memories stay with you.', 'privacy');
+
+-- ============================================================================
+-- Companion Skill Accrual (NFT-portable skills)
+-- ============================================================================
+
+-- Tracks skills that a specific companion instance has accrued
+CREATE TABLE IF NOT EXISTS companion_skills (
+  id TEXT PRIMARY KEY,
+  companion_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skill_id TEXT NOT NULL REFERENCES skills(id),
+  skill_level INTEGER NOT NULL DEFAULT 1,
+  xp INTEGER NOT NULL DEFAULT 0,
+  xp_to_next_level INTEGER NOT NULL DEFAULT 100,
+  is_portable BOOLEAN NOT NULL DEFAULT TRUE,
+  accrued_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000),
+  last_used_at INTEGER,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(companion_id, user_id, skill_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_companion_skills_companion ON companion_skills(companion_id);
+CREATE INDEX IF NOT EXISTS idx_companion_skills_user ON companion_skills(user_id);
+
+-- Companion personality snapshots (IPFS-ready, encrypted)
+-- Stores a hash of the companion's personality/skill state for blockchain anchoring
+CREATE TABLE IF NOT EXISTS companion_snapshots (
+  id TEXT PRIMARY KEY,
+  companion_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  nft_mint_address TEXT,
+  snapshot_type TEXT NOT NULL DEFAULT 'skill_state'
+    CHECK (snapshot_type IN ('skill_state','personality','full','transfer')),
+  -- Content hash (SHA-256) for integrity verification
+  content_hash TEXT NOT NULL,
+  -- Encrypted payload (JSON) — only skills/personality, never private memories
+  encrypted_payload TEXT,
+  -- IPFS CID if pinned
+  ipfs_cid TEXT,
+  -- Solana transaction signature if anchored on-chain
+  solana_tx_sig TEXT,
+  is_on_chain BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_companion_snapshots_nft ON companion_snapshots(nft_mint_address);
+
+-- Transfer log: tracks skill portability on NFT sale
+CREATE TABLE IF NOT EXISTS nft_transfers (
+  id TEXT PRIMARY KEY,
+  nft_mint_address TEXT NOT NULL,
+  companion_id TEXT NOT NULL,
+  from_user_id TEXT NOT NULL,
+  to_user_id TEXT,
+  skills_transferred TEXT NOT NULL DEFAULT '[]', -- JSON array of skill IDs + levels
+  snapshot_id TEXT REFERENCES companion_snapshots(id),
+  transfer_tx_sig TEXT, -- Solana transfer transaction signature
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')*1000)
+);
+
+CREATE INDEX IF NOT EXISTS idx_nft_transfers_mint ON nft_transfers(nft_mint_address);

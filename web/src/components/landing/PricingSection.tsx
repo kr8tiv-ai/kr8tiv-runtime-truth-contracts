@@ -12,6 +12,7 @@ function PricingCard({ tier, index, isInView }: { tier: PricingTier; index: numb
 
   const ctaMap: Record<string, { label: string; href: string }> = {
     free: { label: 'Get Started', href: '/login' },
+    genesis: { label: 'Mint Your KIN', href: '/login' },
     pro: { label: 'Upgrade to Pro', href: '/login' },
     enterprise: { label: 'Contact Us', href: '/login' },
   };
@@ -54,7 +55,7 @@ function PricingCard({ tier, index, isInView }: { tier: PricingTier; index: numb
           {tier.price === 0 ? 'Free' : `$${tier.price}`}
         </span>
         {tier.price > 0 && (
-          <span className="text-sm text-white/40 ml-1">/month</span>
+          <span className="text-sm text-white/40 ml-1">{tier.priceLabel ?? '/month'}</span>
         )}
       </div>
 
@@ -117,7 +118,7 @@ export function PricingSection() {
         </motion.div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
           {PRICING_TIERS.map((tier, index) => (
             <PricingCard key={tier.id} tier={tier} index={index} isInView={isInView} />
           ))}

@@ -4,10 +4,11 @@
 // Settings Page — Profile, preferences, memory management, and danger zone.
 // ============================================================================
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMemories } from '@/hooks/useMemories';
+import { kinApi } from '@/lib/api';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -36,6 +37,33 @@ export default function SettingsPage() {
 
   const [language, setLanguage] = useState('en');
   const [notifications, setNotifications] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExportData = useCallback(async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const data = await kinApi.get<Record<string, unknown>>('/chat/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `kin-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(
+        err instanceof Error ? err.message : 'Failed to export data',
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -220,6 +248,28 @@ export default function SettingsPage() {
         <WalletCard />
         <PhantomConnect />
       </div>
+
+      {/* Data & Privacy */}
+      <GlassCard className="p-6" hover={false}>
+        <h2 className="mb-2 font-display text-lg font-semibold text-white">
+          Data &amp; Privacy
+        </h2>
+        <p className="text-sm text-white/50">
+          Download all your conversations, memories, and companion data as JSON.
+        </p>
+        <div className="mt-4">
+          <Button
+            variant="outline"
+            onClick={handleExportData}
+            disabled={exporting}
+          >
+            {exporting ? 'Exporting...' : 'Export My Data'}
+          </Button>
+          {exportError && (
+            <p className="mt-2 text-sm text-magenta">{exportError}</p>
+          )}
+        </div>
+      </GlassCard>
 
       {/* Danger Zone */}
       <DangerZone />

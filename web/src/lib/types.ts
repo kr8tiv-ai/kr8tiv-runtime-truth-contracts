@@ -22,11 +22,19 @@ export interface UserPreferences {
   onboardingComplete: boolean;
 }
 
+export interface FrontierModelInfo {
+  provider: string;
+  modelId: string;
+  modelName: string;
+  contextWindow: number;
+}
+
 export interface Companion {
   id: string;
   name: string;
   type: string;
   specialization: string;
+  frontierModel?: FrontierModelInfo;
 }
 
 export interface UserCompanion {
@@ -118,4 +126,115 @@ export interface ProgressData {
 export interface ApiError {
   error: string;
   statusCode?: number;
+}
+
+// ============================================================================
+// Skills Marketplace
+// ============================================================================
+
+export interface Skill {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: string;
+  sourceType: 'builtin' | 'companion' | 'custom';
+  installCount: number;
+  isInstalled: boolean;
+  isActive: boolean;
+}
+
+export interface SkillRequest {
+  id: string;
+  githubRepoUrl: string;
+  skillName?: string;
+  status: 'pending' | 'payment_required' | 'paid' | 'reviewing' |
+          'approved' | 'installed' | 'rejected';
+  rejectionReason?: string;
+  amountCents: number;
+  createdAt: string;
+}
+
+// ============================================================================
+// Health Dashboard
+// ============================================================================
+
+export interface ServiceStatus {
+  name: string;
+  status: 'ok' | 'warn' | 'error';
+  detail: string;
+  label: string;
+}
+
+export interface HealthDashboardData {
+  overallStatus: 'healthy' | 'degraded' | 'offline';
+  lastHeartbeat: string;
+  latencyMs: number;
+  kinVersion: string;
+  services: ServiceStatus[];
+  system: {
+    cpuUsagePercent: number;
+    memUsedMB: number;
+    memTotalMB: number;
+    diskFreeMB: number;
+    uptimeSeconds: number;
+  };
+  recentEvents: Array<{ service: string; from: string; to: string; timestamp: string }>;
+}
+
+// ============================================================================
+// Support Chat
+// ============================================================================
+
+export interface SupportMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'agent';
+  content: string;
+  createdAt: string;
+}
+
+export interface SupportChatSession {
+  chatId: string | null;
+  status: 'active' | 'escalated' | 'resolved' | null;
+  messages: SupportMessage[];
+}
+
+// ============================================================================
+// NFT Skill Portability
+// ============================================================================
+
+export interface CompanionSkill {
+  id: string;
+  companionId: string;
+  skillId: string;
+  skillName: string;
+  skillDisplayName: string;
+  skillLevel: number;
+  xp: number;
+  xpToNextLevel: number;
+  isPortable: boolean;
+  usageCount: number;
+  accruedAt: string;
+  lastUsedAt?: string;
+}
+
+export interface CompanionSnapshot {
+  id: string;
+  companionId: string;
+  snapshotType: 'skill_state' | 'personality' | 'full' | 'transfer';
+  contentHash: string;
+  ipfsCid?: string;
+  isOnChain: boolean;
+  createdAt: string;
+}
+
+export interface NftTransfer {
+  id: string;
+  nftMintAddress: string;
+  companionId: string;
+  fromUserId: string;
+  toUserId?: string;
+  skillsTransferred: Array<{ skillId: string; level: number }>;
+  transferTxSig?: string;
+  createdAt: string;
 }

@@ -61,6 +61,49 @@ export class SkillRouter {
     return this.skills.delete(name);
   }
 
+  /**
+   * Register skills loaded from the database (user_skills + skills tables).
+   * Custom/companion skills get placeholder executors since they run as
+   * metadata-only descriptors — actual processing is handled by the LLM
+   * using the skill description as context.
+   */
+  registerFromDatabase(
+    rows: Array<{
+      name: string;
+      display_name: string;
+      description: string;
+      triggers: string; // JSON array
+      source_type: string;
+    }>,
+  ): number {
+    let count = 0;
+    for (const row of rows) {
+      if (this.skills.has(row.name)) continue; // Don't override builtins
+
+      let triggers: string[];
+      try {
+        triggers = JSON.parse(row.triggers);
+      } catch {
+        triggers = [row.name]; // Fallback to skill name as trigger
+      }
+
+      const skill: KinSkill = {
+        name: row.name,
+        description: row.description,
+        triggers,
+        execute: async (ctx: SkillContext): Promise<SkillResult> => ({
+          content: `[${row.display_name}] ${row.description}\n\nThis skill enhances my capabilities. Let me help you with: "${ctx.message}"`,
+          type: 'text' as const,
+          metadata: { sourceType: row.source_type, skillName: row.name },
+        }),
+      };
+
+      this.register(skill);
+      count++;
+    }
+    return count;
+  }
+
   // --------------------------------------------------------------------------
   // Matching
   // --------------------------------------------------------------------------

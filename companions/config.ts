@@ -2,11 +2,22 @@
  * Companion Configuration - Runtime config for each KIN companion
  *
  * Maps companion IDs to their model preferences, escalation thresholds,
- * and supervisor settings. This is the runtime counterpart to the
- * personality definitions in the companion .md files.
+ * supervisor settings, and frontier model assignments.
+ *
+ * Each companion is powered by a specific frontier AI model:
+ * - Cipher  → OpenAI GPT-5.4 (code generation)
+ * - Mischief → Google Gemini 3.1 Pro (creative multimodal)
+ * - Vortex  → Anthropic Claude Opus 4.6 (strategy & analysis)
+ * - Forge   → xAI Grok 4.20 (2M context architecture)
+ * - Aether  → Moonshot Kimi K2.5 (creative writing)
+ * - Catalyst → Z.ai GLM-4.6 (cost-efficient coaching)
+ *
+ * Free tier uses Groq Qwen 3 32B for all companions.
  *
  * @module companions/config
  */
+
+import type { FrontierProviderId } from '../inference/providers/types.js';
 
 // ============================================================================
 // Types
@@ -25,7 +36,7 @@ export interface CompanionConfig {
   tagline: string;
   /** Local Ollama model to use */
   localModel: string;
-  /** Preferred supervisor provider */
+  /** Preferred supervisor provider (legacy — used by FallbackHandler for free tier) */
   supervisorProvider: 'openai' | 'anthropic';
   /** How eagerly this companion escalates to the supervisor */
   escalationLevel: EscalationLevel;
@@ -33,6 +44,12 @@ export interface CompanionConfig {
   escalationKeywords: string[];
   /** Max conversation history messages to send to supervisor */
   supervisorContextWindow: number;
+  /** Frontier model provider for paid/NFT users */
+  frontierProvider: FrontierProviderId;
+  /** Frontier model ID (e.g. 'gpt-5.4', 'claude-opus-4-6') */
+  frontierModelId: string;
+  /** Display name of the frontier model (for UI) */
+  frontierModelName: string;
 }
 
 // ============================================================================
@@ -53,6 +70,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'deploy', 'production', 'scale', 'performance', 'database design',
     ],
     supervisorContextWindow: 6,
+    frontierProvider: 'openai',
+    frontierModelId: 'gpt-5.4',
+    frontierModelName: 'OpenAI GPT-5.4',
   },
 
   mischief: {
@@ -68,6 +88,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'engagement', 'audience', 'campaign', 'schedule',
     ],
     supervisorContextWindow: 6,
+    frontierProvider: 'google',
+    frontierModelId: 'gemini-3.1-pro',
+    frontierModelName: 'Google Gemini 3.1 Pro',
   },
 
   vortex: {
@@ -83,6 +106,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'market research', 'competitive analysis', 'positioning',
     ],
     supervisorContextWindow: 6,
+    frontierProvider: 'anthropic',
+    frontierModelId: 'claude-opus-4-6',
+    frontierModelName: 'Anthropic Claude Opus 4.6',
   },
 
   forge: {
@@ -98,6 +124,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'memory leak', 'race condition', 'algorithm', 'data structure',
     ],
     supervisorContextWindow: 8,
+    frontierProvider: 'xai',
+    frontierModelId: 'grok-4.20',
+    frontierModelName: 'xAI Grok 4.20',
   },
 
   aether: {
@@ -113,6 +142,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'manuscript', 'worldbuilding', 'prose style', 'narrative voice',
     ],
     supervisorContextWindow: 10,
+    frontierProvider: 'moonshot',
+    frontierModelId: 'kimi-k2.5',
+    frontierModelName: 'Moonshot Kimi K2.5',
   },
 
   catalyst: {
@@ -128,6 +160,9 @@ export const COMPANION_CONFIGS: Record<string, CompanionConfig> = {
       'budget analysis', 'financial plan', 'debt strategy',
     ],
     supervisorContextWindow: 6,
+    frontierProvider: 'zai',
+    frontierModelId: 'glm-4.6',
+    frontierModelName: 'Z.ai GLM-4.6',
   },
 };
 

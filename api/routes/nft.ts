@@ -5,6 +5,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import crypto from 'crypto';
 import { mintCompanionNFT } from '../lib/solana-mint.js';
+import { mintRateLimit } from '../middleware/rate-limit.js';
 
 interface NFTParams {
   mintAddress: string;
@@ -89,6 +90,7 @@ const nftRoutes: FastifyPluginAsync = async (fastify) => {
   // Initiate mint (placeholder - actual Solana integration required)
   fastify.post<{ Body: { companionId: string; wallet: string } }>(
     '/nft/mint',
+    { preHandler: [mintRateLimit()] },
     async (request, reply) => {
       const userId = (request.user as { userId: string }).userId;
       const { companionId, wallet } = request.body;

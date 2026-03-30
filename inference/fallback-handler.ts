@@ -604,6 +604,162 @@ export class FallbackHandler {
   }
 
   /**
+   * Simple chat — sends messages to the best available cloud provider.
+   * Convenience wrapper used by support-chat.ts and other services.
+   */
+  async chat(
+    messages: Message[],
+    options?: { maxTokens?: number; temperature?: number },
+  ): Promise<FallbackResult> {
+    return this.executeCloud(messages, 'user_requested');
+  }
+
+  /**
+   * Streaming chat — yields tokens one-at-a-time via async generator.
+   * Supports Groq, OpenAI (both use OpenAI-compatible SSE), and Anthropic.
+   */
+  async *chatStream(
+    messages: Message[],
+    options?: { maxTokens?: number; temperature?: number },
+  ): AsyncGenerator<string> {
+    // Build provider priority: preferred → fallbacks
+    const providerOrder: Array<'groq' | 'openai' | 'anthropic'> = [
+      this.config.preferredProvider as 'groq' | 'openai' | 'anthropic',
+    ];
+    for (const p of ['groq', 'anthropic', 'openai'] as const) {
+      if (!providerOrder.includes(p)) providerOrder.push(p);
+    }
+
+    // Find first available provider
+    let provider: 'groq' | 'openai' | 'anthropic' | undefined;
+    let apiKey: string | undefined;
+    for (const p of providerOrder) {
+      const key = this.providerConfig[p]?.apiKey;
+      if (key) {
+        provider = p;
+        apiKey = key;
+        break;
+      }
+    }
+
+    if (!provider || !apiKey) {
+      throw new Error('No API key configured for streaming');
+    }
+
+    const model = this.providerConfig[provider]?.model ?? DEFAULT_MODELS[provider];
+    const maxTokens = options?.maxTokens ?? 4096;
+    const temperature = options?.temperature ?? 0.8;
+
+    if (provider === 'groq' || provider === 'openai') {
+      // OpenAI-compatible SSE streaming (Groq + OpenAI)
+      const baseUrl = provider === 'groq'
+        ? (this.providerConfig.groq?.baseUrl ?? 'https://api.groq.com/openai/v1')
+        : (this.providerConfig.openai?.baseUrl ?? 'https://api.openai.com/v1');
+
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          max_tokens: maxTokens,
+          temperature,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`${provider} streaming error: ${response.status} - ${error}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const data = trimmed.slice(6);
+            if (data === '[DONE]') return;
+            try {
+              const parsed = JSON.parse(data);
+              const token = parsed.choices?.[0]?.delta?.content;
+              if (token) yield token;
+            } catch { /* skip malformed chunks */ }
+          }
+        }
+      }
+    } else {
+      // Anthropic SSE streaming
+      const baseUrl = this.providerConfig.anthropic?.baseUrl ?? 'https://api.anthropic.com/v1';
+      const system = messages.find((m) => m.role === 'system')?.content;
+      const chatMessages = messages.filter((m) => m.role !== 'system');
+
+      const response = await fetch(`${baseUrl}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          system,
+          messages: chatMessages.map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          })),
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Anthropic streaming error: ${response.status} - ${error}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            const data = trimmed.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                yield parsed.delta.text;
+              }
+            } catch { /* skip malformed chunks */ }
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Get cost summary
    */
   getCostSummary(): { total: number; byProvider: { openai: number; anthropic: number; groq: number } } {

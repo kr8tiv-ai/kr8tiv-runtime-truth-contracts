@@ -15,9 +15,28 @@ interface TelegramAuth {
   hash: string;
 }
 
+// JSON Schema for Telegram auth payload validation
+const telegramAuthSchema = {
+  type: 'object' as const,
+  required: ['id', 'first_name', 'auth_date', 'hash'],
+  properties: {
+    id: { type: 'number' as const },
+    first_name: { type: 'string' as const, minLength: 1, maxLength: 256 },
+    last_name: { type: 'string' as const, maxLength: 256 },
+    username: { type: 'string' as const, maxLength: 64 },
+    photo_url: { type: 'string' as const, maxLength: 1024 },
+    auth_date: { type: 'number' as const },
+    hash: { type: 'string' as const, minLength: 64, maxLength: 64 },
+  },
+  additionalProperties: false,
+};
+
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Telegram login widget verification
-  fastify.post<{ Body: TelegramAuth }>('/auth/telegram', async (request, reply) => {
+  fastify.post<{ Body: TelegramAuth }>('/auth/telegram', {
+    schema: { body: telegramAuthSchema },
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  } as any, async (request, reply) => {
     const telegramData = request.body;
     
     // Verify Telegram hash

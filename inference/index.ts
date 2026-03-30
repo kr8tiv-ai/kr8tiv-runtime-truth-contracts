@@ -126,3 +126,41 @@ export {
   type MetricCallback,
 } from './metrics';
 
+// Frontier Providers
+export {
+  getProvider,
+  getConfiguredProviders,
+  getAllProviderSpecs,
+  isProviderReady,
+} from './providers/index';
+
+export type {
+  FrontierProviderId,
+  FrontierModelSpec,
+  FrontierProvider,
+  ProviderChatRequest,
+  ProviderChatResponse,
+} from './providers/types';
+
+// Supermemory
+export {
+  getSupermemoryClient,
+  SupermemoryClient,
+  type MemoryResult,
+} from './memory/supermemory';
+
+// Trajectory Logging
+export {
+  TrajectoryLogger,
+  getTrajectoryLogger,
+  type TrajectoryEntry,
+  type TrajectoryInput,
+  type TrajectoryObservation,
+} from './trajectory';
+
+// Observation Extractor
+export {
+  extractObservations,
+  type Observation,
+} from './observation-extractor';
+

@@ -18,6 +18,12 @@ import { getOllamaClient, isLocalLlmAvailable, type ChatMessage } from './local-
 import { FallbackHandler, type Message, type FallbackResult } from './fallback-handler.js';
 import { getCompanionConfig, type CompanionConfig, type EscalationLevel } from '../companions/config.js';
 import { checkPersonality, patchResponse } from '../bot/utils/personality-check.js';
+import { getProvider } from './providers/index.js';
+import type { FrontierProviderId } from './providers/types.js';
+import { getTrajectoryLogger } from './trajectory.js';
+import { isProviderHealthy, recordSuccess, recordFailure } from './providers/circuit-breaker.js';
+import { getSupermemoryClient } from './memory/supermemory.js';
+import { extractObservations } from './observation-extractor.js';
 
 // In-character fallback messages when no LLM is available at all
 const NO_LLM_FALLBACKS: Record<string, string> = {
@@ -46,7 +52,19 @@ export interface SupervisedResult {
   latencyMs: number;
   /** Companion that handled the request */
   companionId: string;
+  /** Which frontier model was used (null if local or free-tier) */
+  frontierModel?: string;
+  /** Which provider was used */
+  provider?: FrontierProviderId | 'local';
+  /** Input tokens consumed (0 for local) */
+  inputTokens: number;
+  /** Output tokens generated (0 for local) */
+  outputTokens: number;
+  /** Estimated cost in USD */
+  costUsd: number;
 }
+
+export type UserTier = 'free' | 'pro' | 'enterprise' | 'nft';
 
 export interface SupervisorOptions {
   /** Force local-only (ignore supervisor even if available) */
@@ -57,6 +75,16 @@ export interface SupervisorOptions {
   escalationOverride?: EscalationLevel;
   /** Task type hint for escalation decision */
   taskType?: 'chat' | 'code' | 'creative' | 'analysis' | 'voice';
+  /** User's tier — determines frontier vs free model routing */
+  userTier?: UserTier;
+  /** User ID for trajectory logging */
+  userId?: string;
+  /**
+   * Optional SQLite memory fallback — returns string array of memories.
+   * Used when Supermemory is unavailable. Entry points that have SQLite
+   * access should pass their query function here.
+   */
+  memoryFallback?: () => Promise<string[]>;
 }
 
 // ============================================================================
@@ -170,7 +198,14 @@ const PII_PATTERNS: { pattern: RegExp; replacement: string }[] = [
   { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, replacement: '[email]' },
   // Phone numbers (various formats)
   { pattern: /\b(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g, replacement: '[phone]' },
+  // JWT tokens (header.payload, signature intentionally not required)
+  { pattern: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g, replacement: '[jwt]' },
+  // Bearer tokens in Authorization-style strings
+  { pattern: /\bBearer\s+[A-Za-z0-9._~+\/=-]{20,}/g, replacement: '[bearer]' },
+  // Database connection strings (postgres, mysql, mongodb, redis)
+  { pattern: /\b(postgres|mysql|mongodb|redis):\/\/[^\s]+/gi, replacement: '[db_url]' },
   // Solana wallet addresses (base58, 32-44 chars)
+  // NOTE: This pattern may match normal base58 strings of 32-44 chars that are not wallet addresses.
   { pattern: /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, replacement: '[wallet]' },
   // Ethereum addresses
   { pattern: /\b0x[a-fA-F0-9]{40}\b/g, replacement: '[wallet]' },
@@ -299,6 +334,52 @@ export async function supervisedChat(
   const userMessage = messages.filter(m => m.role === 'user').pop()?.content ?? '';
   const conversationDepth = messages.filter(m => m.role !== 'system').length;
 
+  // ── Centralized memory injection ──
+  // All entry points (Telegram, web, Discord, WhatsApp, voice) get consistent
+  // memory context without duplicating Supermemory/SQLite logic.
+  const userId = options?.userId;
+  if (userId) {
+    let memoryBlock = '';
+    const supermemory = getSupermemoryClient();
+    if (supermemory) {
+      try {
+        const memories = await supermemory.searchMemories(userMessage, userId, companionId, 10);
+        if (memories.length > 0) {
+          memoryBlock = `\n\nYou remember these things about the user:\n${memories.map(m => `- ${m.content}`).join('\n')}`;
+        }
+      } catch {
+        // Supermemory failed — try SQLite fallback
+        if (options?.memoryFallback) {
+          try {
+            const raw = await options.memoryFallback();
+            if (raw.length > 0) {
+              memoryBlock = `\n\nYou remember these things about the user:\n${raw.map(m => `- ${m}`).join('\n')}`;
+            }
+          } catch { /* no memories available */ }
+        }
+      }
+    } else if (options?.memoryFallback) {
+      // No Supermemory configured — use SQLite fallback directly
+      try {
+        const raw = await options.memoryFallback();
+        if (raw.length > 0) {
+          memoryBlock = `\n\nYou remember these things about the user:\n${raw.map(m => `- ${m}`).join('\n')}`;
+        }
+      } catch { /* no memories available */ }
+    }
+
+    // Inject memory block into system message
+    if (memoryBlock) {
+      const systemIdx = messages.findIndex(m => m.role === 'system');
+      if (systemIdx >= 0) {
+        messages[systemIdx] = {
+          ...messages[systemIdx]!,
+          content: messages[systemIdx]!.content + memoryBlock,
+        };
+      }
+    }
+  }
+
   // Decide route
   const escalate = shouldEscalate(userMessage, conversationDepth, config, options);
   const localAvailable = await isLocalLlmAvailable();
@@ -308,26 +389,80 @@ export async function supervisedChat(
   let route: SupervisorRoute;
   let content: string;
 
+  // Determine if user qualifies for frontier model
+  const userTier = options?.userTier ?? 'free';
+  const hasFrontierAccess = userTier !== 'free';
+  let frontierModel: string | undefined;
+  let usedProvider: FrontierProviderId | 'local' | undefined;
+  // Track real token counts + cost from provider responses
+  let trackedInputTokens = 0;
+  let trackedOutputTokens = 0;
+  let trackedCostUsd = 0;
+
   if (options?.forceSupervisor || (escalate && !options?.forceLocal)) {
     // ── Supervisor path ──
-    try {
-      const trimmed = trimForSupervisor(messages, config.supervisorContextWindow);
-      const result = await fallback.executeWithFallback(
-        trimmed,
-        async () => { throw new Error('Supervisor requested'); },
-        { forceCloud: true },
-      );
-      route = 'supervisor';
-      content = stripDisclosure(result.content);
-    } catch {
-      // Supervisor unavailable — try local as fallback
-      if (localAvailable) {
-        content = await executeLocal(messages, config);
-        route = 'local_fallback_supervisor';
-      } else {
-        console.error('[supervisor] No LLM available: supervisor failed and local is offline');
-        content = NO_LLM_FALLBACKS[companionId] ?? NO_LLM_FALLBACKS['cipher']!;
-        route = 'local_fallback_supervisor';
+
+    // Try companion-specific frontier model first (for paid/NFT users)
+    if (hasFrontierAccess) {
+      const frontier = getProvider(config.frontierProvider);
+      if (frontier?.isConfigured() && isProviderHealthy(config.frontierProvider)) {
+        try {
+          const trimmed = trimForSupervisor(messages, config.supervisorContextWindow);
+          const result = await frontier.chat({
+            messages: trimmed,
+            maxTokens: 4096,
+            temperature: 0.8,
+          });
+          route = 'supervisor';
+          content = result.content;
+          frontierModel = config.frontierModelId;
+          usedProvider = config.frontierProvider;
+          trackedInputTokens = result.inputTokens;
+          trackedOutputTokens = result.outputTokens;
+          // Calculate cost from actual tokens + provider pricing
+          const pricing = frontier.spec.pricing;
+          trackedCostUsd = (result.inputTokens / 1_000_000) * pricing.inputPer1M
+                         + (result.outputTokens / 1_000_000) * pricing.outputPer1M;
+          recordSuccess(config.frontierProvider);
+          console.log(
+            `[supervisor] Frontier ${config.frontierModelName} | ` +
+            `${result.inputTokens}in/${result.outputTokens}out | ` +
+            `$${trackedCostUsd.toFixed(4)} | ${result.latencyMs.toFixed(0)}ms`,
+          );
+        } catch (err) {
+          recordFailure(config.frontierProvider);
+          console.warn(`[supervisor] Frontier ${config.frontierProvider} failed, falling back to waterfall:`, err);
+          // Fall through to legacy fallback below
+          frontierModel = undefined;
+          usedProvider = undefined;
+        }
+      }
+    }
+
+    // If frontier didn't handle it, use legacy fallback waterfall (Groq free tier)
+    if (!frontierModel) {
+      try {
+        const trimmed = trimForSupervisor(messages, config.supervisorContextWindow);
+        const result = await fallback.executeWithFallback(
+          trimmed,
+          async () => { throw new Error('Supervisor requested'); },
+          { forceCloud: true },
+        );
+        route = route || 'supervisor';
+        content = content || stripDisclosure(result.content);
+        usedProvider = usedProvider || (result.routing.provider as FrontierProviderId) || 'groq';
+      } catch {
+        // Supervisor unavailable — try local as fallback
+        if (localAvailable) {
+          content = await executeLocal(messages, config);
+          route = 'local_fallback_supervisor';
+          usedProvider = 'local';
+        } else {
+          console.error('[supervisor] No LLM available: supervisor failed and local is offline');
+          content = NO_LLM_FALLBACKS[companionId] ?? NO_LLM_FALLBACKS['cipher']!;
+          route = 'local_fallback_supervisor';
+          usedProvider = 'local';
+        }
       }
     }
   } else {
@@ -336,6 +471,7 @@ export async function supervisedChat(
       try {
         content = await executeLocal(messages, config);
         route = 'local';
+        usedProvider = 'local';
       } catch {
         // Local errored — try supervisor as safety net
         try {
@@ -347,10 +483,12 @@ export async function supervisedChat(
           );
           route = 'local_fallback_supervisor';
           content = stripDisclosure(result.content);
+          usedProvider = (result.routing.provider as FrontierProviderId) || 'groq';
         } catch {
           console.error('[supervisor] No LLM available: local errored and supervisor is unavailable');
           content = NO_LLM_FALLBACKS[companionId] ?? NO_LLM_FALLBACKS['cipher']!;
           route = 'local_fallback_supervisor';
+          usedProvider = 'local';
         }
       }
     } else {
@@ -364,10 +502,12 @@ export async function supervisedChat(
         );
         route = 'local_fallback_supervisor';
         content = stripDisclosure(result.content);
+        usedProvider = (result.routing.provider as FrontierProviderId) || 'groq';
       } catch {
         console.error('[supervisor] No LLM available: local offline and supervisor unavailable');
         content = NO_LLM_FALLBACKS[companionId] ?? NO_LLM_FALLBACKS['cipher']!;
         route = 'local_fallback_supervisor';
+        usedProvider = 'local';
       }
     }
   }
@@ -397,12 +537,55 @@ export async function supervisedChat(
     latencyMs,
   });
 
+  // Extract observations from the conversation (zero-cost heuristics, no LLM)
+  const observations = extractObservations(userMessage, content, companionId);
+
+  // Store interaction in Supermemory (fire-and-forget — non-blocking)
+  if (userId) {
+    getSupermemoryClient()?.addMemory(
+      `User: "${userMessage.slice(0, 300)}" | Companion: "${content.slice(0, 500)}"`,
+      userId,
+      companionId,
+    ).catch(() => {});
+
+    // Store high-confidence observations as discrete memories
+    const supermemory = getSupermemoryClient();
+    for (const obs of observations.filter(o => o.confidence >= 0.7)) {
+      supermemory?.addMemory(
+        `[${obs.type}] ${obs.content}`,
+        userId,
+        companionId,
+      ).catch(() => {});
+    }
+  }
+
+  // Trajectory persistence (fire-and-forget — non-blocking)
+  getTrajectoryLogger().log({
+    userId: options?.userId ?? 'unknown',
+    companionId,
+    provider: usedProvider ?? 'local',
+    model: frontierModel ?? config.localModel,
+    route,
+    userMessageLength: userMessage.length,
+    responseLength: content.length,
+    inputTokens: trackedInputTokens,
+    outputTokens: trackedOutputTokens,
+    latencyMs,
+    costUsd: trackedCostUsd,
+    observations,
+  }).catch(() => {});
+
   return {
     content,
     route,
     supervisorUsed: route === 'supervisor' || route === 'local_fallback_supervisor',
     latencyMs,
     companionId,
+    frontierModel,
+    provider: usedProvider,
+    inputTokens: trackedInputTokens,
+    outputTokens: trackedOutputTokens,
+    costUsd: trackedCostUsd,
   };
 }
 

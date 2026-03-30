@@ -34,6 +34,10 @@ import adminRoutes from './routes/admin.js';
 import preferencesRoutes from './routes/preferences.js';
 import telegramWebhookRoutes from './routes/telegram-webhook.js';
 import chatRoutes from './routes/chat.js';
+import skillsRoutes from './routes/skills.js';
+import heartbeatRoutes from './routes/heartbeat.js';
+import supportChatRoutes from './routes/support-chat.js';
+import companionSkillsRoutes from './routes/companion-skills.js';
 
 // ============================================================================
 // Types
@@ -200,6 +204,10 @@ export async function createServer(config: ApiConfig = {}) {
     await protectedFastify.register(preferencesRoutes);
     await protectedFastify.register(adminRoutes);
     await protectedFastify.register(chatRoutes);
+    await protectedFastify.register(skillsRoutes);
+    await protectedFastify.register(heartbeatRoutes);
+    await protectedFastify.register(supportChatRoutes);
+    await protectedFastify.register(companionSkillsRoutes);
   });
 
   // ==========================================================================

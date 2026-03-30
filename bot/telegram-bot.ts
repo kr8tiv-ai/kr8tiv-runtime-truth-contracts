@@ -36,6 +36,7 @@ import { sanitizeInput, escapeMarkdown, detectJailbreak } from './utils/sanitize
 import { checkRateLimit, RATE_LIMITS } from './utils/rate-limit.js';
 import { detectLanguage, getLanguagePromptAddition } from './utils/language.js';
 
+
 // Suggestion buttons shown after Cipher responses
 const SUGGESTION_BUTTONS = new InlineKeyboard()
   .text('💬 Tell me more', 'suggest:more')
@@ -220,23 +221,22 @@ export function createKINBot(config: BotConfig) {
       const companionId = ctx.session.companionId ?? 'cipher';
       const history = await conversationStore.getHistory(userId, 20);
 
-      // Inject memories into system prompt
-      const userMemories = await conversationStore.getMemories?.(userId) ?? [];
-      const memoryBlock = userMemories.length > 0
-        ? `\n\nYou remember these things about the user:\n${userMemories.map((m: string) => `- ${m}`).join('\n')}`
-        : '';
-
       const systemPrompt = buildCompanionPrompt(companionId, {
         userName: ctx.from?.first_name ?? 'Friend',
         taskContext: { type: 'chat' },
         timeContext: new Date().toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' }),
-      }) + memoryBlock;
+      });
       const messages = [
         { role: 'system' as const, content: systemPrompt },
         ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
         { role: 'user' as const, content: 'Tell me more about that' },
       ];
-      const result = await supervisedChat(messages, companionId, fallback, { taskType: 'chat' });
+      // Memory injection is handled centrally by the supervisor
+      const result = await supervisedChat(messages, companionId, fallback, {
+        taskType: 'chat',
+        userId,
+        memoryFallback: async () => (await conversationStore.getMemories?.(userId)) ?? [],
+      });
       await conversationStore.addMessage(userId, 'user', 'Tell me more about that');
       await conversationStore.addMessage(userId, 'assistant', result.content);
       try {
@@ -475,17 +475,11 @@ export function createKINBot(config: BotConfig) {
       // Build messages for the LLM — uses active companion's personality
       const companionId = ctx.session.companionId ?? 'cipher';
 
-      // Inject memories into system prompt
-      const userMemories = await conversationStore.getMemories?.(userId) ?? [];
-      const memoryBlock = userMemories.length > 0
-        ? `\n\nYou remember these things about the user:\n${userMemories.map((m: string) => `- ${m}`).join('\n')}`
-        : '';
-
       const systemPrompt = buildCompanionPrompt(companionId, {
         userName: ctx.from?.first_name ?? 'Friend',
         taskContext: { type: 'chat' },
         timeContext: new Date().toLocaleString('en-US', { weekday: 'long', hour: 'numeric', minute: 'numeric' }),
-      }) + memoryBlock + langAddition;
+      }) + langAddition;
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
@@ -496,9 +490,11 @@ export function createKINBot(config: BotConfig) {
         { role: 'user' as const, content: message },
       ];
 
-      // Generate response via two-brain architecture (local + supervisor)
+      // Memory injection + Supermemory storage handled centrally by supervisor
       const result = await supervisedChat(messages, companionId, fallback, {
         taskType: 'chat',
+        userId,
+        memoryFallback: async () => (await conversationStore.getMemories?.(userId)) ?? [],
       });
       const response = result.content;
 
