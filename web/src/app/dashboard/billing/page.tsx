@@ -1,7 +1,8 @@
 'use client';
 
 // ============================================================================
-// Billing Page — Plan overview, usage meters, and subscription management.
+// Billing Page — Genesis Mint tiers + Monthly Hosting plans.
+// Aligned with meetyourkin.com pricing (source of truth).
 // ============================================================================
 
 import { motion } from 'framer-motion';
@@ -14,14 +15,18 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { UsageMeter } from '@/components/dashboard/UsageMeter';
-import { PlanCard } from '@/components/dashboard/PlanCard';
-import { PRICING_TIERS } from '@/lib/constants';
+import { PRICING_TIERS, GENESIS_TIERS } from '@/lib/constants';
 
 function getPlanBadgeColor(plan: string): 'cyan' | 'magenta' | 'gold' | 'muted' {
   switch (plan.toLowerCase()) {
-    case 'pro':
+    case 'hatchling':
+    case 'hatchling-monthly':
+      return 'cyan';
+    case 'elder':
+    case 'elder-monthly':
       return 'magenta';
-    case 'enterprise':
+    case 'hero':
+    case 'hero-monthly':
       return 'gold';
     default:
       return 'muted';
@@ -53,8 +58,7 @@ export default function BillingPage() {
   const currentPlan = billing?.plan ?? user?.tier ?? 'free';
   const limits = getPlanLimits(currentPlan);
   const isFree = currentPlan.toLowerCase() === 'free';
-  const isPro = currentPlan.toLowerCase() === 'pro';
-  const isEnterprise = currentPlan.toLowerCase() === 'enterprise';
+  const hasPaidPlan = !isFree;
 
   if (loading) {
     return (
@@ -90,10 +94,10 @@ export default function BillingPage() {
       {/* Header */}
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight text-white">
-          Billing & Subscription
+          Plans & Billing
         </h1>
         <p className="mt-1 text-white/50">
-          Manage your plan, usage, and payment details.
+          Your KIN companion plan, usage, and upgrade options.
         </p>
       </div>
 
@@ -103,10 +107,10 @@ export default function BillingPage() {
           <div>
             <div className="flex items-center gap-3">
               <h2 className="font-display text-xl font-semibold text-white">
-                Current Plan
+                Your Plan
               </h2>
               <Badge color={getPlanBadgeColor(currentPlan)}>
-                {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+                {currentPlan === 'free' ? 'Free Trial' : currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
               </Badge>
             </div>
             {billing?.currentPeriodEnd && (
@@ -121,20 +125,14 @@ export default function BillingPage() {
                 })}
               </p>
             )}
+            {isFree && (
+              <p className="mt-1 text-sm text-white/40">
+                You are on the free trial. Mint a Genesis KIN or subscribe to unlock all features!
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
-            {isFree && (
-              <Button
-                onClick={() => {
-                  track('upgrade_clicked', { from: currentPlan });
-                  checkout().catch(() => toastError('Checkout failed. Please try again.'));
-                }}
-                disabled={checkingOut}
-              >
-                {checkingOut ? 'Redirecting...' : 'Upgrade to Pro'}
-              </Button>
-            )}
-            {(isPro || isEnterprise) && (
+            {hasPaidPlan && (
               <Button
                 variant="outline"
                 onClick={openPortal}
@@ -150,56 +148,202 @@ export default function BillingPage() {
       {/* Usage Meters */}
       <GlassCard className="space-y-6 p-6" hover={false}>
         <h2 className="font-display text-lg font-semibold text-white">
-          Usage This Period
+          Usage Today
         </h2>
         <UsageMeter
-          label="Messages Today"
+          label="Messages"
           current={billing?.usage?.messagesToday ?? 0}
-          max={isEnterprise ? null : limits.messagesPerDay}
+          max={limits.messagesPerDay}
         />
         <UsageMeter
           label="Active Companions"
           current={billing?.usage?.activeCompanions ?? 1}
-          max={isEnterprise ? null : limits.companions}
-        />
-        <UsageMeter
-          label="API Calls"
-          current={billing?.usage?.apiCalls ?? 0}
-          max={isEnterprise ? null : 500}
+          max={limits.companions}
         />
       </GlassCard>
 
-      {/* Plan Comparison */}
+      {/* Genesis Mint Section */}
       <div>
-        <h2 className="mb-4 font-display text-lg font-semibold text-white">
-          Compare Plans
-        </h2>
+        <div className="mb-4">
+          <h2 className="font-display text-lg font-semibold text-white">
+            Genesis Mint (Limited to 60)
+          </h2>
+          <p className="mt-1 text-sm text-white/40">
+            Own your KIN forever. Genesis holders get 25% off all plans for life + Solana rewards.
+          </p>
+        </div>
         <div className="grid gap-6 md:grid-cols-3">
-          {PRICING_TIERS.map((tier) => (
-            <PlanCard
+          {GENESIS_TIERS.map((tier, index) => (
+            <motion.div
               key={tier.id}
-              planName={tier.name}
-              price={tier.price}
-              features={tier.features}
-              isCurrent={tier.id === currentPlan.toLowerCase()}
-              highlighted={tier.highlighted}
-              onAction={
-                tier.id === currentPlan.toLowerCase()
-                  ? undefined
-                  : tier.id === 'free'
-                    ? undefined
-                    : () => checkout()
-              }
-              actionLabel={
-                tier.id === currentPlan.toLowerCase()
-                  ? undefined
-                  : tier.id === 'free'
-                    ? undefined
-                    : `Upgrade to ${tier.name}`
-              }
-              actionLoading={checkingOut}
-            />
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.4 }}
+            >
+              <GlassCard
+                className={`relative p-6 ${tier.id === 'elder' ? 'border-gold/30' : ''}`}
+                glow={tier.id === 'elder' ? 'gold' : tier.id === 'hatchling' ? 'cyan' : 'none'}
+              >
+                {tier.id === 'elder' && (
+                  <div className="absolute right-4 top-4">
+                    <Badge color="gold">Best Value</Badge>
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl">{tier.emoji}</span>
+                    <h3 className="font-display text-xl font-semibold text-white">
+                      {tier.name}
+                    </h3>
+                  </div>
+                  <div className="mt-2">
+                    <span className="font-display text-3xl font-bold text-white">
+                      {tier.priceSol}
+                    </span>
+                    <span className="ml-1 text-sm text-white/50">SOL</span>
+                  </div>
+                  <p className="mt-1 text-xs text-white/30">One-time mint price</p>
+                </div>
+
+                <ul className="mb-6 space-y-2">
+                  {tier.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm text-white/70">
+                      <svg
+                        className="mt-0.5 h-4 w-4 shrink-0 text-cyan"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => {
+                    track('genesis_mint_clicked', { tier: tier.id });
+                    window.open('https://meetyourkin.com', '_blank');
+                  }}
+                >
+                  Mint {tier.name}
+                </Button>
+              </GlassCard>
+            </motion.div>
           ))}
+        </div>
+      </div>
+
+      {/* Monthly Hosting Plans */}
+      <div>
+        <div className="mb-4">
+          <h2 className="font-display text-lg font-semibold text-white">
+            Monthly Hosting Plans
+          </h2>
+          <p className="mt-1 text-sm text-white/40">
+            Keep your KIN running after your Genesis free months. All plans include Supermemory Pro, frontier AI, and full platform access.
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {PRICING_TIERS.map((tier, index) => {
+            const isCurrent = tier.id === currentPlan.toLowerCase();
+            return (
+              <motion.div
+                key={tier.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + index * 0.1, duration: 0.4 }}
+              >
+                <GlassCard
+                  className={`relative p-6 h-full flex flex-col ${tier.highlighted ? 'border-cyan/30' : ''}`}
+                  glow={tier.highlighted ? 'cyan' : 'none'}
+                >
+                  {isCurrent && (
+                    <div className="absolute right-4 top-4">
+                      <Badge color="cyan">Current</Badge>
+                    </div>
+                  )}
+                  {tier.highlighted && !isCurrent && (
+                    <div className="absolute right-4 top-4">
+                      <Badge color="cyan">Popular</Badge>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <h3 className="font-display text-xl font-semibold text-white">
+                      {tier.name}
+                    </h3>
+                    <div className="mt-2">
+                      {tier.price === 0 ? (
+                        <span className="font-display text-3xl font-bold text-white">Free</span>
+                      ) : (
+                        <>
+                          <span className="font-display text-3xl font-bold text-white">
+                            ${tier.price}
+                          </span>
+                          <span className="text-sm text-white/50">{tier.priceLabel}</span>
+                        </>
+                      )}
+                    </div>
+                    {tier.price > 0 && (
+                      <p className="mt-0.5 text-xs text-gold/60">
+                        Genesis holders: ${Math.round(tier.price * 0.75)}/mo (25% off)
+                      </p>
+                    )}
+                  </div>
+
+                  <ul className="mb-6 space-y-2 flex-1">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-white/70">
+                        <svg
+                          className="mt-0.5 h-4 w-4 shrink-0 text-cyan"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {!isCurrent && tier.id !== 'free' && (
+                    <Button
+                      variant={tier.highlighted ? 'primary' : 'outline'}
+                      className="w-full"
+                      onClick={() => {
+                        track('upgrade_clicked', { from: currentPlan, to: tier.id });
+                        checkout().catch(() => toastError('Checkout not available yet. Coming soon!'));
+                      }}
+                      disabled={checkingOut}
+                    >
+                      {checkingOut ? 'Loading...' : `Choose ${tier.name}`}
+                    </Button>
+                  )}
+                  {isCurrent && (
+                    <div className="rounded-lg bg-cyan/5 border border-cyan/10 px-4 py-2 text-center text-sm text-cyan/70">
+                      Your current plan
+                    </div>
+                  )}
+                </GlassCard>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
@@ -207,65 +351,55 @@ export default function BillingPage() {
       <GlassCard className="overflow-hidden p-0" hover={false}>
         <div className="p-6 pb-0">
           <h2 className="font-display text-lg font-semibold text-white">
-            Feature Comparison
+            What You Get
           </h2>
         </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="px-6 py-3 text-left font-medium text-white/50">
-                  Feature
-                </th>
-                {PRICING_TIERS.map((tier) => (
-                  <th
-                    key={tier.id}
-                    className="px-6 py-3 text-center font-medium text-white/50"
-                  >
-                    {tier.name}
-                  </th>
-                ))}
+                <th className="px-6 py-3 text-left font-medium text-white/50">Feature</th>
+                <th className="px-6 py-3 text-center font-medium text-white/50">Free Trial</th>
+                <th className="px-6 py-3 text-center font-medium text-white/50">Hatchling</th>
+                <th className="px-6 py-3 text-center font-medium text-white/50">Elder</th>
+                <th className="px-6 py-3 text-center font-medium text-white/50">Hero</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              <FeatureRow
-                feature="Companions"
-                values={['1', '3', 'All 6']}
-              />
-              <FeatureRow
-                feature="Messages / Day"
-                values={['50', 'Unlimited', 'Unlimited']}
-              />
-              <FeatureRow
-                feature="Web Builder"
-                values={['Basic', 'Full', 'Full']}
-              />
-              <FeatureRow
-                feature="Memory & Context"
-                values={[false, true, true]}
-              />
-              <FeatureRow
-                feature="Project Export"
-                values={[false, true, true]}
-              />
-              <FeatureRow
-                feature="API Access"
-                values={[false, false, true]}
-              />
-              <FeatureRow
-                feature="Team Collaboration"
-                values={[false, false, true]}
-              />
-              <FeatureRow
-                feature="Support"
-                values={['Community', 'Priority', 'Dedicated']}
-              />
+              <FeatureRow feature="Companions" values={['1', '1', '3', 'All 6']} />
+              <FeatureRow feature="Messages / Day" values={['50', 'Unlimited', 'Unlimited', 'Unlimited']} />
+              <FeatureRow feature="AI Model" values={['Qwen 3 32B', 'Frontier (per KIN)', 'Frontier (per KIN)', 'Frontier (per KIN)']} />
+              <FeatureRow feature="Supermemory Pro" values={[false, true, true, true]} />
+              <FeatureRow feature="Telegram + WhatsApp" values={[false, true, true, true]} />
+              <FeatureRow feature="Voice Chat" values={[false, true, true, true]} />
+              <FeatureRow feature="Computer Control" values={[false, true, true, true]} />
+              <FeatureRow feature="VPS Hosting" values={[false, true, true, true]} />
+              <FeatureRow feature="Priority Support" values={[false, false, true, true]} />
+              <FeatureRow feature="Dedicated Manager" values={[false, false, false, true]} />
+              <FeatureRow feature="API Access" values={[false, false, false, true]} />
             </tbody>
           </table>
         </div>
       </GlassCard>
 
-      {/* Billing History Placeholder */}
+      {/* Genesis Discount Banner */}
+      <GlassCard className="p-6 text-center" hover={false} glow="gold">
+        <span className="text-4xl mb-3 block">{'\uD83D\uDC32'}</span>
+        <h2 className="font-display text-lg font-semibold text-white mb-2">
+          Genesis Holders Save 25% Forever
+        </h2>
+        <p className="text-sm text-white/50 max-w-lg mx-auto mb-4">
+          Mint a Genesis KIN to lock in a lifetime 25% discount on every hosting plan, plus earn passive Solana rewards. Only 60 will ever exist.
+        </p>
+        <Button
+          variant="primary"
+          onClick={() => window.open('https://meetyourkin.com', '_blank')}
+        >
+          View Genesis Mint
+        </Button>
+      </GlassCard>
+
+      {/* Billing History */}
       <GlassCard className="p-6" hover={false}>
         <h2 className="font-display text-lg font-semibold text-white">
           Billing History
@@ -285,8 +419,7 @@ export default function BillingPage() {
             />
           </svg>
           <p className="text-sm text-white/40">
-            No billing history yet. Your invoices will appear here after your
-            first payment.
+            No billing history yet. Your invoices will appear here after your first payment.
           </p>
         </div>
       </GlassCard>
@@ -294,7 +427,7 @@ export default function BillingPage() {
   );
 }
 
-// --- Internal component for feature comparison rows -------------------------
+// --- Feature comparison row ---
 
 function FeatureRow({
   feature,

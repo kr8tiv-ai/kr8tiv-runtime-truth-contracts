@@ -203,7 +203,7 @@ export function ChatWindow({ companionId, className }: ChatWindowProps) {
               {companion.emoji}
             </span>
             {/* Online indicator */}
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-black" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-cyan ring-2 ring-black" />
           </div>
           <div>
             <h2 className="font-display text-lg font-bold text-white">
@@ -325,7 +325,7 @@ export function ChatWindow({ companionId, className }: ChatWindowProps) {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm text-red-400"
+            className="rounded-lg bg-magenta/10 border border-magenta/20 px-4 py-2 text-sm text-magenta"
           >
             {error}
           </motion.div>

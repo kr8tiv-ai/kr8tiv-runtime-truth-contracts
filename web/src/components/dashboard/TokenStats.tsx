@@ -93,7 +93,7 @@ export function TokenStats() {
       <GlassCard className="p-4" hover>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-cyan animate-pulse" />
             <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
               Live on Bags.fm
             </span>

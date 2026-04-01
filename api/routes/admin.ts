@@ -2,7 +2,7 @@
  * Admin Routes - Platform administration dashboard API
  *
  * All routes are protected by an admin check:
- *   - user.tier === 'enterprise', OR
+ *   - user.tier === 'hero', OR
  *   - user.userId is listed in the ADMIN_USER_IDS env var (comma-separated)
  *
  * Returns 403 for non-admin callers.
@@ -25,7 +25,7 @@ function getAdminUserIds(): Set<string> {
 
 function isAdmin(request: FastifyRequest): boolean {
   const user = request.user as { userId: string; tier?: string };
-  if (user.tier === 'enterprise') return true;
+  if (user.tier === 'hero') return true;
   return getAdminUserIds().has(user.userId);
 }
 
@@ -51,7 +51,7 @@ interface ListQuery {
 }
 
 interface TierBody {
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero';
 }
 
 // ---------------------------------------------------------------------------
@@ -274,7 +274,7 @@ const adminRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId } = request.params;
       const { tier } = request.body ?? {};
 
-      const validTiers = ['free', 'pro', 'enterprise'];
+      const validTiers = ['free', 'hatchling', 'elder', 'hero'];
       if (!tier || !validTiers.includes(tier)) {
         reply.status(400);
         return { error: `tier must be one of: ${validTiers.join(', ')}` };

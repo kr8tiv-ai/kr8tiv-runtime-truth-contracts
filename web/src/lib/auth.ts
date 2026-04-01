@@ -10,7 +10,7 @@ const TOKEN_EXPIRY_HOURS = 2;
 export interface JwtPayload {
   userId: string;
   telegramId: string;
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero';
   exp: number;
 }
 

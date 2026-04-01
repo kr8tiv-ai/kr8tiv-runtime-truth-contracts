@@ -1,22 +1,25 @@
 'use client';
 
 // ============================================================================
-// Collection Page — Browse, view, and manage companion collection.
+// Collection Page — Browse all 6 KIN companions. Shows owned vs locked state.
 // ============================================================================
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useCollection, type CollectionItem } from '@/hooks/useCollection';
 import { useConversations } from '@/hooks/useConversations';
 import { useCompanions } from '@/hooks/useCompanions';
-import { CollectionCard } from '@/components/dashboard/CollectionCard';
+import { COMPANION_LIST, type CompanionData } from '@/lib/companions';
+import { CompanionViewer } from '@/components/3d/CompanionViewer';
 import { CollectionDetail } from '@/components/dashboard/CollectionDetail';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function CollectionPage() {
-  const { items, loading, error, refresh, isEmpty } = useCollection();
+  const { items, loading, error, refresh } = useCollection();
   const { conversations } = useConversations();
   const { claimCompanion, claiming } = useCompanions();
   const [selectedItem, setSelectedItem] = useState<CollectionItem | null>(null);
@@ -27,6 +30,9 @@ export default function CollectionPage() {
     setSelectedItem(null);
   };
 
+  // Build a set of owned companion IDs for quick lookup
+  const ownedIds = new Set(items.map((i) => i.companionId));
+
   // --- Loading State ---
   if (loading) {
     return (
@@ -34,7 +40,7 @@ export default function CollectionPage() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-5 w-80" />
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} variant="card" className="h-80" />
           ))}
         </div>
@@ -50,63 +56,15 @@ export default function CollectionPage() {
           My Collection
         </h1>
         <GlassCard hover={false} className="p-8 text-center">
-          <p className="text-red-400">{error}</p>
+          <p className="text-magenta">{error}</p>
           <Button variant="outline" size="sm" onClick={refresh} className="mt-4">
-            Retry
+            Try Again
           </Button>
         </GlassCard>
       </div>
     );
   }
 
-  // --- Empty State ---
-  if (isEmpty) {
-    return (
-      <div className="space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h1 className="font-display text-3xl font-bold tracking-tight text-white">
-            My Collection
-          </h1>
-          <p className="mt-1 text-text-muted">
-            Your companions — view, interact, and manage your collection.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
-          <GlassCard hover={false} className="flex flex-col items-center px-8 py-16">
-            <span className="text-6xl" aria-hidden="true">
-              🥚
-            </span>
-            <h2 className="mt-6 font-display text-xl font-bold text-white">
-              Your collection is empty
-            </h2>
-            <p className="mt-2 max-w-sm text-center text-sm text-text-muted">
-              Choose your first companion to start building your collection and
-              unlock unique abilities.
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              href="/dashboard/companion"
-              className="mt-6"
-            >
-              Choose Your First Companion
-            </Button>
-          </GlassCard>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // --- Collection Grid ---
   return (
     <div className="space-y-6">
       <motion.div
@@ -114,26 +72,148 @@ export default function CollectionPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <h1 className="font-display text-3xl font-bold tracking-tight text-white">
-          My Collection
+        <span className="inline-flex items-center rounded-full bg-magenta/10 border border-magenta/20 px-4 py-1.5 text-xs font-mono text-magenta mb-4">
+          Genesis Collection
+        </span>
+        <h1
+          className="font-display font-extrabold uppercase tracking-[-0.04em] text-white"
+          style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+        >
+          The Genesis Six
         </h1>
-        <p className="mt-1 text-text-muted">
-          Your companions — view, interact, and manage your collection.
+        <p className="mt-2 text-white/50" style={{ fontSize: 'clamp(0.9rem, 1.5vw, 1.15rem)' }}>
+          Six unique AI companions, each with their own personality, skills, and style.
         </p>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {items.map((item, index) => (
-          <CollectionCard
-            key={item.companionId}
-            item={item}
-            index={index}
-            onClick={() => setSelectedItem(item)}
-          />
-        ))}
+      {/* Stats */}
+      <div className="flex gap-4">
+        <GlassCard className="px-4 py-3" hover={false}>
+          <span className="text-xs text-white/40">Owned</span>
+          <p className="font-display text-lg font-bold text-cyan">{items.length}</p>
+        </GlassCard>
+        <GlassCard className="px-4 py-3" hover={false}>
+          <span className="text-xs text-white/40">Available</span>
+          <p className="font-display text-lg font-bold text-white/60">{COMPANION_LIST.length - items.length}</p>
+        </GlassCard>
       </div>
 
-      {/* Detail Modal */}
+      {/* All 6 Companions Grid */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {COMPANION_LIST.map((companion, index) => {
+          const isOwned = ownedIds.has(companion.id);
+          const ownedItem = items.find((i) => i.companionId === companion.id);
+          const isActive = ownedItem?.isActive ?? false;
+
+          return (
+            <motion.div
+              key={companion.id}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: index * 0.08 }}
+            >
+              <Link
+                href={`/dashboard/companion/${companion.id}`}
+                className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50 rounded-lg"
+              >
+                <div
+                  className={`group rounded-[24px] border bg-surface overflow-hidden transition-all duration-400 hover:-translate-y-[10px] ${
+                    isOwned
+                      ? `border-${companion.color}/20`
+                      : 'border-white/10 opacity-75'
+                  }`}
+                  onMouseEnter={(e) => {
+                    if (isOwned) {
+                      const glowMap: Record<string, string> = {
+                        cyan: '0 10px 30px rgba(0,240,255,0.12)',
+                        magenta: '0 10px 30px rgba(255,0,170,0.12)',
+                        gold: '0 10px 30px rgba(255,215,0,0.12)',
+                      };
+                      e.currentTarget.style.boxShadow = glowMap[companion.color] ?? 'none';
+                      e.currentTarget.style.borderColor = `var(--color-${companion.color})`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.borderColor = '';
+                  }}
+                >
+                  {/* Companion Image — square aspect to show full image */}
+                  <div className="relative aspect-square overflow-hidden">
+                    <CompanionViewer
+                      glbUrl={companion.glbUrl}
+                      fallbackImage={companion.images[0]}
+                      alt={companion.name}
+                      modelReady={companion.modelReady}
+                      className="h-full w-full"
+                    />
+                    {/* Bottom gradient fade */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                    {/* Badges */}
+                    {isActive && (
+                      <div className="absolute top-4 left-4">
+                        <Badge color="cyan">Active</Badge>
+                      </div>
+                    )}
+
+                    {isOwned && (
+                      <div className="absolute top-4 right-4">
+                        <Badge color="gold">Owned</Badge>
+                      </div>
+                    )}
+
+                    {/* Emoji overlay */}
+                    {!isOwned && (
+                      <div className="absolute top-4 right-4">
+                        <span className="text-2xl drop-shadow-lg">{companion.emoji}</span>
+                      </div>
+                    )}
+
+                    {/* Lock overlay for unowned */}
+                    {!isOwned && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                        <span className="text-4xl mb-2">{'\uD83D\uDD12'}</span>
+                        <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/80">
+                          Mint to Unlock
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info — matches meetyourkin.com card content padding */}
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-display text-lg font-bold text-white">
+                        {companion.name}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-mono border-${companion.color}/20 bg-${companion.color}/10`}
+                        style={{ color: `var(--color-${companion.color})` }}
+                      >
+                        {companion.species}
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-white/50 leading-relaxed">
+                      {companion.tagline}
+                    </p>
+
+                    {/* Model info */}
+                    <div className="mt-3 flex items-center gap-2 text-xs text-white/25 font-mono">
+                      <span>{companion.frontierModel.provider}</span>
+                      <span>{'\u00B7'}</span>
+                      <span>{companion.frontierModel.modelName}</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Detail Modal (for owned companions) */}
       <CollectionDetail
         item={selectedItem}
         open={selectedItem !== null}

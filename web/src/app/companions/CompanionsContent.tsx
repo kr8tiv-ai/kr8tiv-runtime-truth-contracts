@@ -66,12 +66,12 @@ function CompanionCard({ companion, index }: { companion: CompanionData; index: 
         >
           {/* Images */}
           <div className="lg:w-1/2 shrink-0">
-            <div className="relative aspect-[4/3] lg:aspect-auto lg:h-full">
+            <div className="relative aspect-square lg:aspect-auto lg:h-full">
               <Image
                 src={companion.images[0]}
                 alt={companion.name}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
               <div

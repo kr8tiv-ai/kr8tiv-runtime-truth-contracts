@@ -71,7 +71,7 @@ export default function ProjectDetailPage() {
           &larr; Back to Projects
         </Button>
         <GlassCard hover={false} className="p-8 text-center">
-          <p className="text-red-400">{error}</p>
+          <p className="text-magenta">{error}</p>
           <Button variant="outline" size="sm" onClick={refresh} className="mt-4">
             Retry
           </Button>
@@ -253,8 +253,8 @@ export default function ProjectDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
       >
-        <GlassCard hover={false} className="border-red-500/20 p-6">
-          <h2 className="mb-2 font-display text-lg font-semibold text-red-400">
+        <GlassCard hover={false} className="border-magenta/20 p-6">
+          <h2 className="mb-2 font-display text-lg font-semibold text-magenta">
             Danger Zone
           </h2>
           <p className="mb-4 text-sm text-text-muted">
@@ -264,7 +264,7 @@ export default function ProjectDetailPage() {
             variant="outline"
             size="sm"
             onClick={() => setDeleteModalOpen(true)}
-            className="border-red-500/40 text-red-400 hover:bg-red-500/10"
+            className="border-magenta/40 text-magenta hover:bg-magenta/10"
           >
             Delete Project
           </Button>
@@ -294,7 +294,7 @@ export default function ProjectDetailPage() {
             size="sm"
             onClick={handleDelete}
             disabled={deleting}
-            className="bg-red-600 shadow-none hover:bg-red-700"
+            className="bg-magenta shadow-none hover:brightness-110"
           >
             {deleting ? 'Deleting...' : 'Delete Project'}
           </Button>

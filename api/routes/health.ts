@@ -81,6 +81,45 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
     return { alive: true };
   });
 
+  // Ollama / local model health check (for Setup page)
+  fastify.get('/health/ollama', async (request, reply) => {
+    try {
+      // Try to import and use the local-llm module
+      const { OllamaClient } = await import('../../inference/local-llm.js');
+      const client = new OllamaClient({
+        host: process.env.OLLAMA_HOST || '127.0.0.1',
+        port: parseInt(process.env.OLLAMA_PORT || '11434', 10),
+        timeout: 5000,
+      });
+
+      const available = await client.isAvailable(5000);
+      if (!available) {
+        return { online: false, hasModel: false, models: [] };
+      }
+
+      const models = await client.listModels();
+      const modelNames = models.map((m: { name: string }) => m.name);
+      // Check for the recommended free model (qwen3:32b or any qwen variant)
+      const hasModel = modelNames.some(
+        (name: string) => name.includes('qwen') || name.includes('llama') || name.includes('mistral'),
+      );
+
+      return {
+        online: true,
+        hasModel,
+        models: modelNames,
+        recommendedModel: 'qwen3:32b',
+      };
+    } catch (error) {
+      return {
+        online: false,
+        hasModel: false,
+        models: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
   // API info
   fastify.get('/', async () => {
     return {
@@ -89,6 +128,7 @@ const healthRoutes: FastifyPluginAsync = async (fastify) => {
       description: 'API for KIN AI Companion Platform',
       endpoints: {
         health: '/health',
+        'health/ollama': '/health/ollama',
         ready: '/ready',
         live: '/live',
         docs: '/docs',

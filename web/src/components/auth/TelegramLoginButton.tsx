@@ -101,7 +101,7 @@ export function TelegramLoginButton({
       )}
 
       {error && (
-        <p className="text-sm text-red-400" role="alert">
+        <p className="text-sm text-magenta" role="alert">
           {error}
         </p>
       )}
@@ -131,6 +131,7 @@ function DevLoginButton({
     try {
       const response = await kinApi.post<{ token: string; user: User }>(
         '/auth/dev-login',
+        { telegramId: 999999, firstName: 'Matt' },
       );
       onAuth(response.token, response.user);
     } catch (err) {
@@ -155,7 +156,7 @@ function DevLoginButton({
         {loading ? 'Logging in...' : 'Dev Login'}
       </button>
       {error && (
-        <p className="text-sm text-red-400" role="alert">
+        <p className="text-sm text-magenta" role="alert">
           {error}
         </p>
       )}

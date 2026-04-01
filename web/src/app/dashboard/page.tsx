@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useCompanions } from '@/hooks/useCompanions';
 import { useConversations } from '@/hooks/useConversations';
 import { useProgress } from '@/hooks/useProgress';
+import { useProjects } from '@/hooks/useProjects';
 import { OverviewStats } from '@/components/dashboard/OverviewStats';
 import { ActiveCompanion } from '@/components/dashboard/ActiveCompanion';
 import { RecentConversations } from '@/components/dashboard/RecentConversations';
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const { companions, loading: companionsLoading } = useCompanions();
   const { conversations, loading: conversationsLoading } = useConversations();
   const { progress, loading: progressLoading } = useProgress();
+  const { projects } = useProjects();
 
   const firstName = user?.firstName ?? 'there';
   const isLoading = companionsLoading || conversationsLoading || progressLoading;
@@ -44,7 +46,7 @@ export default function DashboardPage() {
       {/* Stats Row — pulls real data from progress API */}
       <OverviewStats
         conversations={conversations}
-        projectCount={0}
+        projectCount={projects?.length ?? 0}
         streak={progress?.streakDays ?? 0}
         level={progress?.level ?? 1}
         loading={isLoading}

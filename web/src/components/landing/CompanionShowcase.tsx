@@ -42,8 +42,11 @@ export function CompanionShowcase() {
           <span className="inline-flex items-center rounded-full bg-magenta/10 border border-magenta/20 px-4 py-1.5 text-xs font-mono text-magenta mb-4">
             Genesis Collection
           </span>
-          <h2 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-white">
-            Meet the Genesis Six
+          <h2
+            className="font-display font-extrabold uppercase tracking-[-0.04em] text-white"
+            style={{ fontSize: 'clamp(2.5rem, 5vw, 5rem)' }}
+          >
+            The Genesis Six
           </h2>
           <p className="mt-4 text-lg text-white/50 max-w-2xl mx-auto">
             Six unique AI companions, each with their own personality, skills, and style.
@@ -68,7 +71,7 @@ export function CompanionShowcase() {
                 <Link href="/companions" className="block group">
                   <div
                     className={cn(
-                      'rounded-xl border bg-white/[0.02] backdrop-blur-sm overflow-hidden transition-all duration-300 hover:-translate-y-1',
+                      'rounded-[24px] border bg-surface overflow-hidden transition-all duration-400 hover:-translate-y-[10px]',
                       style.border,
                     )}
                     onMouseEnter={(e) => {
@@ -79,12 +82,12 @@ export function CompanionShowcase() {
                     }}
                   >
                     {/* Image */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
+                    <div className="relative aspect-square overflow-hidden">
                       <Image
                         src={companion.images[0]}
                         alt={companion.name}
                         fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="object-contain transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

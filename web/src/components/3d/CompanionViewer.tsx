@@ -69,21 +69,27 @@ export function CompanionViewer({
     );
   }
 
-  // 2D fallback
+  // 2D fallback with beautiful styling
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden group ${className}`}>
       {!imageError ? (
-        <Image
-          src={fallbackImage}
-          alt={alt}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 400px"
-          onError={() => setImageError(true)}
-        />
+        <>
+          <Image
+            src={fallbackImage}
+            alt={alt}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 400px"
+            onError={() => setImageError(true)}
+          />
+          {/* Subtle animated gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+        </>
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-surface text-4xl">
-          🥚
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan/5 to-magenta/5">
+          <span className="text-6xl animate-pulse" aria-hidden="true">
+            {'\uD83E\uDD5A'}
+          </span>
         </div>
       )}
     </div>

@@ -190,14 +190,49 @@ const referralRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.context.db.prepare(`
       INSERT INTO referrals
-        (id, referrer_user_id, referred_user_id, referral_code, status, completed_at)
-      VALUES (?, ?, ?, ?, 'completed', ?)
+        (id, referrer_user_id, referred_user_id, referral_code, status, completed_at, reward_granted)
+      VALUES (?, ?, ?, ?, 'completed', ?, 1)
     `).run(id, codeRecord.referrer_user_id, userId, normalizedCode, now);
+
+    // ── Reward distribution ────────────────────────────────────────────
+    // Referrer: 7 free days added to their plan
+    // Referred user: 3 free trial days
+    const REFERRER_BONUS_DAYS = 7;
+    const REFERRED_BONUS_DAYS = 3;
+
+    const grantFreeDays = (targetUserId: string, days: number) => {
+      // Check if user already has a free_until date
+      const existing = fastify.context.db.prepare(
+        `SELECT free_until FROM users WHERE id = ?`,
+      ).get(targetUserId) as { free_until: string | null } | undefined;
+
+      const baseDate = existing?.free_until && new Date(existing.free_until) > new Date()
+        ? new Date(existing.free_until)
+        : new Date();
+
+      const newFreeUntil = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+      fastify.context.db.prepare(
+        `UPDATE users SET free_until = ? WHERE id = ?`,
+      ).run(newFreeUntil.toISOString(), targetUserId);
+    };
+
+    try {
+      grantFreeDays(codeRecord.referrer_user_id, REFERRER_BONUS_DAYS);
+      grantFreeDays(userId, REFERRED_BONUS_DAYS);
+    } catch (rewardErr) {
+      // Log but don't fail the referral — rewards are best-effort
+      request.log.error(rewardErr, 'Failed to grant referral rewards');
+    }
 
     return {
       success: true,
       message: 'Referral code redeemed successfully',
       referrerId: codeRecord.referrer_user_id,
+      rewards: {
+        referrerBonus: `${REFERRER_BONUS_DAYS} free days`,
+        referredBonus: `${REFERRED_BONUS_DAYS} free days`,
+      },
     };
   });
 

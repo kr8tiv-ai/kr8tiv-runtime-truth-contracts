@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef, useState } from 'react';
 import { track } from '@/lib/analytics';
 
-const HERO_VIDEO_SRC = '/video/hero-bg.mp4';
+const HERO_VIDEO_SRC = '/videos/hero-bg.mp4';
 
 const container = {
   hidden: {},
@@ -94,39 +94,6 @@ export function HeroSection() {
         />
       </div>
 
-      {/* Floating companion images flanking hero */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Left companion */}
-        <div
-          className="hidden md:block absolute left-6 lg:left-12 top-1/2 -translate-y-1/2 w-48 lg:w-64 h-48 lg:h-64 opacity-20"
-          style={{ animation: 'float 6s ease-in-out infinite' }}
-        >
-          <Image
-            src="/creatures/cipher-2.jpg"
-            alt=""
-            fill
-            className="object-cover rounded-2xl"
-            style={{ filter: 'blur(1px)' }}
-            sizes="256px"
-          />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-black/40 via-transparent to-black/60" />
-        </div>
-        {/* Right companion */}
-        <div
-          className="hidden md:block absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 w-48 lg:w-64 h-48 lg:h-64 opacity-20"
-          style={{ animation: 'float 6s ease-in-out infinite 2s' }}
-        >
-          <Image
-            src="/creatures/forge-2.jpg"
-            alt=""
-            fill
-            className="object-cover rounded-2xl"
-            style={{ filter: 'blur(1px)' }}
-            sizes="256px"
-          />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-l from-black/40 via-transparent to-black/60" />
-        </div>
-      </div>
 
       {/* Content */}
       <motion.div
@@ -135,36 +102,16 @@ export function HeroSection() {
         animate="show"
         className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 text-center pt-24 pb-16"
       >
-        <motion.div variants={fadeUp} className="mb-6">
-          <span className="inline-flex items-center rounded-full bg-cyan/10 border border-cyan/20 px-4 py-1.5 text-xs font-mono text-cyan">
-            AI Companion Platform &middot; Bags.fm
-          </span>
-        </motion.div>
 
         <motion.h1
           variants={fadeUp}
-          className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.05] mb-6"
+          className="font-display font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-white mb-10"
+          style={{ fontSize: 'clamp(5rem, 12vw, 14rem)' }}
         >
-          <span className="block text-white">We Build You</span>
-          <span
-            className="block"
-            style={{
-              background: 'linear-gradient(135deg, #00f0ff 0%, #ff00aa 50%, #ffd700 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            A Friend
-          </span>
+          WELCOME
+          <br />
+          TO KIN
         </motion.h1>
-
-        <motion.p
-          variants={fadeUp}
-          className="mx-auto max-w-xl text-lg sm:text-xl text-white/60 leading-relaxed mb-10"
-        >
-          Meet your AI companion. Chat, create, and grow together.
-        </motion.p>
 
         <motion.div
           variants={fadeUp}
@@ -175,14 +122,14 @@ export function HeroSection() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => track('cta_clicked', { label: 'start_chatting', location: 'hero' })}
-            className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-magenta px-8 py-3.5 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,0,170,0.3)] transition-all duration-200 hover:brightness-110 hover:shadow-[0_0_40px_rgba(255,0,170,0.5)]"
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-magenta px-10 py-4 font-display text-sm font-medium uppercase tracking-wide text-white shadow-[0_0_20px_rgba(255,0,170,0.2)] transition-all duration-400 hover:bg-white hover:text-black hover:shadow-[0_0_40px_rgba(255,255,255,0.5)]"
           >
             Start Chatting
           </a>
           <Link
             href="/companions"
             onClick={() => track('cta_clicked', { label: 'meet_companions', location: 'hero' })}
-            className="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-cyan text-cyan px-8 py-3.5 text-base font-semibold transition-all duration-200 hover:bg-cyan/10"
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-full border border-cyan text-cyan px-10 py-4 font-display text-sm font-medium uppercase tracking-wide shadow-[0_0_20px_rgba(0,240,255,0.1)] transition-all duration-400 hover:bg-cyan hover:text-black hover:shadow-[0_0_40px_rgba(0,240,255,0.4)]"
           >
             Meet the Companions
           </Link>

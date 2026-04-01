@@ -380,7 +380,7 @@ const billingRoutes: FastifyPluginAsync = async (fastify) => {
 
           // Fetch the subscription to get period dates and plan
           const apiKey = stripeKey();
-          let plan = 'pro';
+          let plan = 'hatchling';
           let periodStart: number | null = null;
           let periodEnd: number | null = null;
 
@@ -413,7 +413,7 @@ const billingRoutes: FastifyPluginAsync = async (fastify) => {
               updated_at             = strftime('%s', 'now') * 1000
           `).run(subId, kinUserId, subscriptionId, customerId, plan, periodStart, periodEnd);
 
-          if (plan === 'pro' || plan === 'enterprise') {
+          if (plan === 'hatchling' || plan === 'elder' || plan === 'hero') {
             db.prepare(`UPDATE users SET tier = ? WHERE id = ?`).run(plan, kinUserId);
           }
           break;

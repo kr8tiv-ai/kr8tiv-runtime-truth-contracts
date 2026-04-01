@@ -176,13 +176,53 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           `).get(userId) as any;
         }
 
+        // Auto-complete onboarding for dev login
+        const existingPrefs = fastify.context.db.prepare(
+          `SELECT id FROM user_preferences WHERE user_id = ?`
+        ).get(user.id) as any;
+
+        if (!existingPrefs) {
+          try {
+            fastify.context.db.prepare(`
+              INSERT INTO user_preferences (id, user_id, display_name, experience_level, goals, language, tone, onboarding_complete)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              `pref-${crypto.randomUUID()}`,
+              user.id,
+              firstName,
+              'advanced',
+              '["ai","defi","building"]',
+              'en',
+              'friendly',
+              1
+            );
+          } catch { /* table may not exist yet — that's ok */ }
+        } else {
+          try {
+            fastify.context.db.prepare(
+              `UPDATE user_preferences SET onboarding_complete = 1 WHERE user_id = ?`
+            ).run(user.id);
+          } catch { /* ignore */ }
+        }
+
         const token = fastify.jwt.sign({
           userId: user.id,
           telegramId: user.telegram_id,
           tier: user.tier,
         });
 
-        return { token, user };
+        return {
+          token,
+          user: {
+            id: user.id,
+            telegramId: user.telegram_id,
+            username: user.username,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            tier: user.tier,
+            onboardingComplete: true,
+          },
+        };
       }
     );
   }

@@ -47,7 +47,7 @@ interface UserSession {
   userId: string;
   companionId: string;
   lastActivity: Date;
-  tier: 'free' | 'pro' | 'enterprise' | 'nft';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero' | 'nft';
 }
 
 // ============================================================================

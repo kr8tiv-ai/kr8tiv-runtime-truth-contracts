@@ -41,7 +41,7 @@ export default function ProgressPage() {
           Your Progress
         </h1>
         <GlassCard hover={false} className="p-8 text-center">
-          <p className="text-red-400">{error}</p>
+          <p className="text-magenta">{error}</p>
           <Button variant="outline" size="sm" onClick={refresh} className="mt-4">
             Retry
           </Button>

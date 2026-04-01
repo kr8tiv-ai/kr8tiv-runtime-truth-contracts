@@ -23,7 +23,7 @@ const BILLING_FAQ = [
   {
     question: 'What happens when I hit my message limit?',
     answer:
-      'Free tier users get 50 messages per day. Once you hit the limit, you can wait until the next day or upgrade to Pro for unlimited messages. Your companion will let you know when you are approaching the limit.',
+      'Free tier users get 50 messages per day. Once you hit the limit, you can wait until the next day or upgrade to Hatchling for unlimited messages. Your companion will let you know when you are approaching the limit.',
   },
   {
     question: 'Can I get a refund?',

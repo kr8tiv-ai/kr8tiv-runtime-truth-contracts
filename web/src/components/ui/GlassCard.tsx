@@ -25,7 +25,7 @@ export function GlassCard({
   return (
     <div
       className={cn(
-        'rounded-lg border border-white/10 bg-white/[0.02] backdrop-blur-[20px]',
+        'rounded-lg border border-white/[0.15] bg-white/[0.02] backdrop-blur-[20px]',
         hover && 'transition-all duration-300 ease-out hover:-translate-y-1',
         hover && glow !== 'none' && 'hover:scale-[1.02]',
         className,

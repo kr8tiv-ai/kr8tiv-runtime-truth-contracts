@@ -175,7 +175,7 @@ export function PhantomConnect() {
           </div>
         </div>
         {connected ? (
-          <Badge color="purple">Linked</Badge>
+          <Badge color="magenta">Linked</Badge>
         ) : null}
       </div>
 
@@ -219,7 +219,7 @@ export function PhantomConnect() {
                     size="sm"
                     variant="outline"
                     onClick={handleDisconnect}
-                    className="text-red-400 border-red-400/20 hover:bg-red-400/10"
+                    className="text-magenta border-magenta/20 hover:bg-magenta/10"
                   >
                     Disconnect
                   </Button>

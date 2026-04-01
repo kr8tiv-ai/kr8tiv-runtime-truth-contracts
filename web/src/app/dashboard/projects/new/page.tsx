@@ -99,7 +99,7 @@ export default function NewProjectPage() {
                 htmlFor="project-name"
                 className="mb-1.5 block text-sm font-medium text-white"
               >
-                Project Name <span className="text-red-400">*</span>
+                Project Name <span className="text-magenta">*</span>
               </label>
               <input
                 id="project-name"
@@ -166,7 +166,7 @@ export default function NewProjectPage() {
 
             {/* Error */}
             {error && (
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-magenta">{error}</p>
             )}
 
             {/* Submit */}

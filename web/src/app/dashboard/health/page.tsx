@@ -1,7 +1,8 @@
 'use client';
 
 // ============================================================================
-// System Health — Real-time monitoring of local KIN services.
+// System Health — Friendly monitoring of your KIN's wellbeing.
+// Written for everyone, even a 10-year-old.
 // ============================================================================
 
 import { motion } from 'framer-motion';
@@ -12,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers — kid-friendly labels
 // ---------------------------------------------------------------------------
 
 function statusColor(status: string): 'cyan' | 'gold' | 'magenta' | 'muted' {
@@ -31,16 +32,36 @@ function statusColor(status: string): 'cyan' | 'gold' | 'magenta' | 'muted' {
   }
 }
 
-function statusDot(status: string): string {
+function statusEmoji(status: string): string {
   switch (status) {
     case 'ok':
-      return 'bg-cyan';
+    case 'healthy':
+      return '\uD83D\uDFE2';
     case 'warn':
-      return 'bg-gold';
+    case 'degraded':
+      return '\uD83D\uDFE1';
     case 'error':
-      return 'bg-magenta';
+    case 'offline':
+      return '\uD83D\uDD34';
     default:
-      return 'bg-white/20';
+      return '\u26AA';
+  }
+}
+
+function statusLabel(status: string): string {
+  switch (status) {
+    case 'ok':
+    case 'healthy':
+      return 'Awake & Healthy';
+    case 'warn':
+    case 'degraded':
+      return 'A Little Sleepy';
+    case 'error':
+      return 'Needs Attention';
+    case 'offline':
+      return 'Sleeping';
+    default:
+      return 'Unknown';
   }
 }
 
@@ -55,10 +76,16 @@ function relativeTime(iso: string | null): string {
 }
 
 function formatUptime(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-  return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
+  if (seconds < 60) return `${seconds} seconds`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes`;
+  if (seconds < 86400) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}h ${m}m`;
+  }
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  return `${d} days, ${h} hours`;
 }
 
 function usagePercent(used: number, total: number): number {
@@ -95,7 +122,7 @@ export default function HealthPage() {
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <p className="text-white/60">{error}</p>
         <Button variant="outline" onClick={refresh}>
-          Retry
+          Try Again
         </Button>
       </div>
     );
@@ -122,70 +149,88 @@ export default function HealthPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-white">
-            System Health
+            How&apos;s Your KIN? {statusEmoji(overallStatus)}
           </h1>
           <p className="mt-1 text-white/50">
-            Real-time monitoring of your local KIN services.
+            Check in on your companion&apos;s health and happiness.
           </p>
         </div>
         <Badge color={statusColor(overallStatus)} className="text-sm">
-          {overallStatus.charAt(0).toUpperCase() + overallStatus.slice(1)}
+          {statusLabel(overallStatus)}
         </Badge>
       </div>
 
-      {/* Connection Card */}
-      <GlassCard className="p-6" hover={false}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            {/* Pulsing indicator */}
-            <div className="relative flex h-4 w-4 items-center justify-center">
-              <span
-                className={`absolute h-4 w-4 rounded-full ${
-                  overallStatus === 'healthy'
-                    ? 'bg-cyan animate-ping opacity-30'
-                    : overallStatus === 'degraded'
-                      ? 'bg-gold animate-ping opacity-30'
-                      : 'bg-magenta/30'
-                }`}
-              />
-              <span
-                className={`relative h-3 w-3 rounded-full ${
-                  overallStatus === 'healthy'
-                    ? 'bg-cyan'
-                    : overallStatus === 'degraded'
-                      ? 'bg-gold'
-                      : 'bg-magenta'
-                }`}
-              />
-            </div>
-            <div>
-              <h2 className="font-display text-lg font-semibold text-white">
-                Connection
-              </h2>
-              <p className="text-sm text-white/50">
-                Last heartbeat: {relativeTime(health?.lastHeartbeat ?? null)}
-              </p>
+      {/* Main Status Card */}
+      <GlassCard className="p-8" hover={false}>
+        <div className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:items-start sm:gap-6">
+          {/* Big pulsing indicator */}
+          <div className="relative mb-4 sm:mb-0">
+            <div className="relative flex h-20 w-20 items-center justify-center">
+              {overallStatus !== 'offline' && (
+                <span
+                  className={`absolute h-20 w-20 rounded-full ${
+                    overallStatus === 'healthy'
+                      ? 'bg-cyan animate-ping opacity-20'
+                      : overallStatus === 'degraded'
+                        ? 'bg-gold animate-ping opacity-20'
+                        : 'bg-magenta/20'
+                  }`}
+                />
+              )}
+              <span className="text-5xl">
+                {overallStatus === 'offline' ? '\uD83D\uDE34' :
+                 overallStatus === 'healthy' ? '\uD83D\uDE0A' :
+                 overallStatus === 'degraded' ? '\uD83E\uDD14' :
+                 '\uD83D\uDE1F'}
+              </span>
             </div>
           </div>
-          <div className="flex gap-6 text-sm text-white/50">
-            <div>
-              <span className="text-white/30">Latency</span>
-              <p className="font-mono text-white/70">
-                {health?.latencyMs ? `${Math.round(health.latencyMs / 1000)}s` : '--'}
-              </p>
-            </div>
-            <div>
-              <span className="text-white/30">Version</span>
-              <p className="font-mono text-white/70">
-                {health?.kinVersion ?? '--'}
-              </p>
-            </div>
-            <div>
-              <span className="text-white/30">Uptime</span>
-              <p className="font-mono text-white/70">
-                {sys.uptimeSeconds ? formatUptime(sys.uptimeSeconds) : '--'}
-              </p>
-            </div>
+
+          <div className="flex-1">
+            {overallStatus === 'offline' ? (
+              <>
+                <h2 className="font-display text-xl font-bold text-white mb-2">
+                  Your KIN is sleeping right now
+                </h2>
+                <p className="text-white/50 text-sm mb-4 max-w-md">
+                  Don&apos;t worry! Your KIN will wake up automatically once everything is set up.
+                  All your conversations and memories are safe.
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+                  <Button variant="outline" size="sm" onClick={refresh}>
+                    Check Again
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="font-display text-xl font-bold text-white mb-2">
+                  {overallStatus === 'healthy'
+                    ? 'Everything looks great!'
+                    : 'Your KIN needs a little help'}
+                </h2>
+                <div className="flex flex-wrap gap-6 text-sm text-white/50">
+                  <div>
+                    <span className="text-white/30">Last check-in</span>
+                    <p className="font-mono text-white/70">
+                      {relativeTime(health?.lastHeartbeat ?? null)}
+                    </p>
+                  </div>
+                  {health?.kinVersion && (
+                    <div>
+                      <span className="text-white/30">Version</span>
+                      <p className="font-mono text-white/70">{health.kinVersion}</p>
+                    </div>
+                  )}
+                  {sys.uptimeSeconds > 0 && (
+                    <div>
+                      <span className="text-white/30">Running for</span>
+                      <p className="font-mono text-white/70">{formatUptime(sys.uptimeSeconds)}</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </GlassCard>
@@ -200,9 +245,7 @@ export default function HealthPage() {
             {services.map((svc) => (
               <GlassCard key={svc.name} className="p-4">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDot(svc.status)}`}
-                  />
+                  <span className="text-lg">{statusEmoji(svc.status)}</span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-white/80">
                       {svc.label}
@@ -216,40 +259,26 @@ export default function HealthPage() {
         </div>
       )}
 
-      {services.length === 0 && overallStatus === 'offline' && (
-        <GlassCard className="p-8 text-center" hover={false}>
-          <p className="text-lg text-white/40">
-            No heartbeat received yet.
-          </p>
-          <p className="mt-2 text-sm text-white/30">
-            Start the heartbeat client on your local machine to see service status here.
-          </p>
-          <pre className="mx-auto mt-4 max-w-md rounded-lg border border-white/5 bg-white/[0.02] p-3 text-left text-xs text-white/50">
-            npx tsx runtime/heartbeat-client.ts
-          </pre>
-        </GlassCard>
-      )}
-
       {/* System Resources */}
       {overallStatus !== 'offline' && (
         <GlassCard className="p-6" hover={false}>
           <h2 className="font-display text-lg font-semibold text-white">
-            System Resources
+            How Hard Is Your KIN Working?
           </h2>
           <div className="mt-4 space-y-5">
             <ResourceBar
-              label="CPU"
+              label="\uD83E\uDDE0 Brain Power"
               percent={sys.cpuUsagePercent}
-              detail={`${sys.cpuUsagePercent}%`}
+              detail={`${sys.cpuUsagePercent}% used`}
             />
             <ResourceBar
-              label="Memory"
+              label="\uD83D\uDCBE Memory"
               percent={usagePercent(sys.memUsedMB, sys.memTotalMB)}
               detail={`${sys.memUsedMB} / ${sys.memTotalMB} MB`}
             />
             {sys.diskFreeMB > 0 && (
               <ResourceBar
-                label="Disk Free"
+                label="\uD83D\uDCE6 Storage"
                 percent={100}
                 detail={`${(sys.diskFreeMB / 1024).toFixed(1)} GB free`}
                 color="cyan"
@@ -263,7 +292,7 @@ export default function HealthPage() {
       {health?.recentEvents && health.recentEvents.length > 0 && (
         <GlassCard className="p-6" hover={false}>
           <h2 className="font-display text-lg font-semibold text-white">
-            Recent Events
+            Recent Activity
           </h2>
           <div className="mt-4 space-y-2">
             {health.recentEvents.map((evt, i) => (
@@ -271,11 +300,9 @@ export default function HealthPage() {
                 key={i}
                 className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.01] px-4 py-2.5 text-sm"
               >
-                <Badge color={statusColor(evt.to)} className="text-[10px]">
-                  {evt.to}
-                </Badge>
+                <span>{statusEmoji(evt.to)}</span>
                 <span className="text-white/50">
-                  {evt.service}: {evt.from} → {evt.to}
+                  {evt.service}: {evt.from} {'\u2192'} {evt.to}
                 </span>
                 <span className="ml-auto text-xs text-white/30">
                   {relativeTime(evt.timestamp)}

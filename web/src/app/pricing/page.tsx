@@ -4,7 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 export const metadata: Metadata = {
   title: 'Pricing — KIN',
   description:
-    'Choose your KIN plan. Free tier with Groq-powered AI chat, Pro tier with premium models and voice companions, Enterprise for teams.',
+    'Choose your KIN plan. Free trial, Hatchling, Elder, or Hero tiers with frontier AI models, Supermemory Pro, and voice companions.',
   openGraph: {
     title: 'Pricing — KIN',
     description: 'Choose your KIN plan. Start free, upgrade when ready.',

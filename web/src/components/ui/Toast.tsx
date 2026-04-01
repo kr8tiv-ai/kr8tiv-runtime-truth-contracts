@@ -17,9 +17,9 @@ const ICONS: Record<ToastData['type'], string> = {
 };
 
 const COLORS: Record<ToastData['type'], string> = {
-  success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-  error: 'border-red-500/30 bg-red-500/10 text-red-400',
-  info: 'border-cyan/30 bg-cyan/10 text-cyan',
+  success: 'border-cyan/30 bg-cyan/10 text-cyan',
+  error: 'border-magenta/30 bg-magenta/10 text-magenta',
+  info: 'border-gold/30 bg-gold/10 text-gold',
 };
 
 interface ToastItemProps {

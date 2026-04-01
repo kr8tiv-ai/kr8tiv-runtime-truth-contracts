@@ -169,8 +169,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     if (!conversationId) {
       conversationId = crypto.randomUUID();
       fastify.context.db.prepare(`
-        INSERT INTO conversations (id, user_id, companion_id, title, created_at, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        INSERT INTO conversations (id, user_id, companion_id, title)
+        VALUES (?, ?, ?, ?)
       `).run(conversationId, userId, companionId, message.slice(0, 80));
     }
 
@@ -179,7 +179,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       SELECT role, content
       FROM messages
       WHERE conversation_id = ?
-      ORDER BY created_at DESC
+      ORDER BY timestamp DESC
       LIMIT 20
     `).all(conversationId) as Array<{ role: string; content: string }>;
 
@@ -216,8 +216,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Store user message
     fastify.context.db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, created_at)
-      VALUES (?, ?, 'user', ?, datetime('now'))
+      INSERT INTO messages (id, conversation_id, role, content)
+      VALUES (?, ?, 'user', ?)
     `).run(crypto.randomUUID(), conversationId, message.trim());
 
     // Generate response via supervisor (two-brain architecture)
@@ -230,34 +230,34 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
         userId,
         memoryFallback: async () => {
           const rows = fastify.context.db.prepare(`
-            SELECT category, content FROM memories
-            WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
-          `).all(userId) as Array<{ category: string; content: string }>;
-          return rows.map(m => `[${m.category}] ${m.content}`);
+            SELECT memory_type, content FROM memories
+            WHERE user_id = ? ORDER BY last_accessed_at DESC LIMIT 20
+          `).all(userId) as Array<{ memory_type: string; content: string }>;
+          return rows.map(m => `[${m.memory_type}] ${m.content}`);
         },
       },
     );
 
     // Store assistant response
     fastify.context.db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, created_at)
-      VALUES (?, ?, 'assistant', ?, datetime('now'))
+      INSERT INTO messages (id, conversation_id, role, content)
+      VALUES (?, ?, 'assistant', ?)
     `).run(crypto.randomUUID(), conversationId, result.content);
 
     // Update conversation timestamp
     fastify.context.db.prepare(`
-      UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
+      UPDATE conversations SET updated_at = (strftime('%s','now')*1000) WHERE id = ?
     `).run(conversationId);
 
     // Drift scoring every 10 assistant messages
     if (soul) {
       const aCount = (fastify.context.db.prepare(
-        `SELECT COUNT(*) as count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
+        `SELECT COUNT(*) AS count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
       ).get(conversationId) as { count: number }).count;
 
       if (aCount > 0 && aCount % 10 === 0) {
         const recent = fastify.context.db.prepare(
-          `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 10`,
+          `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY timestamp DESC LIMIT 10`,
         ).all(conversationId) as Array<{ content: string }>;
 
         const newDrift = scoreDrift(soul.config, recent);
@@ -296,8 +296,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     if (!conversationId) {
       conversationId = crypto.randomUUID();
       fastify.context.db.prepare(`
-        INSERT INTO conversations (id, user_id, companion_id, title, created_at, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        INSERT INTO conversations (id, user_id, companion_id, title)
+        VALUES (?, ?, ?, ?)
       `).run(conversationId, userId, companionId, message.slice(0, 80));
     }
 
@@ -306,7 +306,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       SELECT role, content
       FROM messages
       WHERE conversation_id = ?
-      ORDER BY created_at DESC
+      ORDER BY timestamp DESC
       LIMIT 20
     `).all(conversationId) as Array<{ role: string; content: string }>;
 
@@ -341,8 +341,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Store user message
     fastify.context.db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, created_at)
-      VALUES (?, ?, 'user', ?, datetime('now'))
+      INSERT INTO messages (id, conversation_id, role, content)
+      VALUES (?, ?, 'user', ?)
     `).run(crypto.randomUUID(), conversationId, message.trim());
 
     // Set SSE headers
@@ -371,24 +371,24 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       // Store assistant response
       if (fullResponse) {
         fastify.context.db.prepare(`
-          INSERT INTO messages (id, conversation_id, role, content, created_at)
-          VALUES (?, ?, 'assistant', ?, datetime('now'))
+          INSERT INTO messages (id, conversation_id, role, content)
+          VALUES (?, ?, 'assistant', ?)
         `).run(crypto.randomUUID(), conversationId, fullResponse);
 
         // Update conversation timestamp
         fastify.context.db.prepare(`
-          UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
+          UPDATE conversations SET updated_at = (strftime('%s','now')*1000) WHERE id = ?
         `).run(conversationId);
 
         // Drift scoring every 10 assistant messages
         if (soul) {
           const aCount = (fastify.context.db.prepare(
-            `SELECT COUNT(*) as count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
+            `SELECT COUNT(*) AS count FROM messages WHERE conversation_id = ? AND role = 'assistant'`,
           ).get(conversationId) as { count: number }).count;
 
           if (aCount > 0 && aCount % 10 === 0) {
             const recent = fastify.context.db.prepare(
-              `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 10`,
+              `SELECT content FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY timestamp DESC LIMIT 10`,
             ).all(conversationId) as Array<{ content: string }>;
 
             const newDrift = scoreDrift(soul.config, recent);
@@ -421,22 +421,22 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
             userId,
             memoryFallback: async () => {
               const rows = fastify.context.db.prepare(`
-                SELECT category, content FROM memories
-                WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
-              `).all(userId) as Array<{ category: string; content: string }>;
-              return rows.map(m => `[${m.category}] ${m.content}`);
+                SELECT memory_type, content FROM memories
+                WHERE user_id = ? ORDER BY last_accessed_at DESC LIMIT 20
+              `).all(userId) as Array<{ memory_type: string; content: string }>;
+              return rows.map(m => `[${m.memory_type}] ${m.content}`);
             },
           },
         );
 
         // Store and stream the buffered response word-by-word
         fastify.context.db.prepare(`
-          INSERT INTO messages (id, conversation_id, role, content, created_at)
-          VALUES (?, ?, 'assistant', ?, datetime('now'))
+          INSERT INTO messages (id, conversation_id, role, content)
+          VALUES (?, ?, 'assistant', ?)
         `).run(crypto.randomUUID(), conversationId, result.content);
 
         fastify.context.db.prepare(`
-          UPDATE conversations SET updated_at = datetime('now') WHERE id = ?
+          UPDATE conversations SET updated_at = (strftime('%s','now')*1000) WHERE id = ?
         `).run(conversationId);
 
         const words = result.content.split(/(\s+)/);
@@ -501,22 +501,22 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       id: string;
       companion_id: string;
       title: string | null;
-      created_at: string;
-      updated_at: string;
+      created_at: number;
+      updated_at: number;
     }>;
 
     // Fetch messages for each conversation
     const conversations: ExportConversation[] = rawConversations.map((c) => {
       const rawMessages = fastify.context.db.prepare(`
-        SELECT id, role, content, created_at
+        SELECT id, role, content, timestamp
         FROM messages
         WHERE conversation_id = ?
-        ORDER BY created_at ASC
+        ORDER BY timestamp ASC
       `).all(c.id) as Array<{
         id: string;
         role: string;
         content: string;
-        created_at: string;
+        timestamp: number;
       }>;
 
       return {
@@ -529,29 +529,29 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
           id: m.id,
           role: m.role,
           content: m.content,
-          createdAt: new Date(m.created_at).toISOString(),
+          createdAt: new Date(m.timestamp).toISOString(),
         })),
       };
     });
 
     // Fetch all memories for the user
     const rawMemories = fastify.context.db.prepare(`
-      SELECT id, companion_id, category, content, created_at
+      SELECT id, companion_id, memory_type, content, created_at
       FROM memories
       WHERE user_id = ?
       ORDER BY created_at ASC
     `).all(userId) as Array<{
       id: string;
       companion_id: string | null;
-      category: string | null;
+      memory_type: string | null;
       content: string;
-      created_at: string;
+      created_at: number;
     }>;
 
     const memories: ExportMemory[] = rawMemories.map((m) => ({
       id: m.id,
       companionId: m.companion_id,
-      category: m.category,
+      category: m.memory_type,
       content: m.content,
       createdAt: new Date(m.created_at).toISOString(),
     }));

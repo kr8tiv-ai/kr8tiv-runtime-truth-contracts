@@ -28,7 +28,7 @@ interface SessionData {
 
 type BotContext = Context & SessionFlavor<SessionData>;
 
-type PlanId = 'free' | 'pro' | 'enterprise';
+type PlanId = 'free' | 'hatchling' | 'elder' | 'hero';
 
 interface Plan {
   id: PlanId;
@@ -39,48 +39,61 @@ interface Plan {
 }
 
 // ============================================================================
-// Plan definitions
+// Plan definitions (aligned with meetyourkin.com)
 // ============================================================================
 
 const PLANS: Record<PlanId, Plan> = {
   free: {
     id: 'free',
-    label: 'Free',
+    label: 'Free Trial',
     emoji: '🆓',
     price: 'Free forever',
     features: [
       '50 messages / day',
-      '1 companion (Cipher)',
-      'Basic chat & help',
-      'Website builder (limited)',
+      '1 companion (Qwen 3 32B)',
+      'Try before you mint',
+      'Community support',
     ],
   },
-  pro: {
-    id: 'pro',
-    label: 'Pro',
-    emoji: '⭐',
-    price: '$9 / month',
+  hatchling: {
+    id: 'hatchling',
+    label: 'Hatchling',
+    emoji: '🐣',
+    price: '$114 / month',
     features: [
+      'Frontier AI model (unique to your KIN)',
       'Unlimited messages',
-      'All 6 companions',
-      'Voice responses (XTTS / Piper)',
-      'Priority support',
-      'Full website deploy',
-      'Teaching mode',
+      'Supermemory Pro',
+      'Telegram + WhatsApp + Voice',
+      'Computer control & automation',
+      'Standard support',
     ],
   },
-  enterprise: {
-    id: 'enterprise',
-    label: 'Enterprise',
-    emoji: '🚀',
-    price: '$29 / month',
+  elder: {
+    id: 'elder',
+    label: 'Elder',
+    emoji: '🐉',
+    price: '$194 / month',
     features: [
-      'Everything in Pro',
-      'Tailscale private network access',
-      'REST API access',
-      'Custom companions (bespoke)',
-      'Dedicated support channel',
-      'SLA + uptime guarantee',
+      'Everything in Hatchling',
+      'Up to 3 companions',
+      'Priority support',
+      'Advanced workflow automation',
+      'Hands-on configuration help',
+    ],
+  },
+  hero: {
+    id: 'hero',
+    label: 'Hero',
+    emoji: '🦸',
+    price: '$324 / month',
+    features: [
+      'Everything in Elder',
+      'All 6 companions',
+      'Dedicated account manager',
+      'Deep customization',
+      'Multi-agent integrations',
+      'API access',
     ],
   },
 };
@@ -105,7 +118,7 @@ const upgradeInterestLog: UpgradeInterest[] = [];
 /**
  * Resolves the current plan for a user.
  * For now all users are on Free. Wire to your billing system to return
- * 'pro' or 'enterprise' when appropriate.
+ * 'hatchling', 'elder', or 'hero' when appropriate.
  */
 function getCurrentPlan(_userId: string): PlanId {
   // TODO: look up subscription status from billing backend
@@ -132,11 +145,14 @@ function formatPlanBlock(plan: Plan, isCurrent: boolean): string {
 function buildUpgradeKeyboard(currentPlan: PlanId): InlineKeyboard {
   const kb = new InlineKeyboard();
 
-  if (currentPlan !== 'pro') {
-    kb.text('⭐ Upgrade to Pro', 'upgrade:pro');
+  if (currentPlan !== 'hatchling' && currentPlan !== 'elder' && currentPlan !== 'hero') {
+    kb.text('🐣 Upgrade to Hatchling', 'upgrade:hatchling');
   }
-  if (currentPlan !== 'enterprise') {
-    kb.text('🚀 Go Enterprise', 'upgrade:enterprise');
+  if (currentPlan !== 'elder' && currentPlan !== 'hero') {
+    kb.text('🐉 Go Elder', 'upgrade:elder');
+  }
+  if (currentPlan !== 'hero') {
+    kb.text('🦸 Go Hero', 'upgrade:hero');
   }
 
   return kb;
@@ -201,52 +217,32 @@ export async function handleUpgradeCallback(
   // ------------------------------------------------------------------
   // upgrade:pro
   // ------------------------------------------------------------------
-  if (data === 'upgrade:pro') {
-    // Log interest for follow-up outreach
+  // Handle all tier upgrades
+  const tierMatch = data.match(/^upgrade:(hatchling|elder|hero)$/);
+  if (tierMatch) {
+    const planId = tierMatch[1] as PlanId;
     upgradeInterestLog.push({
       userId,
-      plan: 'pro',
+      plan: planId,
       timestamp: new Date().toISOString(),
     });
-    console.info('[upgrade] Pro interest logged', { userId, timestamp: new Date().toISOString() });
+    console.info(`[upgrade] ${planId} interest logged`, { userId, timestamp: new Date().toISOString() });
 
-    const plan = PLANS.pro;
+    const plan = PLANS[planId];
+    const isHero = planId === 'hero';
     await ctx.reply(
       [
         `${plan.emoji} *${plan.label} — ${plan.price}*`,
         '',
         'Coming soon! We\'re setting up payments. We\'ll notify you when it\'s ready.',
         '',
-        "We've noted your interest and will reach out as soon as Pro is live.",
+        isHero
+          ? "We've noted your Hero interest — our team will be in touch soon for a personalised onboarding."
+          : `We've noted your interest and will reach out as soon as ${plan.label} is live.`,
         '',
-        '_In the meantime, keep chatting — Cipher is always here for you!_ 🐙',
-      ].join('\n'),
-      { parse_mode: 'Markdown' },
-    );
-    return;
-  }
-
-  // ------------------------------------------------------------------
-  // upgrade:enterprise
-  // ------------------------------------------------------------------
-  if (data === 'upgrade:enterprise') {
-    upgradeInterestLog.push({
-      userId,
-      plan: 'enterprise',
-      timestamp: new Date().toISOString(),
-    });
-    console.info('[upgrade] Enterprise interest logged', { userId, timestamp: new Date().toISOString() });
-
-    const plan = PLANS.enterprise;
-    await ctx.reply(
-      [
-        `${plan.emoji} *${plan.label} — ${plan.price}*`,
-        '',
-        'Coming soon! We\'re setting up payments. We\'ll notify you when it\'s ready.',
-        '',
-        "We've noted your Enterprise interest — our team will be in touch soon for a personalised onboarding.",
-        '',
-        '_Have a specific use case in mind? Let us know with /support and we\'ll prioritise you!_',
+        isHero
+          ? '_Have a specific use case in mind? Let us know with /support and we\'ll prioritise you!_'
+          : '_In the meantime, keep chatting — your KIN is always here for you!_',
       ].join('\n'),
       { parse_mode: 'Markdown' },
     );

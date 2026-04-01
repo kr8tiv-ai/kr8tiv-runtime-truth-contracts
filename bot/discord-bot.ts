@@ -42,7 +42,7 @@ interface DiscordBotConfig {
 interface UserSession {
   userId: string;
   companionId: string;
-  tier: 'free' | 'pro' | 'enterprise' | 'nft';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero' | 'nft';
   lastActivity: Date;
 }
 

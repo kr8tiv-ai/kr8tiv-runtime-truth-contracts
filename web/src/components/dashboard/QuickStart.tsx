@@ -32,24 +32,25 @@ function CloseIcon({ className }: { className?: string }) {
 const STEPS = [
   {
     number: 1,
-    title: 'Chat with your companion',
-    description: 'Start a conversation on Telegram and get to know your AI companion.',
-    ctaLabel: 'Open Telegram',
-    ctaHref: 'https://t.me/KinCompanionBot',
-    external: true,
+    title: 'Set up your KIN brain',
+    description: 'Install the free local AI that powers your KIN. Takes under 5 minutes.',
+    ctaLabel: 'Start Setup',
+    ctaHref: '/dashboard/setup',
+    external: false,
     accent: 'cyan' as const,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z" />
+        <path d="M12 6v6l4 2" />
       </svg>
     ),
   },
   {
     number: 2,
-    title: 'Build a website',
-    description: 'Use the web builder to create your portfolio or personal site.',
-    ctaLabel: 'Create Project',
-    ctaHref: '/dashboard/projects',
+    title: 'Meet your companions',
+    description: 'Browse all 6 KIN species and discover their unique abilities.',
+    ctaLabel: 'View Collection',
+    ctaHref: '/dashboard/collection',
     external: false,
     accent: 'magenta' as const,
     icon: (
@@ -62,18 +63,15 @@ const STEPS = [
   },
   {
     number: 3,
-    title: 'Invite friends',
-    description: 'Share your referral code and earn rewards when friends join.',
-    ctaLabel: 'Get Referral Code',
-    ctaHref: '/dashboard/refer',
+    title: 'Start chatting',
+    description: 'Talk to your KIN right here in the dashboard or on Telegram.',
+    ctaLabel: 'Open Chat',
+    ctaHref: '/dashboard/chat',
     external: false,
     accent: 'gold' as const,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="28" height="28">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <line x1="19" y1="8" x2="19" y2="14" />
-        <line x1="22" y1="11" x2="16" y2="11" />
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
   },

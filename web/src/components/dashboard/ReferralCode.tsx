@@ -17,7 +17,7 @@ const SHARE_BASE_URL = 'https://meetyourkin.com';
 
 export function ReferralCode({ code }: ReferralCodeProps) {
   const { success } = useToast();
-  const shareUrl = `${SHARE_BASE_URL}?ref=${code}`;
+  const shareUrl = `${SHARE_BASE_URL}/join?ref=${code}`;
 
   const copyCode = useCallback(async () => {
     try {

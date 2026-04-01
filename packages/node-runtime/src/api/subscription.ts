@@ -43,7 +43,7 @@ interface SubscriptionRecord {
   owner_id: string;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
-  tier: 'free' | 'starter' | 'pro' | 'enterprise';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero';
   status: 'active' | 'past_due' | 'canceled' | 'incomplete' | 'trialing' | 'unpaid';
   usage: UsageMetrics;
   billing_cycle: BillingCycle;
@@ -96,12 +96,12 @@ const TIERS: Record<string, TierDefinition> = {
       health_monitoring: false,
     },
   },
-  starter: {
-    price: 900,
-    kin_limit: 3,
-    api_calls_limit: 10000,
-    storage_limit_mb: 500,
-    voice_minutes_limit: 50,
+  hatchling: {
+    price: 11400,
+    kin_limit: 1,
+    api_calls_limit: -1,
+    storage_limit_mb: 5000,
+    voice_minutes_limit: -1,
     features: {
       voice_mode: true,
       custom_specializations: false,
@@ -111,12 +111,12 @@ const TIERS: Record<string, TierDefinition> = {
       health_monitoring: true,
     },
   },
-  pro: {
-    price: 2900,
-    kin_limit: 10,
-    api_calls_limit: 100000,
-    storage_limit_mb: 5000,
-    voice_minutes_limit: 500,
+  elder: {
+    price: 19400,
+    kin_limit: 3,
+    api_calls_limit: -1,
+    storage_limit_mb: 10000,
+    voice_minutes_limit: -1,
     features: {
       voice_mode: true,
       custom_specializations: true,
@@ -126,9 +126,9 @@ const TIERS: Record<string, TierDefinition> = {
       health_monitoring: true,
     },
   },
-  enterprise: {
-    price: 9900,
-    kin_limit: -1,
+  hero: {
+    price: 32400,
+    kin_limit: 6,
     api_calls_limit: -1,
     storage_limit_mb: -1,
     voice_minutes_limit: -1,
@@ -358,7 +358,7 @@ router.get('/tiers', async (req: Request, res: Response) => {
 
 // --- Mock Data Functions ---
 
-function getMockSubscription(tier: string = 'pro'): SubscriptionRecord {
+function getMockSubscription(tier: string = 'hatchling'): SubscriptionRecord {
   const now = new Date();
   const tierConfig = TIERS[tier];
 
@@ -368,7 +368,7 @@ function getMockSubscription(tier: string = 'pro'): SubscriptionRecord {
     owner_id: 'owner-mock123',
     stripe_customer_id: 'cus_mock123456',
     stripe_subscription_id: 'sub_mock123456',
-    tier: tier as 'free' | 'starter' | 'pro' | 'enterprise',
+    tier: tier as 'free' | 'hatchling' | 'elder' | 'hero',
     status: 'active',
     usage: getMockUsage(tier),
     billing_cycle: {
@@ -395,7 +395,7 @@ function getMockSubscription(tier: string = 'pro'): SubscriptionRecord {
   };
 }
 
-function getMockUsage(tier: string = 'pro'): UsageMetrics {
+function getMockUsage(tier: string = 'hatchling'): UsageMetrics {
   const tierConfig = TIERS[tier];
 
   return {

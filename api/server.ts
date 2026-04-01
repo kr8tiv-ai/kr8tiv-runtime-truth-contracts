@@ -39,6 +39,14 @@ import heartbeatRoutes from './routes/heartbeat.js';
 import supportChatRoutes from './routes/support-chat.js';
 import companionSkillsRoutes from './routes/companion-skills.js';
 import soulRoutes from './routes/soul.js';
+import voiceRoutes from './routes/voice.js';
+import modelRoutes from './routes/models.js';
+
+// Inference imports for WebSocket streaming chat
+import crypto from 'crypto';
+import { getOllamaClient, isLocalLlmAvailable, type ChatMessage } from '../inference/local-llm.js';
+import { buildCompanionPrompt } from '../inference/companion-prompts.js';
+import { getCompanionConfig } from '../companions/config.js';
 
 // ============================================================================
 // Types
@@ -88,7 +96,7 @@ export async function createServer(config: ApiConfig = {}) {
     })(),
     databasePath: config.databasePath ?? process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'kin.db'),
     corsOrigins: config.corsOrigins ?? (environment === 'development'
-      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173']
+      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:5173']
       : ['https://www.meetyourkin.com', 'https://meetyourkin.com']),
     rateLimitMax: config.rateLimitMax ?? 100,
     environment: environment as 'development' | 'production' | 'test',
@@ -101,15 +109,23 @@ export async function createServer(config: ApiConfig = {}) {
   }
 
   const fastify = Fastify({
-    bodyLimit: 1024 * 1024, // 1MB max request body
+    bodyLimit: 26 * 1024 * 1024, // 26MB — accommodates audio uploads up to 25MB (Whisper limit)
     logger: {
       level: environment === 'development' ? 'debug' : 'info',
-      transport: environment === 'development' ? {
-        target: 'pino-pretty',
-        options: { colorize: true },
-      } : undefined,
     },
   });
+
+  // Parse audio/* and application/octet-stream bodies as raw Buffers
+  // so the POST /voice/stt endpoint can receive audio file uploads.
+  fastify.addContentTypeParser(
+    ['audio/ogg', 'audio/opus', 'audio/mpeg', 'audio/mp3', 'audio/wav',
+     'audio/x-wav', 'audio/webm', 'audio/flac', 'audio/mp4', 'audio/m4a',
+     'application/octet-stream'],
+    { parseAs: 'buffer' },
+    (_req: any, body: Buffer, done: (err: Error | null, body?: Buffer) => void) => {
+      done(null, body);
+    },
+  );
 
   // Initialize database
   const db = new Database(resolvedConfig.databasePath);
@@ -120,6 +136,31 @@ export async function createServer(config: ApiConfig = {}) {
   if (fs.existsSync(schemaPath)) {
     const schema = fs.readFileSync(schemaPath, 'utf-8');
     db.exec(schema);
+  }
+
+  // Safe migrations — add columns that may not exist in older databases.
+  // SQLite doesn't support ADD COLUMN IF NOT EXISTS, so we catch errors.
+  const safeMigrations = [
+    `ALTER TABLE users ADD COLUMN free_until TEXT`,
+    `ALTER TABLE users ADD COLUMN genesis_tier TEXT`,
+    `ALTER TABLE users ADD COLUMN genesis_discount INTEGER NOT NULL DEFAULT 0`,
+  ];
+  for (const migration of safeMigrations) {
+    try { db.exec(migration); } catch { /* column already exists — safe to ignore */ }
+  }
+
+  // Seed dev user in development mode
+  if (resolvedConfig.environment === 'development') {
+    try {
+      const devUser = db.prepare(`SELECT id FROM users WHERE id = 'user-dev'`).get();
+      if (!devUser) {
+        db.prepare(`INSERT INTO users (id, telegram_id, first_name) VALUES ('user-dev', 999999, 'Matt')`).run();
+      }
+      const devPrefs = db.prepare(`SELECT id FROM user_preferences WHERE user_id = 'user-dev'`).get();
+      if (!devPrefs) {
+        db.prepare(`INSERT INTO user_preferences (id, user_id, display_name, experience_level, goals, language, tone, onboarding_complete) VALUES ('pref-dev', 'user-dev', 'Matt', 'advanced', '["ai","defi"]', 'en', 'friendly', 1)`).run();
+      }
+    } catch { /* tables may not exist yet */ }
   }
 
   // Store context
@@ -183,8 +224,13 @@ export async function createServer(config: ApiConfig = {}) {
 
   // Protected routes
   await fastify.register(async (protectedFastify) => {
-    // JWT verification hook
+    // JWT verification hook (skipped in development for easy local testing)
     protectedFastify.addHook('onRequest', async (request, reply) => {
+      if (resolvedConfig.environment === 'development') {
+        // Auto-inject a dev user so protected routes work without auth
+        (request as any).user = { userId: 'user-dev', telegramId: 999999, tier: 'free' };
+        return;
+      }
       try {
         await request.jwtVerify();
       } catch {
@@ -210,6 +256,8 @@ export async function createServer(config: ApiConfig = {}) {
     await protectedFastify.register(supportChatRoutes);
     await protectedFastify.register(companionSkillsRoutes);
     await protectedFastify.register(soulRoutes);
+    await protectedFastify.register(voiceRoutes);
+    await protectedFastify.register(modelRoutes);
   });
 
   // ==========================================================================
@@ -243,7 +291,7 @@ export async function createServer(config: ApiConfig = {}) {
         // Parse message
         try {
           const data = JSON.parse(message);
-          
+
           // Handle different message types
           switch (data.type) {
             case 'ping':
@@ -251,21 +299,30 @@ export async function createServer(config: ApiConfig = {}) {
               break;
             case 'subscribe':
               // Subscribe to kin updates
-              connection.socket.send(JSON.stringify({ 
-                type: 'subscribed', 
-                channel: data.channel 
+              connection.socket.send(JSON.stringify({
+                type: 'subscribed',
+                channel: data.channel,
               }));
               break;
+            case 'chat':
+              // Streaming chat over WebSocket — works without API keys via Ollama
+              handleWsChat(data, connection, fastify).catch((err) => {
+                connection.socket.send(JSON.stringify({
+                  type: 'chat_error',
+                  error: err instanceof Error ? err.message : 'Internal error',
+                }));
+              });
+              break;
             default:
-              connection.socket.send(JSON.stringify({ 
-                type: 'error', 
-                message: 'Unknown message type' 
+              connection.socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Unknown message type',
               }));
           }
         } catch {
-          connection.socket.send(JSON.stringify({ 
-            type: 'error', 
-            message: 'Invalid JSON' 
+          connection.socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid JSON',
           }));
         }
       });
@@ -343,6 +400,131 @@ export async function startServer(config: ApiConfig = {}) {
 // Start if run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   startServer();
+}
+
+// ============================================================================
+// WebSocket Chat Handler — streams tokens to the client via Ollama (no API key)
+// ============================================================================
+
+/**
+ * Handle a WebSocket `{ type: "chat", ... }` message.
+ *
+ * Expected payload:
+ *   { type: "chat", message: string, companionId?: string, conversationId?: string }
+ *
+ * Sends back a series of frames:
+ *   { type: "chat_token", content: string, done: false }
+ *   { type: "chat_done",  conversationId, companionId, latencyMs }
+ *   { type: "chat_error", error: string }  (on failure)
+ *
+ * Works entirely without API keys — uses local Ollama only.
+ */
+async function handleWsChat(
+  data: { message?: string; companionId?: string; conversationId?: string },
+  connection: { socket: { send: (msg: string) => void } },
+  fastify: { context: AppContext },
+): Promise<void> {
+  const start = performance.now();
+  const userId = 'user-dev'; // In WS context, dev mode auto-assigns; production would use JWT
+  const companionId = data.companionId ?? 'cipher';
+  const userMessage = data.message?.trim();
+
+  if (!userMessage) {
+    connection.socket.send(JSON.stringify({ type: 'chat_error', error: 'message is required' }));
+    return;
+  }
+
+  if (userMessage.length > 4000) {
+    connection.socket.send(JSON.stringify({ type: 'chat_error', error: 'Message too long (max 4000 chars)' }));
+    return;
+  }
+
+  // Ensure Ollama is reachable
+  const ollamaUp = await isLocalLlmAvailable();
+  if (!ollamaUp) {
+    connection.socket.send(JSON.stringify({
+      type: 'chat_error',
+      error: 'Local Ollama is not running. Start Ollama to use WebSocket chat.',
+    }));
+    return;
+  }
+
+  // Resolve or create conversation
+  let conversationId = data.conversationId;
+  if (!conversationId) {
+    conversationId = crypto.randomUUID();
+    fastify.context.db.prepare(`
+      INSERT INTO conversations (id, user_id, companion_id, title)
+      VALUES (?, ?, ?, ?)
+    `).run(conversationId, userId, companionId, userMessage.slice(0, 80));
+  }
+
+  // Load recent messages for context
+  const recentMessages = fastify.context.db.prepare(`
+    SELECT role, content FROM messages
+    WHERE conversation_id = ?
+    ORDER BY timestamp DESC LIMIT 20
+  `).all(conversationId) as Array<{ role: string; content: string }>;
+
+  // Build prompt
+  const config = getCompanionConfig(companionId);
+  const systemPrompt = buildCompanionPrompt(companionId, {
+    userName: userId,
+    timeContext: new Date().toLocaleString('en-US', {
+      weekday: 'long', hour: 'numeric', minute: '2-digit',
+    }),
+  });
+
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...recentMessages.reverse().map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    })),
+    { role: 'user', content: userMessage },
+  ];
+
+  // Store user message
+  fastify.context.db.prepare(`
+    INSERT INTO messages (id, conversation_id, role, content)
+    VALUES (?, ?, 'user', ?)
+  `).run(crypto.randomUUID(), conversationId, userMessage);
+
+  // Stream response from Ollama
+  const client = getOllamaClient();
+  let fullResponse = '';
+
+  await client.chatStream(
+    { messages, model: config.localModel, options: { temperature: 0.8, top_p: 0.9 } },
+    (chunk: string, done: boolean) => {
+      fullResponse += chunk;
+      connection.socket.send(JSON.stringify({
+        type: 'chat_token',
+        content: chunk,
+        done: false,
+      }));
+    },
+  );
+
+  // Store assistant response
+  if (fullResponse) {
+    fastify.context.db.prepare(`
+      INSERT INTO messages (id, conversation_id, role, content)
+      VALUES (?, ?, 'assistant', ?)
+    `).run(crypto.randomUUID(), conversationId, fullResponse);
+
+    fastify.context.db.prepare(`
+      UPDATE conversations SET updated_at = (strftime('%s','now')*1000) WHERE id = ?
+    `).run(conversationId);
+  }
+
+  // Send completion frame
+  connection.socket.send(JSON.stringify({
+    type: 'chat_done',
+    conversationId,
+    companionId,
+    latencyMs: Math.round(performance.now() - start),
+  }));
 }
 
 export default createServer;

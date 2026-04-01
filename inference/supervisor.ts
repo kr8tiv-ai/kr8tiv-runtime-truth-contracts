@@ -64,7 +64,7 @@ export interface SupervisedResult {
   costUsd: number;
 }
 
-export type UserTier = 'free' | 'pro' | 'enterprise' | 'nft';
+export type UserTier = 'free' | 'hatchling' | 'elder' | 'hero' | 'nft';
 
 export interface SupervisorOptions {
   /** Force local-only (ignore supervisor even if available) */

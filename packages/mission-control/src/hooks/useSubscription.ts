@@ -9,7 +9,7 @@ export interface SubscriptionData {
   owner_id: string;
   stripe_customer_id?: string;
   stripe_subscription_id?: string;
-  tier: 'free' | 'starter' | 'pro' | 'enterprise';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero';
   status: 'active' | 'past_due' | 'canceled' | 'incomplete' | 'trialing' | 'unpaid';
   usage: UsageMetrics;
   billing_cycle: BillingCycle;

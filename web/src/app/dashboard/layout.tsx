@@ -7,12 +7,16 @@
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { DashboardTopbar } from '@/components/layout/DashboardTopbar';
+import { useAutoRedeemReferral } from '@/hooks/useAutoRedeemReferral';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Auto-redeem any pending referral code from /join?ref=CODE
+  useAutoRedeemReferral();
+
   return (
     <AuthGuard>
       <div className="flex min-h-screen bg-bg">

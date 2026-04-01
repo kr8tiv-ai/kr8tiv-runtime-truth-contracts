@@ -8,13 +8,13 @@ type SystemStatus = 'operational' | 'degraded';
 const STATUS_CONFIG: Record<SystemStatus, { label: string; dotClass: string; textClass: string }> = {
   operational: {
     label: 'All Systems Operational',
-    dotClass: 'bg-emerald-400',
-    textClass: 'text-emerald-400/70',
+    dotClass: 'bg-cyan',
+    textClass: 'text-cyan/70',
   },
   degraded: {
     label: 'Degraded Performance',
-    dotClass: 'bg-amber-400',
-    textClass: 'text-amber-400/70',
+    dotClass: 'bg-gold',
+    textClass: 'text-gold/70',
   },
 };
 

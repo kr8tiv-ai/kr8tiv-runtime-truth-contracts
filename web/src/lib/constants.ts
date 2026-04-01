@@ -1,25 +1,93 @@
 // ============================================================================
-// KIN App Constants
+// KIN App Constants — Pricing aligned with meetyourkin.com (source of truth)
 // ============================================================================
 
-// --- Pricing Tiers -----------------------------------------------------------
+// --- Genesis Mint Tiers (one-time SOL purchase, 60 total) --------------------
+
+export interface GenesisTier {
+  id: string;
+  name: string;
+  emoji: string;
+  priceSol: number;
+  freeMonths: number;
+  planLevel: string;
+  lifetimeDiscount: number;
+  solanaRewardPercent: number;
+  features: string[];
+}
+
+export const GENESIS_TIERS: GenesisTier[] = [
+  {
+    id: 'egg',
+    name: 'Egg',
+    emoji: '\uD83E\uDD5A',
+    priceSol: 2.5,
+    freeMonths: 1,
+    planLevel: 'Hatchling',
+    lifetimeDiscount: 25,
+    solanaRewardPercent: 1,
+    features: [
+      'Genesis avatar (1 of 60)',
+      '1 month Hatchling plan included',
+      'Supermemory Pro included',
+      '25% lifetime discount on all plans',
+      '1% lifetime Solana rewards',
+    ],
+  },
+  {
+    id: 'hatchling',
+    name: 'Hatchling',
+    emoji: '\uD83D\uDC23',
+    priceSol: 5.3,
+    freeMonths: 3,
+    planLevel: 'Hatchling',
+    lifetimeDiscount: 25,
+    solanaRewardPercent: 2,
+    features: [
+      'Genesis avatar (1 of 60)',
+      '3 months Hatchling plan included',
+      'Supermemory Pro included',
+      '25% lifetime discount on all plans',
+      '2% lifetime Solana rewards',
+    ],
+  },
+  {
+    id: 'elder',
+    name: 'Elder',
+    emoji: '\uD83D\uDC32',
+    priceSol: 8.3,
+    freeMonths: 3,
+    planLevel: 'Elder',
+    lifetimeDiscount: 25,
+    solanaRewardPercent: 3,
+    features: [
+      'Genesis avatar (1 of 60)',
+      '3 months Elder plan included',
+      'Supermemory Pro included',
+      '25% lifetime discount on all plans',
+      '3% lifetime Solana rewards',
+    ],
+  },
+];
+
+// --- Monthly Hosting Plans ---------------------------------------------------
 
 export interface PricingTier {
   id: string;
   name: string;
-  price: number; // price in dollars (one-time or monthly)
+  price: number;
   priceCents: number;
-  priceLabel?: string; // e.g. "one-time per companion", "/month"
+  priceLabel?: string;
   features: string[];
   companionLimit: number;
-  messagesPerDay: number | null; // null = unlimited
+  messagesPerDay: number | null;
   highlighted?: boolean;
 }
 
 export const PRICING_TIERS: PricingTier[] = [
   {
     id: 'free',
-    name: 'Free',
+    name: 'Free Trial',
     price: 0,
     priceCents: 0,
     companionLimit: 1,
@@ -27,60 +95,59 @@ export const PRICING_TIERS: PricingTier[] = [
     features: [
       '1 companion (Qwen 3 32B)',
       '50 messages per day',
-      'Basic web builder',
+      'Try before you mint',
       'Community support',
     ],
   },
   {
-    id: 'genesis',
-    name: 'Genesis Mint',
-    price: 9.99,
-    priceCents: 999,
-    priceLabel: 'one-time per companion',
+    id: 'hatchling-monthly',
+    name: 'Hatchling',
+    price: 114,
+    priceCents: 11400,
+    priceLabel: '/month',
     companionLimit: 1,
     messagesPerDay: null,
     highlighted: true,
     features: [
-      'Frontier AI brain (unique per companion)',
+      'Frontier AI model (unique to your KIN)',
       'Unlimited messages',
-      'Supermemory intelligent context',
-      'Yours forever (NFT)',
-      'Voice chat',
-      'Priority support',
+      'Supermemory Pro',
+      'Telegram + WhatsApp + Voice',
+      'Computer control & automation',
+      'Standard support',
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    price: 19.99,
-    priceCents: 1999,
+    id: 'elder-monthly',
+    name: 'Elder',
+    price: 194,
+    priceCents: 19400,
     priceLabel: '/month',
     companionLimit: 3,
     messagesPerDay: null,
     features: [
-      '3 companions with frontier brains',
-      'Unlimited messages',
-      'Supermemory for each companion',
-      'Full web builder',
+      'Everything in Hatchling',
+      'Up to 3 companions',
       'Priority support',
-      'Project export',
+      'Advanced workflow automation',
+      'Hands-on configuration help',
     ],
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 49.99,
-    priceCents: 4999,
+    id: 'hero-monthly',
+    name: 'Hero',
+    price: 324,
+    priceCents: 32400,
     priceLabel: '/month',
     companionLimit: 6,
     messagesPerDay: null,
     features: [
-      'All 6 companions with frontier brains',
-      'Unlimited everything',
+      'Everything in Elder',
+      'All 6 companions',
+      'Dedicated account manager',
+      'Deep customization',
+      'Multi-agent integrations',
       'API access',
-      'Team collaboration',
-      'Dedicated support',
-      'Advanced analytics',
     ],
   },
 ];
@@ -202,6 +269,14 @@ export const XP_PER_MESSAGE = 10;
 export function XP_FOR_LEVEL(level: number): number {
   return Math.floor(100 * Math.pow(1.2, level - 1));
 }
+
+// --- NFT Transfer / Rebinding -----------------------------------------------
+
+/** One-time fee for NFT transfer and new owner onboarding (source: meetyourkin.com) */
+export const NFT_REBINDING_FEE_USD = 149;
+
+/** Genesis holders' lifetime discount on all KR8TIV services */
+export const GENESIS_LIFETIME_DISCOUNT_PERCENT = 25;
 
 // --- Bags.fm Integration ---------------------------------------------------
 

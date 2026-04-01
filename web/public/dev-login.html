@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head><title>KIN Dev Login</title></head>
+<body style="background:#000;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+<div id="status" style="text-align:center">
+  <h2>Logging in as Matt...</h2>
+  <p id="msg">Clearing old session...</p>
+</div>
+<script>
+(async () => {
+  const msg = document.getElementById('msg');
+
+  // 1. Nuke ALL old auth state
+  document.cookie.split(";").forEach(c => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/");
+  });
+  try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}
+
+  msg.textContent = "Authenticating...";
+
+  // 2. Call dev-login API
+  try {
+    const res = await fetch('/api/auth/dev-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegramId: 999999, firstName: 'Matt' })
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      msg.textContent = "API error " + res.status + ": " + text;
+      return;
+    }
+
+    const data = JSON.parse(text);
+    msg.textContent = "Got token! Setting auth...";
+
+    // 3. Set the cookie exactly how js-cookie would
+    document.cookie = "kin_token=" + data.token + "; path=/; max-age=7200; SameSite=Lax";
+
+    // 4. Also store in localStorage as backup
+    try {
+      localStorage.setItem('kin_token', data.token);
+      localStorage.setItem('kin_user', JSON.stringify(data.user));
+    } catch(e) {}
+
+    msg.textContent = "Success! Redirecting to dashboard...";
+
+    // 5. Redirect to dashboard
+    setTimeout(() => { window.location.replace('/dashboard'); }, 800);
+  } catch (err) {
+    msg.textContent = "Error: " + err.message;
+  }
+})();
+</script>
+</body>
+</html>

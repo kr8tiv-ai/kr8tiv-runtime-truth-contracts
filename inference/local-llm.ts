@@ -407,6 +407,21 @@ export class OllamaClient {
   }
 
   /**
+   * Delete a model from the local Ollama instance
+   */
+  async deleteModel(model: string): Promise<void> {
+    const response = await this.fetchWithTimeout(`${this.baseUrl}/api/delete`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: model }),
+    });
+
+    if (!response.ok) {
+      throw new OllamaError(`Delete model failed: ${response.status}`, response.status);
+    }
+  }
+
+  /**
    * Check if a specific model is available
    */
   async hasModel(model: string): Promise<boolean> {

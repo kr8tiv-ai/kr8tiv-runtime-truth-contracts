@@ -10,7 +10,7 @@ export class KinApiClient {
   private baseUrl: string;
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl ?? process.env.NEXT_PUBLIC_API_URL ?? '';
+    this.baseUrl = baseUrl ?? process.env.NEXT_PUBLIC_API_URL ?? '/api';
   }
 
   private getToken(): string | undefined {

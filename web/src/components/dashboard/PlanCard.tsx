@@ -21,9 +21,11 @@ interface PlanCardProps {
 
 function getPlanBadgeColor(plan: string): 'cyan' | 'magenta' | 'gold' | 'muted' {
   switch (plan.toLowerCase()) {
-    case 'pro':
+    case 'hatchling':
+      return 'cyan';
+    case 'elder':
       return 'magenta';
-    case 'enterprise':
+    case 'hero':
       return 'gold';
     default:
       return 'muted';

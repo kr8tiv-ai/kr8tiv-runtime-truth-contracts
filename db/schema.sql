@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS users (
   last_name TEXT,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
-  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'pro', 'enterprise')),
+  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'hatchling', 'elder', 'hero')),
   stripe_customer_id TEXT,
+  free_until TEXT, -- ISO date: user has free access until this date (referral rewards, Genesis mint)
+  genesis_tier TEXT, -- 'egg', 'hatchling', 'elder' — set if user holds a Genesis NFT
+  genesis_discount INTEGER NOT NULL DEFAULT 0, -- lifetime discount percentage (25 for Genesis holders)
   metadata TEXT -- JSON blob for additional user data
 );
 
@@ -312,7 +315,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   stripe_subscription_id TEXT UNIQUE,
   stripe_customer_id TEXT,
-  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'enterprise')),
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'hatchling', 'elder', 'hero')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'past_due', 'canceled', 'trialing')),
   current_period_start INTEGER,
   current_period_end INTEGER,
@@ -614,3 +617,21 @@ CREATE TABLE IF NOT EXISTS companion_souls (
 
 CREATE INDEX IF NOT EXISTS idx_companion_souls_user ON companion_souls(user_id);
 CREATE INDEX IF NOT EXISTS idx_companion_souls_companion ON companion_souls(companion_id);
+
+-- ============================================================================
+-- Safe Migrations — add columns to existing tables without breaking anything.
+-- Each ALTER TABLE is wrapped in a sub-statement; SQLite silently ignores
+-- "duplicate column name" errors when using CREATE TABLE IF NOT EXISTS but
+-- ALTER TABLE doesn't have IF NOT EXISTS. We catch errors at the app level.
+-- ============================================================================
+
+-- Users: referral free days, Genesis NFT fields
+-- Note: these may already exist from CREATE TABLE; ALTER TABLE will error
+-- harmlessly if so. The app wraps schema execution in try/catch.
+
+-- Migration 1: free_until for referral rewards
+-- ALTER TABLE users ADD COLUMN free_until TEXT;
+
+-- Migration 2: Genesis NFT tracking
+-- ALTER TABLE users ADD COLUMN genesis_tier TEXT;
+-- ALTER TABLE users ADD COLUMN genesis_discount INTEGER NOT NULL DEFAULT 0;

@@ -55,7 +55,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/cipher-4.jpg',
     ],
     glbUrl: '/models/cipher.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'OpenAI', modelId: 'gpt-5.4', modelName: 'GPT-5.4', contextWindow: 1_050_000 },
   },
 
@@ -75,7 +75,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/mischief-4.jpg',
     ],
     glbUrl: '/models/mischief.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'Google', modelId: 'gemini-3.1-pro', modelName: 'Gemini 3.1 Pro', contextWindow: 128_000 },
   },
 
@@ -95,7 +95,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/vortex-4.jpg',
     ],
     glbUrl: '/models/vortex.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'Anthropic', modelId: 'claude-opus-4-6', modelName: 'Claude Opus 4.6', contextWindow: 1_000_000 },
   },
 
@@ -115,7 +115,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/forge-4.jpg',
     ],
     glbUrl: '/models/forge.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'xAI', modelId: 'grok-4.20', modelName: 'Grok 4.20', contextWindow: 2_000_000 },
   },
 
@@ -135,7 +135,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/aether-4.jpg',
     ],
     glbUrl: '/models/aether.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'Moonshot', modelId: 'kimi-k2.5', modelName: 'Kimi K2.5', contextWindow: 256_000 },
   },
 
@@ -155,7 +155,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
       '/creatures/catalyst-4.jpg',
     ],
     glbUrl: '/models/catalyst.glb',
-    modelReady: false,
+    modelReady: true,
     frontierModel: { provider: 'Z.ai', modelId: 'glm-4.6', modelName: 'GLM-4.6', contextWindow: 200_000 },
   },
 };

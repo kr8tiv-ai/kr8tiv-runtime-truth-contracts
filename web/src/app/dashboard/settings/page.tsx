@@ -4,7 +4,7 @@
 // Settings Page — Profile, preferences, memory management, and danger zone.
 // ============================================================================
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMemories } from '@/hooks/useMemories';
@@ -19,6 +19,10 @@ import { WalletCard } from '@/components/dashboard/WalletCard';
 import { PhantomConnect } from '@/components/dashboard/PhantomConnect';
 import { formatDate } from '@/lib/utils';
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const LANGUAGE_OPTIONS = [
   { value: 'en', label: 'English' },
   { value: 'es', label: 'Spanish' },
@@ -30,21 +34,67 @@ const LANGUAGE_OPTIONS = [
   { value: 'zh', label: 'Chinese' },
 ];
 
+const TONE_OPTIONS = [
+  { value: 'friendly', label: 'Friendly' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'casual', label: 'Casual' },
+  { value: 'technical', label: 'Technical' },
+];
+
+const TIER_COLORS: Record<string, 'muted' | 'cyan' | 'magenta' | 'gold'> = {
+  free: 'muted',
+  hatchling: 'cyan',
+  elder: 'magenta',
+  hero: 'gold',
+};
+
+const TIER_BORDER_CLASSES: Record<string, string> = {
+  free: 'border-white/10',
+  hatchling: 'border-cyan/30',
+  elder: 'border-magenta/30',
+  hero: 'border-gold/30',
+};
+
+// ---------------------------------------------------------------------------
+// Page Component
+// ---------------------------------------------------------------------------
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { memories, loading, error, refresh, deleteMemory, deleting } =
     useMemories();
 
   const [language, setLanguage] = useState('en');
+  const [tone, setTone] = useState('friendly');
+  const [displayName, setDisplayName] = useState('');
   const [notifications, setNotifications] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [timezone, setTimezone] = useState('');
+
+  // Detect timezone on mount
+  useEffect(() => {
+    try {
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    } catch {
+      setTimezone('Unknown');
+    }
+  }, []);
+
+  // Populate display name from user data
+  useEffect(() => {
+    if (user?.firstName) {
+      setDisplayName(
+        `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`,
+      );
+    }
+  }, [user?.firstName, user?.lastName]);
 
   const handleExportData = useCallback(async () => {
     setExporting(true);
     setExportError(null);
     try {
-      const data = await kinApi.get<Record<string, unknown>>('/chat/export');
+      const data = await kinApi.get<Record<string, unknown>>('/kin/export');
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: 'application/json',
       });
@@ -79,6 +129,10 @@ export default function SettingsPage() {
     );
   }
 
+  const tierKey = user?.tier ?? 'free';
+  const tierColor = TIER_COLORS[tierKey] ?? 'muted';
+  const tierBorder = TIER_BORDER_CLASSES[tierKey] ?? 'border-white/10';
+
   return (
     <motion.div
       className="space-y-8"
@@ -96,7 +150,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* Profile Section */}
+      {/* User Info Section */}
       <GlassCard className="p-6" hover={false}>
         <h2 className="mb-4 font-display text-lg font-semibold text-white">
           Profile
@@ -104,12 +158,23 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white/50">Telegram Username</p>
+              <p className="text-sm text-white/50">Name</p>
               <p className="text-white">
-                {user?.username ? `@${user.username}` : 'Not set'}
+                {user?.firstName ?? '--'}
+                {user?.lastName ? ` ${user.lastName}` : ''}
               </p>
             </div>
-            <Badge color="cyan">Telegram</Badge>
+            <div className={`rounded-full border px-3 py-1 ${tierBorder}`}>
+              <Badge color={tierColor}>
+                {tierKey.charAt(0).toUpperCase() + tierKey.slice(1)}
+              </Badge>
+            </div>
+          </div>
+          <div className="border-t border-white/5 pt-4">
+            <p className="text-sm text-white/50">Telegram Username</p>
+            <p className="text-white">
+              {user?.username ? `@${user.username}` : 'Not set'}
+            </p>
           </div>
           <div className="border-t border-white/5 pt-4">
             <p className="text-sm text-white/50">User ID</p>
@@ -118,33 +183,10 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="border-t border-white/5 pt-4">
-            <p className="text-sm text-white/50">Name</p>
-            <p className="text-white">
-              {user?.firstName ?? '--'}
-              {user?.lastName ? ` ${user.lastName}` : ''}
-            </p>
-          </div>
-          <div className="border-t border-white/5 pt-4">
             <p className="text-sm text-white/50">Member Since</p>
             <p className="text-white">
               {user?.createdAt ? formatDate(user.createdAt) : '--'}
             </p>
-          </div>
-          <div className="border-t border-white/5 pt-4">
-            <p className="text-sm text-white/50">Current Tier</p>
-            <Badge
-              color={
-                user?.tier === 'pro'
-                  ? 'magenta'
-                  : user?.tier === 'enterprise'
-                    ? 'gold'
-                    : 'muted'
-              }
-            >
-              {user?.tier
-                ? user.tier.charAt(0).toUpperCase() + user.tier.slice(1)
-                : 'Free'}
-            </Badge>
           </div>
         </div>
       </GlassCard>
@@ -155,6 +197,51 @@ export default function SettingsPage() {
           Preferences
         </h2>
         <div className="space-y-6">
+          {/* Display Name */}
+          <div>
+            <label
+              htmlFor="display-name"
+              className="mb-1.5 block text-sm font-medium text-white/70"
+            >
+              Display Name
+            </label>
+            <input
+              id="display-name"
+              type="text"
+              value={displayName}
+              readOnly
+              className="w-full max-w-xs rounded-lg border border-white/10 bg-surface px-4 py-2.5 text-sm text-white/70 cursor-default focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-white/30">
+              Display name is synced from your Telegram profile.
+            </p>
+          </div>
+
+          {/* Tone */}
+          <div>
+            <label
+              htmlFor="tone-select"
+              className="mb-1.5 block text-sm font-medium text-white/70"
+            >
+              Tone
+            </label>
+            <select
+              id="tone-select"
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+              className="w-full max-w-xs rounded-lg border border-white/10 bg-surface px-4 py-2.5 text-sm text-white transition-colors focus:border-cyan focus:outline-none focus:ring-1 focus:ring-cyan/30"
+            >
+              {TONE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-white/30">
+              How your KIN speaks to you.
+            </p>
+          </div>
+
           {/* Language */}
           <div>
             <label
@@ -175,6 +262,21 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Timezone */}
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-white/70">
+              Timezone
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg border border-white/10 bg-surface px-4 py-2.5 text-sm text-white/70">
+                {timezone || 'Detecting...'}
+              </div>
+              <span className="text-xs text-white/30">
+                Detected from your browser
+              </span>
+            </div>
           </div>
 
           {/* Notifications Toggle */}
@@ -249,7 +351,7 @@ export default function SettingsPage() {
         <PhantomConnect />
       </div>
 
-      {/* Data & Privacy */}
+      {/* Data & Privacy — Export */}
       <GlassCard className="p-6" hover={false}>
         <h2 className="mb-2 font-display text-lg font-semibold text-white">
           Data &amp; Privacy

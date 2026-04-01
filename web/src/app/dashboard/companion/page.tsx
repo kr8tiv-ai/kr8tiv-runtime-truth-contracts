@@ -72,7 +72,7 @@ export default function CompanionPage() {
           Your Companion
         </h1>
         <GlassCard hover={false} className="p-8 text-center">
-          <p className="text-red-400">{error}</p>
+          <p className="text-magenta">{error}</p>
           <Button variant="outline" size="sm" onClick={refresh} className="mt-4">
             Retry
           </Button>
@@ -118,13 +118,15 @@ export default function CompanionPage() {
             Meet your AI companion and track your journey together.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="md"
-          onClick={() => setSwitcherOpen(true)}
-        >
-          Switch Companion
-        </Button>
+        {companions.length > 1 && (
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setSwitcherOpen(true)}
+          >
+            Switch Companion
+          </Button>
+        )}
       </motion.div>
 
       <CompanionDetail companion={companionData} stats={stats} />

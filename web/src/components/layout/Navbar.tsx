@@ -6,9 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/companions', label: 'Companions' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: 'https://www.meetyourkin.com/#features', label: 'Features' },
+  { href: 'https://www.meetyourkin.com/#genesis-six', label: 'Genesis Six' },
+  { href: 'https://www.meetyourkin.com/#how-it-works', label: 'How It Works' },
+  { href: 'https://www.meetyourkin.com/#mint', label: 'Mint' },
+  { href: 'https://www.meetyourkin.com/#about', label: 'About' },
 ];
 
 export function Navbar() {
@@ -48,14 +50,11 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between sm:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="text-2xl" aria-hidden="true">
-              🐙
-            </span>
             <span
-              className="font-display text-xl font-bold tracking-tight text-cyan"
+              className="font-display text-xl font-extrabold tracking-tight"
               style={{
-                textShadow:
-                  '0 0 7px rgba(0,240,255,0.6), 0 0 20px rgba(0,240,255,0.4)',
+                color: '#ffd700',
+                textShadow: '0 0 20px rgba(255,215,0,0.3)',
               }}
             >
               KIN
@@ -68,7 +67,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-white/70 transition-colors duration-200 hover:text-white"
+                className="font-mono text-[0.65rem] uppercase tracking-[0.1em] text-white/35 transition-colors duration-300 hover:text-white"
               >
                 {link.label}
               </Link>

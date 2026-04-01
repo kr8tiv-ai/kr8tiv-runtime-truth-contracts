@@ -8,7 +8,7 @@ export interface User {
   username?: string;
   firstName: string;
   lastName?: string;
-  tier: 'free' | 'pro' | 'enterprise';
+  tier: 'free' | 'hatchling' | 'elder' | 'hero';
   createdAt: string;
   onboardingComplete?: boolean;
 }

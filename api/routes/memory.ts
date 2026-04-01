@@ -82,7 +82,7 @@ const memoryRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // Get preferences
-  fastify.get('/preferences', async (request) => {
+  fastify.get('/memory-preferences', async (request) => {
     const userId = (request.user as { userId: string }).userId;
 
     const preferences = fastify.context.db.prepare(`
