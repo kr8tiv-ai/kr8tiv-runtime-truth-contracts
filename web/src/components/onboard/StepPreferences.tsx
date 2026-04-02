@@ -184,6 +184,45 @@ export function StepPreferences({
             ))}
           </select>
         </GlassCard>
+
+        {/* Data & Privacy */}
+        <GlassCard className="p-5" hover={false}>
+          <label className="mb-3 block text-sm font-medium text-white/70">
+            Data &amp; Privacy
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => onChange({ privacyMode: 'private' })}
+              className={cn(
+                'rounded-lg border px-3 py-3 text-left transition-all duration-200',
+                preferences.privacyMode === 'private'
+                  ? 'border-cyan bg-cyan/10 text-cyan'
+                  : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/70',
+              )}
+            >
+              <p className="text-xs font-semibold">Keep conversations private</p>
+              <p className="mt-1 text-[10px] opacity-60">
+                Your companion uses only the local model. Nothing leaves your device.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ privacyMode: 'shared' })}
+              className={cn(
+                'rounded-lg border px-3 py-3 text-left transition-all duration-200',
+                preferences.privacyMode === 'shared'
+                  ? 'border-magenta bg-magenta/10 text-magenta'
+                  : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/70',
+              )}
+            >
+              <p className="text-xs font-semibold">Help your companion learn</p>
+              <p className="mt-1 text-[10px] opacity-60">
+                Complex questions use frontier AI. Responses improve your companion over time.
+              </p>
+            </button>
+          </div>
+        </GlassCard>
       </div>
 
       {/* Navigation */}

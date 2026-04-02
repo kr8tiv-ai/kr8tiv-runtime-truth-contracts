@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMemories } from '@/hooks/useMemories';
 import { kinApi } from '@/lib/api';
+import { cn, formatDate } from '@/lib/utils';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -17,7 +18,7 @@ import { MemoryList } from '@/components/dashboard/MemoryList';
 import { DangerZone } from '@/components/dashboard/DangerZone';
 import { WalletCard } from '@/components/dashboard/WalletCard';
 import { PhantomConnect } from '@/components/dashboard/PhantomConnect';
-import { formatDate } from '@/lib/utils';
+import type { UserPreferences } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -68,6 +69,8 @@ export default function SettingsPage() {
   const [tone, setTone] = useState('friendly');
   const [displayName, setDisplayName] = useState('');
   const [notifications, setNotifications] = useState(true);
+  const [privacyMode, setPrivacyMode] = useState<'private' | 'shared'>('private');
+  const [privacySaving, setPrivacySaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [timezone, setTimezone] = useState('');
@@ -89,6 +92,33 @@ export default function SettingsPage() {
       );
     }
   }, [user?.firstName, user?.lastName]);
+
+  // Load privacy mode from API on mount
+  useEffect(() => {
+    kinApi
+      .get<UserPreferences>('/preferences')
+      .then((prefs) => {
+        if (prefs.privacyMode) {
+          setPrivacyMode(prefs.privacyMode);
+        }
+      })
+      .catch(() => {
+        // Keep default 'private' on error
+      });
+  }, []);
+
+  const handlePrivacyChange = useCallback(async (mode: 'private' | 'shared') => {
+    setPrivacyMode(mode);
+    setPrivacySaving(true);
+    try {
+      await kinApi.put('/preferences', { privacyMode: mode });
+    } catch {
+      // Revert on failure
+      setPrivacyMode(mode === 'private' ? 'shared' : 'private');
+    } finally {
+      setPrivacySaving(false);
+    }
+  }, []);
 
   const handleExportData = useCallback(async () => {
     setExporting(true);
@@ -351,15 +381,59 @@ export default function SettingsPage() {
         <PhantomConnect />
       </div>
 
-      {/* Data & Privacy — Export */}
+      {/* Data & Privacy — Privacy Toggle + Export */}
       <GlassCard className="p-6" hover={false}>
         <h2 className="mb-2 font-display text-lg font-semibold text-white">
           Data &amp; Privacy
         </h2>
-        <p className="text-sm text-white/50">
-          Download all your conversations, memories, and companion data as JSON.
+        <p className="mb-4 text-sm text-white/50">
+          When private, your companion uses only local AI. When shared, frontier
+          AI handles complex requests and helps your companion learn.
         </p>
-        <div className="mt-4">
+
+        {/* Privacy Mode Toggle */}
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            disabled={privacySaving}
+            onClick={() => handlePrivacyChange('private')}
+            className={cn(
+              'rounded-lg border px-4 py-3 text-left transition-all duration-200',
+              privacyMode === 'private'
+                ? 'border-cyan bg-cyan/10 text-cyan'
+                : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/70',
+              privacySaving && 'pointer-events-none opacity-60',
+            )}
+          >
+            <p className="text-sm font-semibold">Keep conversations private</p>
+            <p className="mt-1 text-xs opacity-60">
+              Your companion uses only the local model. Nothing leaves your device.
+            </p>
+          </button>
+          <button
+            type="button"
+            disabled={privacySaving}
+            onClick={() => handlePrivacyChange('shared')}
+            className={cn(
+              'rounded-lg border px-4 py-3 text-left transition-all duration-200',
+              privacyMode === 'shared'
+                ? 'border-magenta bg-magenta/10 text-magenta'
+                : 'border-white/10 bg-white/[0.02] text-white/50 hover:border-white/20 hover:text-white/70',
+              privacySaving && 'pointer-events-none opacity-60',
+            )}
+          >
+            <p className="text-sm font-semibold">Help your companion learn</p>
+            <p className="mt-1 text-xs opacity-60">
+              Complex questions use frontier AI. Responses improve your companion over time.
+            </p>
+          </button>
+        </div>
+
+        {/* Export */}
+        <div className="border-t border-white/5 pt-4">
+          <p className="mb-2 text-sm text-white/50">
+            Download all your conversations, memories, and companion data as JSON.
+          </p>
           <Button
             variant="outline"
             onClick={handleExportData}
