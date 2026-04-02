@@ -28,6 +28,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+training/output/
+*.gguf
 target/
 vendor/
 .cache/

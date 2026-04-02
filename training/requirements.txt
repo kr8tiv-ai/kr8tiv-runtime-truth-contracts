@@ -1,0 +1,13 @@
+# Unsloth QLoRA fine-tuning dependencies
+# Install in a venv: python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+# Requires CUDA-capable GPU (RTX 4050+ recommended)
+
+unsloth[colab-new]>=2024.8
+trl>=0.12.0
+transformers>=4.46.0
+datasets>=3.0.0
+torch>=2.4.0
+bitsandbytes>=0.44.0
+accelerate>=1.0.0
+sentencepiece>=0.2.0
+protobuf>=5.28.0
