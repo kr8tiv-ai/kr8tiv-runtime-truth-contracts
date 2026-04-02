@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -129,11 +129,16 @@ describe('TrainingDataCollector', () => {
   });
 
   it('never throws even if filesystem fails', async () => {
-    // Point to an impossible path on Windows/Linux
-    const badCollector = new TrainingDataCollector('/dev/null/impossible/path');
-    const result = await badCollector.collect(makeParams());
+    // Force appendFile to reject to simulate a filesystem failure
+    const spy = vi.spyOn(fs.promises, 'appendFile').mockRejectedValueOnce(
+      new Error('EACCES: permission denied')
+    );
+
+    const result = await collector.collect(makeParams());
 
     // Should return gracefully, not throw
     expect(result.written).toBe(false);
+
+    spy.mockRestore();
   });
 });

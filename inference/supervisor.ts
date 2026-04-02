@@ -24,6 +24,7 @@ import { getTrajectoryLogger } from './trajectory.js';
 import { isProviderHealthy, recordSuccess, recordFailure } from './providers/circuit-breaker.js';
 import { getSupermemoryClient } from './memory/supermemory.js';
 import { extractObservations } from './observation-extractor.js';
+import { getTrainingDataCollector } from './training-data.js';
 
 // In-character fallback messages when no LLM is available at all
 const NO_LLM_FALLBACKS: Record<string, string> = {
@@ -79,6 +80,8 @@ export interface SupervisorOptions {
   userTier?: UserTier;
   /** User ID for trajectory logging */
   userId?: string;
+  /** User's privacy mode — 'private' forces local-only, 'shared' enables training data collection */
+  privacyMode?: 'private' | 'shared';
   /**
    * Optional SQLite memory fallback — returns string array of memories.
    * Used when Supermemory is unavailable. Entry points that have SQLite
@@ -380,6 +383,18 @@ export async function supervisedChat(
     }
   }
 
+  // ── Privacy enforcement ──
+  // Undefined privacyMode defaults to 'private' (safe default — opt-in to shared)
+  const privacyMode = options?.privacyMode ?? 'private';
+  if (privacyMode === 'private') {
+    if (options) {
+      options.forceLocal = true;
+    } else {
+      options = { forceLocal: true };
+    }
+    console.log(`[supervisor] Privacy mode: ${privacyMode}, enforcing local-only`);
+  }
+
   // Decide route
   const escalate = shouldEscalate(userMessage, conversationDepth, config, options);
   const localAvailable = await isLocalLlmAvailable();
@@ -526,6 +541,25 @@ export async function supervisedChat(
   }
 
   const latencyMs = performance.now() - start;
+
+  // ── Training data collection ──
+  // Only collect when privacy mode is 'shared' AND the response came from the frontier (supervisor route).
+  // Fire-and-forget — errors are swallowed by the collector.
+  if (privacyMode === 'shared' && route === 'supervisor') {
+    const systemPrompt = messages[0]?.role === 'system' ? messages[0].content : '';
+    getTrainingDataCollector().collect({
+      userId: userId ?? 'unknown',
+      companionId,
+      privacyMode,
+      systemPrompt,
+      userMessage,
+      assistantResponse: content,
+      route,
+      provider: (usedProvider ?? 'unknown') as string,
+      model: frontierModel ?? config.localModel,
+      latencyMs,
+    }).catch(() => {});
+  }
 
   // Log for auditing
   logSupervisorCall({

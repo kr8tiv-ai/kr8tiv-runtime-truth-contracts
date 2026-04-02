@@ -114,6 +114,24 @@ const chatBodySchema = {
   additionalProperties: false,
 };
 
+// ── Privacy mode helper ───────────────────────────────────────────────────
+
+/**
+ * Read the user's privacy_mode from user_preferences.
+ * Defaults to 'private' if no row exists or on any error (safe default).
+ */
+function loadPrivacyMode(db: any, userId: string): 'private' | 'shared' {
+  try {
+    const row = db.prepare(
+      `SELECT privacy_mode FROM user_preferences WHERE user_id = ?`
+    ).get(userId) as { privacy_mode: string } | undefined;
+    if (row?.privacy_mode === 'shared') return 'shared';
+    return 'private';
+  } catch {
+    return 'private';
+  }
+}
+
 // ── Soul injection helper ─────────────────────────────────────────────────
 
 interface SoulRow {
@@ -221,6 +239,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     `).run(crypto.randomUUID(), conversationId, message.trim());
 
     // Generate response via supervisor (two-brain architecture)
+    const privacyMode = loadPrivacyMode(fastify.context.db, userId);
     const result = await supervisedChat(
       messages,
       companionId,
@@ -228,6 +247,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
       {
         taskType: 'chat',
         userId,
+        privacyMode,
         memoryFallback: async () => {
           const rows = fastify.context.db.prepare(`
             SELECT memory_type, content FROM memories
@@ -412,6 +432,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
     } catch (err) {
       // Streaming failed — fall back to non-streaming supervisor call
       try {
+        const streamPrivacyMode = loadPrivacyMode(fastify.context.db, userId);
         const result = await supervisedChat(
           messages,
           companionId,
@@ -419,6 +440,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
           {
             taskType: 'chat',
             userId,
+            privacyMode: streamPrivacyMode,
             memoryFallback: async () => {
               const rows = fastify.context.db.prepare(`
                 SELECT memory_type, content FROM memories
