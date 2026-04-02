@@ -8,6 +8,7 @@ interface CompanionSceneProps {
   glbUrl: string;
   autoRotate?: boolean;
   interactive?: boolean;
+  initialRotation?: [number, number, number];
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function CompanionScene({
   glbUrl,
   autoRotate = true,
   interactive = false,
+  initialRotation,
   className = '',
 }: CompanionSceneProps) {
   return (
@@ -45,6 +47,7 @@ export function CompanionScene({
             url={glbUrl}
             autoRotate={autoRotate}
             interactive={interactive}
+            initialRotation={initialRotation}
           />
         </Canvas>
       </Suspense>

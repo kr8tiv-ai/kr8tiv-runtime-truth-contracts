@@ -28,6 +28,8 @@ export interface CompanionData {
   modelReady: boolean;
   /** Arweave URI for the GLB model (set after Irys upload) */
   arweaveModelUri?: string;
+  /** Initial rotation [x, y, z] in radians to correct GLB orientation */
+  modelRotation?: [number, number, number];
   /** Frontier AI model powering this companion (for NFT owners) */
   frontierModel: CompanionFrontierModel;
 }
@@ -56,6 +58,7 @@ export const COMPANIONS: Record<string, CompanionData> = {
     ],
     glbUrl: '/models/cipher.glb',
     modelReady: true,
+    modelRotation: [0, Math.PI, 0],
     frontierModel: { provider: 'OpenAI', modelId: 'gpt-5.4', modelName: 'GPT-5.4', contextWindow: 1_050_000 },
   },
 

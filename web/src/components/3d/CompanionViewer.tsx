@@ -18,6 +18,8 @@ interface CompanionViewerProps {
   interactive?: boolean;
   /** Set false to show 2D even if glbUrl is provided */
   modelReady?: boolean;
+  /** Initial rotation [x, y, z] in radians to correct GLB orientation */
+  initialRotation?: [number, number, number];
 }
 
 function isWebGLAvailable(): boolean {
@@ -37,6 +39,7 @@ export function CompanionViewer({
   className = '',
   interactive = false,
   modelReady = false,
+  initialRotation,
 }: CompanionViewerProps) {
   const [hovered, setHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -63,6 +66,7 @@ export function CompanionViewer({
           glbUrl={resolvedGlbUrl!}
           autoRotate={!hovered}
           interactive={interactive || hovered}
+          initialRotation={initialRotation}
           className="h-full w-full"
         />
       </div>

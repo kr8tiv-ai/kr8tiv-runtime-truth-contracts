@@ -8,6 +8,7 @@
 import { use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { getCompanion } from '@/lib/companions';
 import { useCompanions } from '@/hooks/useCompanions';
@@ -82,6 +83,56 @@ export default function CompanionDetailPage({
   const isActive = ownedEntry?.isActive ?? false;
   const traits = COMPANION_TRAITS[id] ?? COMPANION_TRAITS['cipher']!;
 
+  // Gate: if user doesn't own this companion, show Mint to Unlock
+  if (!isOwned) {
+    return (
+      <motion.div
+        className="space-y-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <Link
+          href="/dashboard/collection"
+          className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+        >
+          {'\u2190'} Back to Collection
+        </Link>
+
+        <GlassCard className="p-8 sm:p-12 text-center" hover={false}>
+          <div className="relative mx-auto h-48 w-48 rounded-2xl overflow-hidden mb-6">
+            <Image
+              src={companion.images[0]}
+              alt={companion.name}
+              fill
+              className="object-cover blur-sm opacity-60"
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+              <span className="text-5xl mb-3">{'\uD83D\uDD12'}</span>
+            </div>
+          </div>
+          <h1 className="font-display text-3xl font-bold text-white mb-2">
+            {companion.name}
+          </h1>
+          <p className="text-white/40 font-mono text-sm mb-2">{companion.species}</p>
+          <p className="text-white/50 text-sm max-w-md mx-auto mb-8">
+            {companion.description}
+          </p>
+          <Button
+            variant="primary"
+            onClick={() => claimCompanion(id)}
+            disabled={claiming}
+          >
+            {claiming ? 'Minting...' : `Mint ${companion.name} to Unlock`}
+          </Button>
+          <p className="mt-4 text-xs text-white/25">
+            Mint this KIN to access their full profile, chat, and abilities.
+          </p>
+        </GlassCard>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       className="space-y-8"
@@ -107,6 +158,7 @@ export default function CompanionDetailPage({
           glbUrl={companion.glbUrl}
           modelReady={companion.modelReady}
           color={companion.color}
+          initialRotation={companion.modelRotation}
         />
 
         {/* Info Panel */}
@@ -130,7 +182,7 @@ export default function CompanionDetailPage({
           </div>
 
           {/* Status Badge */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {isOwned ? (
               <>
                 <Badge color="cyan">Owned</Badge>
@@ -138,6 +190,20 @@ export default function CompanionDetailPage({
               </>
             ) : (
               <Badge color="muted">Not Owned</Badge>
+            )}
+            {/* NFT on-chain link */}
+            {ownedEntry?.nftMintAddress && !ownedEntry.nftMintAddress.startsWith('kin-') && (
+              <a
+                href={`https://explorer.solana.com/address/${ownedEntry.nftMintAddress}${process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta' ? '' : '?cluster=devnet'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-[#AB6DFE]/30 bg-[#AB6DFE]/10 px-3 py-1 text-[11px] font-mono text-[#AB6DFE] hover:bg-[#AB6DFE]/20 transition-colors"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/>
+                </svg>
+                View NFT on Solana
+              </a>
             )}
           </div>
 

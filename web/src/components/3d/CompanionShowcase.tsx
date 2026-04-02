@@ -23,6 +23,7 @@ interface CompanionShowcaseProps {
   glbUrl: string;
   modelReady: boolean;
   color: 'cyan' | 'magenta' | 'gold';
+  initialRotation?: [number, number, number];
   className?: string;
 }
 
@@ -43,6 +44,7 @@ export function CompanionShowcase({
   glbUrl,
   modelReady,
   color,
+  initialRotation,
   className = '',
 }: CompanionShowcaseProps) {
   const [selectedImage, setSelectedImage] = useState(0);
@@ -113,6 +115,7 @@ export function CompanionShowcase({
                 glbUrl={glbUrl}
                 mouseX={mousePos.x}
                 mouseY={mousePos.y}
+                initialRotation={initialRotation}
                 className="h-full w-full"
               />
               {/* Label */}

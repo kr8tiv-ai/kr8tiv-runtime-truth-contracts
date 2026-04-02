@@ -62,20 +62,17 @@ export function DashboardTopbar() {
           </div>
         </button>
 
-        {/* Logo */}
+        {/* Logo — matches kin-by-kr8tiv source */}
         <div className="flex items-center gap-2">
-          <span className="text-xl" aria-hidden="true">
-            🐙
-          </span>
           <span
-            className="font-display text-lg font-bold text-cyan"
-            style={{
-              textShadow:
-                '0 0 7px rgba(0,240,255,0.6), 0 0 20px rgba(0,240,255,0.4)',
-            }}
+            className="font-display text-xl font-extrabold tracking-[-0.04em] uppercase"
+            style={{ color: '#fff' }}
           >
             KIN
           </span>
+          <a href="https://kr8tiv.ai" target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+            <img src="/kr8tiv-logo.png" alt="KR8TIV" style={{ height: '16px', width: 'auto', filter: 'brightness(2)' }} />
+          </a>
         </div>
 
         {/* User Avatar */}

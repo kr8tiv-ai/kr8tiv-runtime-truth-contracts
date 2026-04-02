@@ -8,12 +8,14 @@ interface ModelLoaderProps {
   url: string;
   autoRotate?: boolean;
   interactive?: boolean;
+  initialRotation?: [number, number, number];
 }
 
 export function ModelLoader({
   url,
   autoRotate = true,
   interactive = false,
+  initialRotation,
 }: ModelLoaderProps) {
   const { scene } = useGLTF(url);
 
@@ -30,8 +32,12 @@ export function ModelLoader({
       cloned.scale.setScalar(2 / maxDim);
     }
 
+    if (initialRotation) {
+      cloned.rotation.set(initialRotation[0], initialRotation[1], initialRotation[2]);
+    }
+
     return cloned;
-  }, [scene]);
+  }, [scene, initialRotation]);
 
   return (
     <>

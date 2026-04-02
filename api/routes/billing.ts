@@ -354,6 +354,13 @@ const billingRoutes: FastifyPluginAsync = async (fastify) => {
                   `).run(ucId, kinUserId, mintCompanionId, mintResult.mintAddress);
                 }
 
+                // Save wallet address to user account for future NFT lookups
+                try {
+                  db.prepare(`
+                    UPDATE users SET wallet_address = COALESCE(wallet_address, ?) WHERE id = ? AND wallet_address IS NULL
+                  `).run(mintWallet, kinUserId);
+                } catch { /* wallet_address column may not exist yet */ }
+
                 console.log(`[Mint] Companion ${mintCompanionId} minted (${mintResult.source}) for user ${kinUserId} → ${mintResult.mintAddress.slice(0, 12)}...`);
               } catch (mintErr) {
                 console.error('[Mint] Failed to mint companion:', mintErr);

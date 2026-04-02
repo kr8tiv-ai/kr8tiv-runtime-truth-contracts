@@ -14,6 +14,7 @@ interface InteractiveSceneProps {
   glbUrl: string;
   mouseX: number; // -1 to 1
   mouseY: number; // -1 to 1
+  initialRotation?: [number, number, number];
   className?: string;
 }
 
@@ -25,10 +26,12 @@ function FollowingModel({
   url,
   mouseX,
   mouseY,
+  initialRotation,
 }: {
   url: string;
   mouseX: number;
   mouseY: number;
+  initialRotation?: [number, number, number];
 }) {
   const { scene } = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
@@ -54,8 +57,11 @@ function FollowingModel({
     if (!groupRef.current) return;
 
     // Update target based on mouse position (subtle — max ~15 degrees)
-    targetRotation.current.y = mouseX * 0.25;
-    targetRotation.current.x = mouseY * 0.12;
+    // Add initialRotation offset to correct GLB model orientation
+    const baseY = initialRotation?.[1] ?? 0;
+    const baseX = initialRotation?.[0] ?? 0;
+    targetRotation.current.y = baseY + mouseX * 0.25;
+    targetRotation.current.x = baseX + mouseY * 0.12;
 
     // Smooth lerp toward target (gentle, organic feel)
     const lerpSpeed = 3 * delta;
@@ -107,6 +113,7 @@ export function InteractiveScene({
   glbUrl,
   mouseX,
   mouseY,
+  initialRotation,
   className = '',
 }: InteractiveSceneProps) {
   return (
@@ -136,7 +143,7 @@ export function InteractiveScene({
           <directionalLight position={[3, -2, 3]} intensity={0.2} color="#ff00aa" />
 
           {/* Model with mouse following */}
-          <FollowingModel url={glbUrl} mouseX={mouseX} mouseY={mouseY} />
+          <FollowingModel url={glbUrl} mouseX={mouseX} mouseY={mouseY} initialRotation={initialRotation} />
 
           {/* Ground shadow */}
           <ContactShadows

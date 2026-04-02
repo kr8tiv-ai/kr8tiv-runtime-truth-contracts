@@ -17,6 +17,7 @@ export interface CollectionItem {
   claimedAt: string;
   isActive: boolean;
   rarity: 'genesis';
+  nftMintAddress?: string;
 }
 
 interface UseCollectionResult {
@@ -30,23 +31,23 @@ interface UseCollectionResult {
 export function useCollection(): UseCollectionResult {
   const { companions, loading, error, refresh } = useCompanions();
 
-  const items = useMemo<CollectionItem[]>(() => {
-    if (!companions || companions.length === 0) return [];
+  const items = useMemo(() => {
+    if (!companions || companions.length === 0) return [] as CollectionItem[];
 
-    return companions
-      .map((uc: UserCompanion) => {
-        const companionData = getCompanion(uc.companion.id);
-        if (!companionData) return null;
-
-        return {
-          companionId: uc.companion.id,
-          companionData,
-          claimedAt: uc.claimedAt,
-          isActive: uc.isActive,
-          rarity: 'genesis' as const,
-        };
-      })
-      .filter((item): item is CollectionItem => item !== null);
+    const result: CollectionItem[] = [];
+    for (const uc of companions) {
+      const companionData = getCompanion(uc.companion.id);
+      if (!companionData) continue;
+      result.push({
+        companionId: uc.companion.id,
+        companionData,
+        claimedAt: uc.claimedAt,
+        isActive: uc.isActive,
+        rarity: 'genesis' as const,
+        nftMintAddress: uc.nftMintAddress,
+      });
+    }
+    return result;
   }, [companions]);
 
   return {

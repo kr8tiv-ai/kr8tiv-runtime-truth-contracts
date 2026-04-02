@@ -9,6 +9,9 @@ export interface User {
   firstName: string;
   lastName?: string;
   tier: 'free' | 'hatchling' | 'elder' | 'hero';
+  email?: string;
+  walletAddress?: string;
+  authProvider?: string; // 'telegram' | 'google' | 'solana' | comma-separated combo
   createdAt: string;
   onboardingComplete?: boolean;
 }

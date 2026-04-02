@@ -96,7 +96,7 @@ export async function createServer(config: ApiConfig = {}) {
     })(),
     databasePath: config.databasePath ?? process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'kin.db'),
     corsOrigins: config.corsOrigins ?? (environment === 'development'
-      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:5173']
+      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001', 'http://127.0.0.1:3002', 'http://127.0.0.1:5173']
       : ['https://www.meetyourkin.com', 'https://meetyourkin.com']),
     rateLimitMax: config.rateLimitMax ?? 100,
     environment: environment as 'development' | 'production' | 'test',
@@ -144,6 +144,11 @@ export async function createServer(config: ApiConfig = {}) {
     `ALTER TABLE users ADD COLUMN free_until TEXT`,
     `ALTER TABLE users ADD COLUMN genesis_tier TEXT`,
     `ALTER TABLE users ADD COLUMN genesis_discount INTEGER NOT NULL DEFAULT 0`,
+    // Multi-auth: Google OAuth, Solana wallet sign-in
+    `ALTER TABLE users ADD COLUMN google_id TEXT`,
+    `ALTER TABLE users ADD COLUMN email TEXT`,
+    `ALTER TABLE users ADD COLUMN wallet_address TEXT`,
+    `ALTER TABLE users ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'telegram'`,
   ];
   for (const migration of safeMigrations) {
     try { db.exec(migration); } catch { /* column already exists — safe to ignore */ }

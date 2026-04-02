@@ -48,15 +48,17 @@ export function HeroSection() {
             <source src={HERO_VIDEO_SRC} type="video/mp4" />
           </video>
         )}
-        {/* Static image fallback (always rendered behind video, shows when video fails) */}
-        <Image
-          src="/creatures/cipher-1.jpg"
-          alt=""
-          fill
-          className="object-cover object-center scale-110"
-          priority
-          sizes="100vw"
-        />
+        {/* Static image fallback — only shows when video fails */}
+        {videoFailed && (
+          <Image
+            src="/creatures/cipher-1.jpg"
+            alt=""
+            fill
+            className="object-cover object-center scale-110"
+            priority
+            sizes="100vw"
+          />
+        )}
         {/* Darker gradient overlays for dramatic effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-black/70" />
@@ -105,12 +107,10 @@ export function HeroSection() {
 
         <motion.h1
           variants={fadeUp}
-          className="font-display font-extrabold uppercase leading-[0.9] tracking-[-0.04em] text-white mb-10"
-          style={{ fontSize: 'clamp(5rem, 12vw, 14rem)' }}
+          className="font-display font-extrabold leading-[0.9] tracking-[-0.04em] text-white mb-10"
+          style={{ fontSize: 'clamp(3rem, 8vw, 8rem)' }}
         >
-          WELCOME
-          <br />
-          TO KIN
+          Meet Your KIN.
         </motion.h1>
 
         <motion.div

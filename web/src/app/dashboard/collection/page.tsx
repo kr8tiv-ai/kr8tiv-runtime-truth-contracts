@@ -18,6 +18,124 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 
+const SOLANA_EXPLORER = 'https://explorer.solana.com/address';
+const SOLANA_CLUSTER = process.env.NEXT_PUBLIC_SOLANA_NETWORK === 'mainnet-beta' ? '' : '?cluster=devnet';
+
+function CompanionCardInner({
+  companion,
+  isOwned,
+  isActive,
+  nftMintAddress,
+}: {
+  companion: CompanionData;
+  isOwned: boolean;
+  isActive: boolean;
+  nftMintAddress?: string;
+}) {
+  return (
+    <div
+      className={`group rounded-[24px] border bg-surface overflow-hidden transition-all duration-400 ${
+        isOwned
+          ? `border-${companion.color}/20 hover:-translate-y-[10px]`
+          : 'border-white/10 opacity-75 cursor-default'
+      }`}
+      onMouseEnter={(e) => {
+        if (isOwned) {
+          const glowMap: Record<string, string> = {
+            cyan: '0 10px 30px rgba(0,240,255,0.12)',
+            magenta: '0 10px 30px rgba(255,0,170,0.12)',
+            gold: '0 10px 30px rgba(255,215,0,0.12)',
+          };
+          e.currentTarget.style.boxShadow = glowMap[companion.color] ?? 'none';
+          e.currentTarget.style.borderColor = `var(--color-${companion.color})`;
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.borderColor = '';
+      }}
+    >
+      <div className="relative aspect-square overflow-hidden">
+        <CompanionViewer
+          glbUrl={companion.glbUrl}
+          fallbackImage={companion.images[0]}
+          alt={companion.name}
+          modelReady={companion.modelReady}
+          initialRotation={companion.modelRotation}
+          className="h-full w-full"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        {isActive && (
+          <div className="absolute top-4 left-4">
+            <Badge color="cyan">Active</Badge>
+          </div>
+        )}
+        {isOwned && (
+          <div className="absolute top-4 right-4">
+            <Badge color="gold">Owned</Badge>
+          </div>
+        )}
+        {!isOwned && (
+          <>
+            <div className="absolute top-4 right-4">
+              <span className="text-2xl drop-shadow-lg">{companion.emoji}</span>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+              <span className="text-4xl mb-2">{'\uD83D\uDD12'}</span>
+              <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/80">
+                Mint to Unlock
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-display text-lg font-bold text-white">
+            {companion.name}
+          </h3>
+          <span
+            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-mono border-${companion.color}/20 bg-${companion.color}/10`}
+            style={{ color: `var(--color-${companion.color})` }}
+          >
+            {companion.species}
+          </span>
+        </div>
+        <p className="text-sm text-white/50 leading-relaxed">
+          {companion.tagline}
+        </p>
+        <div className="mt-3 flex items-center gap-2 text-xs text-white/25 font-mono">
+          <span>{companion.frontierModel.provider}</span>
+          <span>{'\u00B7'}</span>
+          <span>{companion.frontierModel.modelName}</span>
+        </div>
+        {/* NFT on-chain link */}
+        {isOwned && nftMintAddress && !nftMintAddress.startsWith('kin-') && (
+          <a
+            href={`${SOLANA_EXPLORER}/${nftMintAddress}${SOLANA_CLUSTER}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#AB6DFE]/20 bg-[#AB6DFE]/10 px-3 py-1 text-[10px] font-mono text-[#AB6DFE] hover:bg-[#AB6DFE]/20 transition-colors"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/>
+            </svg>
+            View on Solana
+          </a>
+        )}
+        {isOwned && nftMintAddress && nftMintAddress.startsWith('kin-') && (
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold/20 bg-gold/10 px-3 py-1 text-[10px] font-mono text-gold/60">
+            Pending on-chain mint
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CollectionPage() {
   const { items, loading, error, refresh } = useCollection();
   const { conversations } = useConversations();
@@ -104,6 +222,7 @@ export default function CollectionPage() {
           const isOwned = ownedIds.has(companion.id);
           const ownedItem = items.find((i) => i.companionId === companion.id);
           const isActive = ownedItem?.isActive ?? false;
+          const nftMintAddress = ownedItem?.nftMintAddress;
 
           return (
             <motion.div
@@ -112,102 +231,16 @@ export default function CollectionPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.08 }}
             >
-              <Link
-                href={`/dashboard/companion/${companion.id}`}
-                className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50 rounded-lg"
-              >
-                <div
-                  className={`group rounded-[24px] border bg-surface overflow-hidden transition-all duration-400 hover:-translate-y-[10px] ${
-                    isOwned
-                      ? `border-${companion.color}/20`
-                      : 'border-white/10 opacity-75'
-                  }`}
-                  onMouseEnter={(e) => {
-                    if (isOwned) {
-                      const glowMap: Record<string, string> = {
-                        cyan: '0 10px 30px rgba(0,240,255,0.12)',
-                        magenta: '0 10px 30px rgba(255,0,170,0.12)',
-                        gold: '0 10px 30px rgba(255,215,0,0.12)',
-                      };
-                      e.currentTarget.style.boxShadow = glowMap[companion.color] ?? 'none';
-                      e.currentTarget.style.borderColor = `var(--color-${companion.color})`;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.borderColor = '';
-                  }}
+              {isOwned ? (
+                <Link
+                  href={`/dashboard/companion/${companion.id}`}
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/50 rounded-lg"
                 >
-                  {/* Companion Image — square aspect to show full image */}
-                  <div className="relative aspect-square overflow-hidden">
-                    <CompanionViewer
-                      glbUrl={companion.glbUrl}
-                      fallbackImage={companion.images[0]}
-                      alt={companion.name}
-                      modelReady={companion.modelReady}
-                      className="h-full w-full"
-                    />
-                    {/* Bottom gradient fade */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                    {/* Badges */}
-                    {isActive && (
-                      <div className="absolute top-4 left-4">
-                        <Badge color="cyan">Active</Badge>
-                      </div>
-                    )}
-
-                    {isOwned && (
-                      <div className="absolute top-4 right-4">
-                        <Badge color="gold">Owned</Badge>
-                      </div>
-                    )}
-
-                    {/* Emoji overlay */}
-                    {!isOwned && (
-                      <div className="absolute top-4 right-4">
-                        <span className="text-2xl drop-shadow-lg">{companion.emoji}</span>
-                      </div>
-                    )}
-
-                    {/* Lock overlay for unowned */}
-                    {!isOwned && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                        <span className="text-4xl mb-2">{'\uD83D\uDD12'}</span>
-                        <span className="font-mono text-xs uppercase tracking-[0.15em] text-white/80">
-                          Mint to Unlock
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info — matches meetyourkin.com card content padding */}
-                  <div className="p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-display text-lg font-bold text-white">
-                        {companion.name}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-mono border-${companion.color}/20 bg-${companion.color}/10`}
-                        style={{ color: `var(--color-${companion.color})` }}
-                      >
-                        {companion.species}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-white/50 leading-relaxed">
-                      {companion.tagline}
-                    </p>
-
-                    {/* Model info */}
-                    <div className="mt-3 flex items-center gap-2 text-xs text-white/25 font-mono">
-                      <span>{companion.frontierModel.provider}</span>
-                      <span>{'\u00B7'}</span>
-                      <span>{companion.frontierModel.modelName}</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                  <CompanionCardInner companion={companion} isOwned={isOwned} isActive={isActive} nftMintAddress={nftMintAddress} />
+                </Link>
+              ) : (
+                <CompanionCardInner companion={companion} isOwned={isOwned} isActive={isActive} />
+              )}
             </motion.div>
           );
         })}
