@@ -33,7 +33,8 @@
     "companions/**/*.ts",
     "voice/**/*.ts",
     "runtime/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "training/**/*.ts"
   ],
   "exclude": [
     "node_modules",
