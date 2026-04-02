@@ -16,6 +16,7 @@ export interface OnboardingPreferences {
   goals: string[];
   language: string;
   tone: 'friendly' | 'professional' | 'casual' | 'technical';
+  privacyMode: 'private' | 'shared';
 }
 
 export interface OnboardingMemories {
@@ -44,6 +45,7 @@ const DEFAULT_PREFERENCES: OnboardingPreferences = {
   goals: [],
   language: 'en',
   tone: 'friendly',
+  privacyMode: 'private',
 };
 
 const DEFAULT_MEMORIES: OnboardingMemories = {
@@ -130,6 +132,7 @@ export function useOnboarding() {
         goals: state.preferences.goals,
         language: state.preferences.language,
         tone: state.preferences.tone,
+        privacyMode: state.preferences.privacyMode,
         onboardingComplete: true,
       });
 

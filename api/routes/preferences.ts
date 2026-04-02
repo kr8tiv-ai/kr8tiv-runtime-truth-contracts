@@ -11,11 +11,13 @@ interface PreferencesBody {
   goals?: string[];
   language?: string;
   tone?: 'friendly' | 'professional' | 'casual' | 'technical';
+  privacyMode?: 'private' | 'shared';
   onboardingComplete?: boolean;
 }
 
 const VALID_EXPERIENCE_LEVELS = ['beginner', 'intermediate', 'advanced'];
 const VALID_TONES = ['friendly', 'professional', 'casual', 'technical'];
+const VALID_PRIVACY_MODES = ['private', 'shared'];
 
 const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
   // Get user preferences
@@ -23,7 +25,7 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
     const userId = (request.user as { userId: string }).userId;
 
     const row = fastify.context.db.prepare(`
-      SELECT display_name, experience_level, goals, language, tone, onboarding_complete
+      SELECT display_name, experience_level, goals, language, tone, privacy_mode, onboarding_complete
       FROM user_preferences
       WHERE user_id = ?
     `).get(userId) as any;
@@ -35,6 +37,7 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
         goals: [],
         language: 'en',
         tone: 'friendly',
+        privacyMode: 'private',
         onboardingComplete: false,
       };
     }
@@ -52,6 +55,7 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
       goals,
       language: row.language ?? 'en',
       tone: row.tone ?? 'friendly',
+      privacyMode: row.privacy_mode ?? 'private',
       onboardingComplete: row.onboarding_complete === 1,
     };
   });
@@ -71,6 +75,12 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
     if (body.tone && !VALID_TONES.includes(body.tone)) {
       reply.status(400);
       return { error: 'Invalid tone' };
+    }
+
+    // Validate privacy mode
+    if (body.privacyMode && !VALID_PRIVACY_MODES.includes(body.privacyMode)) {
+      reply.status(400);
+      return { error: 'Invalid privacy mode' };
     }
 
     // Validate display name length
@@ -115,6 +125,10 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
         updates.push('tone = ?');
         params.push(body.tone);
       }
+      if (body.privacyMode !== undefined) {
+        updates.push('privacy_mode = ?');
+        params.push(body.privacyMode);
+      }
       if (body.onboardingComplete !== undefined) {
         updates.push('onboarding_complete = ?');
         params.push(body.onboardingComplete ? 1 : 0);
@@ -133,8 +147,8 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
       // Insert new preferences
       const id = `pref-${crypto.randomUUID()}`;
       fastify.context.db.prepare(`
-        INSERT INTO user_preferences (id, user_id, display_name, experience_level, goals, language, tone, onboarding_complete)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO user_preferences (id, user_id, display_name, experience_level, goals, language, tone, privacy_mode, onboarding_complete)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         userId,
@@ -143,13 +157,14 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
         body.goals ? JSON.stringify(body.goals) : '[]',
         body.language ?? 'en',
         body.tone ?? 'friendly',
+        body.privacyMode ?? 'private',
         body.onboardingComplete ? 1 : 0,
       );
     }
 
     // Return updated preferences
     const row = fastify.context.db.prepare(`
-      SELECT display_name, experience_level, goals, language, tone, onboarding_complete
+      SELECT display_name, experience_level, goals, language, tone, privacy_mode, onboarding_complete
       FROM user_preferences
       WHERE user_id = ?
     `).get(userId) as any;
@@ -167,6 +182,7 @@ const preferencesRoutes: FastifyPluginAsync = async (fastify) => {
       goals,
       language: row.language ?? 'en',
       tone: row.tone ?? 'friendly',
+      privacyMode: row.privacy_mode ?? 'private',
       onboardingComplete: row.onboarding_complete === 1,
     };
   });

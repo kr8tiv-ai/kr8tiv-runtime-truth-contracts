@@ -251,6 +251,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   goals TEXT,                      -- JSON array of goals
   language TEXT DEFAULT 'en',      -- ISO 639-1 language code
   tone TEXT DEFAULT 'friendly' CHECK (tone IN ('friendly', 'professional', 'casual', 'technical')),
+  privacy_mode TEXT DEFAULT 'private' CHECK (privacy_mode IN ('private', 'shared')),
   onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
@@ -635,3 +636,6 @@ CREATE INDEX IF NOT EXISTS idx_companion_souls_companion ON companion_souls(comp
 -- Migration 2: Genesis NFT tracking
 -- ALTER TABLE users ADD COLUMN genesis_tier TEXT;
 -- ALTER TABLE users ADD COLUMN genesis_discount INTEGER NOT NULL DEFAULT 0;
+
+-- Migration 3: Privacy mode for training data pipeline
+-- ALTER TABLE user_preferences ADD COLUMN privacy_mode TEXT DEFAULT 'private' CHECK (privacy_mode IN ('private', 'shared'));

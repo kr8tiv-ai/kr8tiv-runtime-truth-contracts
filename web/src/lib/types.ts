@@ -22,6 +22,7 @@ export interface UserPreferences {
   goals: string[];
   language: string;
   tone: 'friendly' | 'professional' | 'casual' | 'technical';
+  privacyMode?: 'private' | 'shared';
   onboardingComplete: boolean;
 }
 
