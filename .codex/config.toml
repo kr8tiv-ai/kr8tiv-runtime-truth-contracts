@@ -1,0 +1,17 @@
+# Codex CLI — Project Configuration
+# Docs: https://developers.openai.com/codex/config-advanced
+
+# Use the latest Codex model
+model = "gpt-5.3-codex"
+
+# Sandbox: allow writes to the workspace, network off by default
+sandbox = "workspace-write"
+
+# Approval policy: auto-approve safe ops, ask on destructive ones
+approval_policy = "on-request"
+
+# Web search: use cached results by default
+web_search = "cached"
+
+# Larger byte limit for AGENTS.md to avoid truncation
+project_doc_max_bytes = 65536

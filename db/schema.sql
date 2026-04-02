@@ -639,3 +639,20 @@ CREATE INDEX IF NOT EXISTS idx_companion_souls_companion ON companion_souls(comp
 
 -- Migration 3: Privacy mode for training data pipeline
 -- ALTER TABLE user_preferences ADD COLUMN privacy_mode TEXT DEFAULT 'private' CHECK (privacy_mode IN ('private', 'shared'));
+
+-- ============================================================================
+-- Training Data Curation (builder review of SFT training pairs)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS training_curation (
+  id TEXT PRIMARY KEY,
+  entry_hash TEXT NOT NULL,
+  companion_id TEXT NOT NULL,
+  verdict TEXT NOT NULL DEFAULT 'pending' CHECK (verdict IN ('pending', 'approved', 'rejected')),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000),
+  UNIQUE(entry_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_training_curation_companion ON training_curation(companion_id);
+CREATE INDEX IF NOT EXISTS idx_training_curation_hash ON training_curation(entry_hash);
