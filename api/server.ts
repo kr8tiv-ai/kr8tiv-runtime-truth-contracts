@@ -233,13 +233,8 @@ export async function createServer(config: ApiConfig = {}) {
 
   // Protected routes
   await fastify.register(async (protectedFastify) => {
-    // JWT verification hook (skipped in development for easy local testing)
+    // JWT verification hook — all environments require valid JWT
     protectedFastify.addHook('onRequest', async (request, reply) => {
-      if (resolvedConfig.environment === 'development') {
-        // Auto-inject a dev user so protected routes work without auth
-        (request as any).user = { userId: 'user-dev', telegramId: 999999, tier: 'free' };
-        return;
-      }
       try {
         await request.jwtVerify();
       } catch {

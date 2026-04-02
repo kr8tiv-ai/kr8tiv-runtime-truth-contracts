@@ -148,12 +148,13 @@ describe('Auth Routes', () => {
     expect(body.token).toBeDefined();
     expect(typeof body.token).toBe('string');
     expect(body.user).toBeDefined();
-    expect(body.user.telegram_id).toBe(12345);
-    expect(body.user.first_name).toBe('TestUser');
 
-    // Store for later tests
+    // Store for later tests (before detailed assertions so downstream tests work)
     authToken = body.token;
     testUserId = body.user.id;
+
+    expect(body.user.telegramId).toBe(12345);
+    expect(body.user.firstName).toBe('TestUser');
   });
 
   it('POST /auth/dev-login returns same user on second call with same telegramId', async () => {
@@ -484,12 +485,12 @@ describe('Memory Routes', () => {
     }
   });
 
-  it('GET /preferences returns memories grouped by companion', async () => {
+  it('GET /memory-preferences returns memories grouped by companion', async () => {
     if (skip()) return;
 
     const response = await server!.inject({
       method: 'GET',
-      url: '/preferences',
+      url: '/memory-preferences',
       headers: { authorization: `Bearer ${authToken}` },
     });
 
