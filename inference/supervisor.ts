@@ -386,8 +386,8 @@ export async function supervisedChat(
 
   // Route: supervisor requested but no API key → fall back to local
   // Route: local requested but Ollama down → fall back to supervisor
-  let route: SupervisorRoute;
-  let content: string;
+  let route: SupervisorRoute = 'local_fallback_supervisor';
+  let content: string = NO_LLM_FALLBACKS[companionId] ?? NO_LLM_FALLBACKS['cipher']!;
 
   // Determine if user qualifies for frontier model
   const userTier = options?.userTier ?? 'free';

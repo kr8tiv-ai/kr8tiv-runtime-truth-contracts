@@ -13,7 +13,7 @@
  * GET    /skills/request/mine       User's submitted requests
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
@@ -204,7 +204,7 @@ const skillsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { id: string };
     Body: ToggleBody;
-  }>('/skills/:id/toggle', { schema: { body: toggleSchema } } as any, async (request, reply) => {
+  }>('/skills/:id/toggle', { schema: { body: toggleSchema } } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { id: skillId } = request.params;
     const { active, companionId = null } = request.body;
@@ -251,7 +251,7 @@ const skillsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: SkillRequestBody }>('/skills/request', {
     schema: { body: skillRequestSchema },
     config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { githubRepoUrl } = request.body;
 
@@ -292,7 +292,7 @@ const skillsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { id: string };
     Body: { successUrl?: string; cancelUrl?: string };
-  }>('/skills/request/:id/checkout', async (request, reply) => {
+  }>('/skills/request/:id/checkout', async (request, reply: FastifyReply) => {
     const key = stripeKey();
     if (!key) {
       return { url: null, message: 'Payments coming soon' };

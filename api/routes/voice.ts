@@ -11,7 +11,7 @@
  * @module api/routes/voice
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import {
   VoicePipelineError,
   getVoicePipeline,
@@ -81,7 +81,7 @@ const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: TtsBody }>('/voice/tts', {
     schema: { body: ttsBodySchema },
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const { text, companionId = 'cipher', provider } = request.body;
 
     // Resolve effective provider (explicit > env > default)
@@ -147,7 +147,7 @@ const voiceRoutes: FastifyPluginAsync = async (fastify) => {
       rateLimit: { max: 15, timeWindow: '1 minute' },
       rawBody: true,
     },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     // Read raw body as Buffer
     const audioBuffer = request.body as Buffer;
 
@@ -206,7 +206,7 @@ const voiceRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // ── GET /voice/providers ────────────────────────────────────────────────
-  fastify.get('/voice/providers', async (_request, reply) => {
+  fastify.get('/voice/providers', async (_request, reply: FastifyReply) => {
     // Check all provider availability in parallel
     const [xttsUp, piperUp, whisperUp] = await Promise.all([
       isXttsAvailable(),

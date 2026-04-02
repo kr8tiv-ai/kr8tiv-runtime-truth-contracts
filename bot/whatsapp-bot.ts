@@ -540,7 +540,7 @@ export async function createWhatsAppBot(config: WhatsAppBotConfig = { authDir: D
     socket.ev.on('creds.update', saveCreds);
 
     // ── Connection updates (reconnect logic) ──────────────────────────
-    socket.ev.on('connection.update', async (update) => {
+    socket.ev.on('connection.update', async (update: any) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
@@ -588,7 +588,7 @@ export async function createWhatsAppBot(config: WhatsAppBotConfig = { authDir: D
     });
 
     // ── Message handler ───────────────────────────────────────────────
-    socket.ev.on('messages.upsert', async ({ messages: incomingMessages, type }) => {
+    socket.ev.on('messages.upsert', async ({ messages: incomingMessages, type }: { messages: any[]; type: string }) => {
       // Only process new messages (not history sync)
       if (type !== 'notify') return;
 

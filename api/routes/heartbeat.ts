@@ -12,7 +12,7 @@
  * POST   /recovery/restore/:id   Restore from snapshot (reset error counters)
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ const heartbeatRoutes: FastifyPluginAsync = async (fastify) => {
   // Receive heartbeat from local KIN. UPSERT into heartbeats table.
   fastify.post<{ Body: HeartbeatBody }>('/heartbeat', {
     schema: { body: heartbeatSchema },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const {
       kinId,

@@ -23,6 +23,7 @@
     }
   },
   "include": [
+    "types/**/*.ts",
     "api/**/*.ts",
     "bot/**/*.ts",
     "inference/**/*.ts",

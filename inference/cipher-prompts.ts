@@ -43,7 +43,7 @@ export interface UserPreferences {
 
 export interface TaskContext {
   /** Type of task being performed */
-  type: 'website' | 'component' | 'debug' | 'teach' | 'chat' | 'code';
+  type: 'website' | 'component' | 'debug' | 'teach' | 'chat' | 'code' | 'document' | 'vision' | 'voice';
   /** Current project or file being worked on */
   project?: string;
   /** Specific goals for this task */

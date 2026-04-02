@@ -12,7 +12,7 @@
  *   3. Provides an escalation button that creates a support ticket + alerts
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { FallbackHandler, type Message } from '../../inference/fallback-handler.js';
 
@@ -134,7 +134,7 @@ const supportChatRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: ChatBody }>('/support/chat', {
     schema: { body: supportChatSchema },
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { message, chatId: existingChatId } = request.body;
 

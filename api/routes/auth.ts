@@ -3,7 +3,7 @@
  * Supports: Telegram Login, Google OAuth, Solana Wallet Sign-In, Email/Password
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -130,7 +130,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: TelegramAuth }>('/auth/telegram', {
     schema: { body: telegramAuthSchema },
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const telegramData = request.body;
     
     // Verify Telegram hash
@@ -264,7 +264,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     } as any,
-    async (request, reply) => {
+    async (request, reply: FastifyReply) => {
       const { idToken } = request.body;
       const clientId = process.env.GOOGLE_CLIENT_ID;
       if (!clientId) {
@@ -388,7 +388,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     } as any,
-    async (request, reply) => {
+    async (request, reply: FastifyReply) => {
       const { walletAddress, nonce, signature } = request.body;
 
       // Validate nonce
@@ -478,7 +478,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
       config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
     } as any,
-    async (request, reply) => {
+    async (request, reply: FastifyReply) => {
       const { email, password, firstName } = request.body;
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -551,7 +551,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     } as any,
-    async (request, reply) => {
+    async (request, reply: FastifyReply) => {
       const { email, password } = request.body;
       const normalizedEmail = email.toLowerCase().trim();
 
@@ -680,7 +680,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       },
       config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
     } as any,
-    async (request, reply) => {
+    async (request, reply: FastifyReply) => {
       const { code, state } = request.body;
 
       const clientId = process.env.X_CLIENT_ID;
@@ -798,7 +798,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
   if (fastify.context.config.environment === 'development') {
     fastify.post<{ Body: { telegramId: number; firstName: string } }>(
       '/auth/dev-login',
-      async (request, reply) => {
+      async (request, reply: FastifyReply) => {
         const { telegramId, firstName } = request.body;
 
         // Find or create user

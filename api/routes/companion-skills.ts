@@ -13,7 +13,7 @@
  * GET    /companion-skills/transfer-log         Transfer history
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 
 // ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ const companionSkillsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{
     Params: { companionId: string };
     Body: AccrueBody;
-  }>('/companion-skills/:companionId/accrue', { schema: { body: accrueSchema } } as any, async (request, reply) => {
+  }>('/companion-skills/:companionId/accrue', { schema: { body: accrueSchema } } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { companionId } = request.params;
     const { skillId, xpGained = 10 } = request.body;
@@ -309,7 +309,7 @@ const companionSkillsRoutes: FastifyPluginAsync = async (fastify) => {
   // ── POST /companion-skills/transfer ─────────────────────────────────────
   // Prepare skills for NFT transfer. Skills travel with the NFT.
   // Private memories are stripped — only portable skills + personality move.
-  fastify.post<{ Body: TransferBody }>('/companion-skills/transfer', { schema: { body: transferSchema } } as any, async (request, reply) => {
+  fastify.post<{ Body: TransferBody }>('/companion-skills/transfer', { schema: { body: transferSchema } } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { companionId, nftMintAddress, toUserId, transferTxSig } = request.body;
 

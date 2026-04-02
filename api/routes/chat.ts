@@ -10,7 +10,7 @@
  *   Local Ollama → Groq (free) → Anthropic/OpenAI (paid fallback)
  */
 
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { supervisedChat } from '../../inference/supervisor.js';
 import { FallbackHandler, type Message } from '../../inference/fallback-handler.js';
@@ -157,7 +157,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: ChatBody }>('/chat', {
     schema: { body: chatBodySchema },
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { companionId = 'cipher', message, conversationId: existingConvoId } = request.body;
 
@@ -284,7 +284,7 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{ Body: ChatBody }>('/chat/stream', {
     schema: { body: chatBodySchema },
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
-  } as any, async (request, reply) => {
+  } as any, async (request, reply: FastifyReply) => {
     const userId = (request.user as { userId: string }).userId;
     const { companionId = 'cipher', message, conversationId: existingConvoId } = request.body;
 

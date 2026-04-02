@@ -92,7 +92,7 @@ function getSession(userId: string): UserSession {
 const chatCommand = new SlashCommandBuilder()
   .setName('chat')
   .setDescription('Send a message to your KIN companion')
-  .addStringOption((option) =>
+  .addStringOption((option: any) =>
     option
       .setName('message')
       .setDescription('What you want to say')
@@ -102,7 +102,7 @@ const chatCommand = new SlashCommandBuilder()
 const companionCommand = new SlashCommandBuilder()
   .setName('companion')
   .setDescription('Switch your active KIN companion')
-  .addStringOption((option) =>
+  .addStringOption((option: any) =>
     option
       .setName('name')
       .setDescription('Companion name (cipher, mischief, vortex, forge, aether, catalyst)')
@@ -478,7 +478,7 @@ export function createDiscordBot(config: DiscordBotConfig) {
   // Event: Ready
   // ==========================================================================
 
-  client.once(Events.ClientReady, (readyClient) => {
+  client.once(Events.ClientReady, (readyClient: any) => {
     console.log(`[discord] Logged in as ${readyClient.user.tag}`);
     console.log(`[discord] Serving ${readyClient.guilds.cache.size} guild(s)`);
   });
@@ -530,11 +530,11 @@ export function createDiscordBot(config: DiscordBotConfig) {
   // Event: Warn / Error Logging
   // ==========================================================================
 
-  client.on(Events.Warn, (warning) => {
+  client.on(Events.Warn, (warning: any) => {
     console.warn('[discord] Warning:', warning);
   });
 
-  client.on(Events.Error, (error) => {
+  client.on(Events.Error, (error: any) => {
     console.error('[discord] Client error:', error);
   });
 
