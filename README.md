@@ -29,6 +29,7 @@ The collection spans **6 bloodlines** with **57 individually crafted 3D characte
 | **Skill Portability** | Skills accrue to companions and transfer with NFT sales — the new owner inherits everything the companion learned |
 | **Local-First Privacy** | Ollama integration means conversations can stay on-device. Cloud is opt-in, not required |
 | **57 Unique 3D Characters** | AI-generated from original artwork, rendered in real-time WebGL with interactive rotation |
+| **Privacy-First Training** | Opt-in conversation curation → QLoRA fine-tuning pipeline → custom Ollama models per companion |
 | **Multi-Platform** | Web dashboard, Telegram bot, Discord bot, WhatsApp — same AI, same memory, everywhere |
 
 ---
@@ -112,6 +113,22 @@ Every conversation runs through a **two-brain architecture**:
 
 The Soul Editor lets users set personality traits. A SHA-256 hash of the soul config creates a "soul fingerprint" — if the AI's behavior drifts from the configured personality, the system detects it and recalibrates.
 
+### Training Pipeline (Fine-Tuning)
+
+Each companion can be fine-tuned on its own conversation history to become more personalized over time:
+
+1. **Curation Dashboard** — Admin UI at `/dashboard/training` to review, approve, and filter conversation data with privacy controls
+2. **Privacy-Gated Collection** — Only conversations from users who opted in are eligible. PII is stripped before export.
+3. **JSONL Export** — Curated data exports to instruction-following format compatible with any fine-tuning framework
+4. **QLoRA Fine-Tuning** — Unsloth-powered 4-bit quantized training script (`training/fine-tune.py`) runs on consumer GPUs (16GB VRAM)
+5. **Ollama Deployment** — Auto-generates Modelfiles and deploys fine-tuned models to Ollama for immediate local inference
+
+### Privacy Controls
+
+Users control their data with a two-option privacy toggle during onboarding and in settings:
+- **Standard Mode** — Conversations may be used for companion improvement (opt-in training data)
+- **Maximum Privacy** — All inference stays local via Ollama. No data leaves the device. Training data collection disabled.
+
 ---
 
 ## Tech Stack
@@ -142,10 +159,10 @@ The Soul Editor lets users set personality traits. A SHA-256 hash of the soul co
 ```
 Kin/
 ├── api/                          # Fastify API server
-│   ├── server.ts                 # Main server, DB init, 26 route files
+│   ├── server.ts                 # Main server, DB init, 28 route files
 │   ├── lib/solana-mint.ts        # Candy Machine NFT minting
 │   ├── middleware/               # Rate limiting, auth, token gating
-│   └── routes/                   # Auth, chat, soul, skills, NFT, support, etc.
+│   └── routes/                   # Auth, chat, soul, skills, NFT, training, support, etc.
 │
 ├── web/                          # Next.js 15 frontend
 │   └── src/
@@ -160,9 +177,16 @@ Kin/
 │   ├── soul-drift.ts             # Personality drift detection
 │   ├── companion-prompts.ts      # 6 distinct system prompts
 │   ├── fallback-handler.ts       # Local -> Cloud fallback chain
+│   ├── training-curation.ts      # Privacy-aware conversation curation for fine-tuning
 │   ├── trajectory.ts             # Inference trajectory logging
 │   ├── observation-extractor.ts  # Memory extraction from conversations
 │   └── memory/supermemory.ts     # Semantic memory client
+│
+├── training/                     # Model fine-tuning pipeline
+│   ├── train-companion.ts        # Full training orchestration (curate → export → fine-tune → deploy)
+│   ├── fine-tune.py              # Unsloth QLoRA fine-tuning script (4-bit quantization)
+│   ├── modelfile-generator.ts    # Ollama Modelfile generation per companion
+│   └── requirements.txt         # Python dependencies (unsloth, transformers, peft)
 │
 ├── companions/config.ts          # 6 companion configs with frontier model assignments
 │
@@ -203,9 +227,10 @@ Kin/
 │
 ├── docker-compose.yml            # App + Ollama containers
 ├── Dockerfile                    # Production build
+├── AGENTS.md                     # AI agent contribution guidelines
 ├── package.json                  # Root dependencies
 ├── tsconfig.json                 # TypeScript config
-└── vitest.config.ts              # Test config (181 tests passing)
+└── vitest.config.ts              # Test config (190+ tests passing)
 ```
 
 ---
@@ -263,6 +288,7 @@ Every KIN character follows the same production pipeline:
 | **NFT** | `GET /nft/owned`, `POST /nft/verify` |
 | **Progress** | `GET /progress`, `POST /progress/streak` |
 | **Support** | `POST /support/chat`, `GET /support/tickets` |
+| **Training** | `GET /training/conversations`, `POST /training/curate`, `GET /training/stats`, `POST /training/export` |
 | **Health** | `GET /health/live`, `POST /heartbeat` |
 
 ---
@@ -356,7 +382,7 @@ docker-compose --profile local-llm up -d
 ## Testing
 
 ```bash
-npm test          # 181 tests passing (Vitest)
+npm test          # 190+ tests passing (Vitest)
 npm run typecheck # Zero TypeScript errors
 npm run build     # Production build verification
 ```
@@ -419,8 +445,9 @@ KIN is evaluated across these Bags Hackathon dimensions:
 | **NFT Mints** | 60 Genesis | Ready to deploy |
 | **Token Volume** | Active trading | $KIN on Bags.fm |
 | **Multi-Platform** | Web + Telegram + Discord | Web + Telegram coded |
-| **Test Coverage** | 181 tests | Passing |
-| **API Endpoints** | 50+ | Live |
+| **Test Coverage** | 190+ tests | Passing |
+| **API Endpoints** | 55+ | Live |
+| **Fine-Tuning** | QLoRA pipeline | Ready |
 
 ---
 
