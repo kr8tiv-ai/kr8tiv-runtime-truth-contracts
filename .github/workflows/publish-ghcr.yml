@@ -77,13 +77,15 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=127084939552-9998j1tvlvfda3cpmcrs2rshlhg1i354.apps.googleusercontent.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Publish step summary
         run: |
           {
-            echo "### GHCR publish result — ${{ matrix.service }}"
+            echo "### GHCR publish result â€” ${{ matrix.service }}"
             echo ""
             echo "- Dockerfile: \`${{ matrix.dockerfile }}\`"
             echo "- Image: \`ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}\`"
