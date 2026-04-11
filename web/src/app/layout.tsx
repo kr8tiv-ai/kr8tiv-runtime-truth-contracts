@@ -7,6 +7,7 @@ import { LocaleProvider } from '@/providers/LocaleProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
 import { LazySupportWidget } from '@/components/ui/LazySupportWidget';
 import { AnalyticsInit } from '@/components/AnalyticsInit';
+import { DevWalkthroughLoader } from '@/components/dev/DevWalkthroughLoader';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 
@@ -104,6 +105,7 @@ export default async function RootLayout({
           </LocaleProvider>
         </NextIntlClientProvider>
         <LazySupportWidget />
+        <DevWalkthroughLoader />
         <AnalyticsInit />
         <Analytics />
         <div className="grain-overlay" aria-hidden="true" />

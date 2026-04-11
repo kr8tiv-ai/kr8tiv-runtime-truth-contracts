@@ -19,6 +19,10 @@
  */
 const APPROVAL_REQUIRED: Record<string, Set<string>> = {
   email: new Set(['send', 'draft']),
+  terminal: new Set(['execute']),
+  'file-manager': new Set(['write', 'create', 'delete']),
+  'app-launcher': new Set(['open', 'close']),
+  clipboard: new Set(['write']),
 };
 
 // ---------------------------------------------------------------------------
@@ -52,10 +56,40 @@ export function requiresApproval(skillName: string, intent?: string): boolean {
  * @returns The extracted intent string, or undefined if no intent detected
  */
 export function extractSkillIntent(message: string, skillName: string): string | undefined {
-  if (skillName !== 'email') return undefined;
-
   const lower = message.toLowerCase();
-  if (/\bsend\b/.test(lower)) return 'send';
-  if (/\bdraft\b/.test(lower)) return 'draft';
-  return undefined;
+
+  switch (skillName) {
+    case 'email':
+      if (/\bsend\b/.test(lower)) return 'send';
+      if (/\bdraft\b/.test(lower)) return 'draft';
+      return undefined;
+
+    case 'terminal':
+      // Terminal commands always map to 'execute' intent (always gated)
+      return 'execute';
+
+    case 'file-manager':
+      if (/\bdelete\b|\bremove\b/.test(lower)) return 'delete';
+      if (/\bwrite\b|\bupdate\b|\bsave\b|\bmodify\b/.test(lower)) return 'write';
+      if (/\bcreate\b|\bnew\b/.test(lower)) return 'create';
+      if (/\bread\b|\bshow\b|\bcat\b|\bview\b|\blist\b/.test(lower)) return 'read';
+      return undefined;
+
+    case 'app-launcher':
+      if (/\bclose\b|\bquit\b|\bexit\b|\bkill\b/.test(lower)) return 'close';
+      if (/\bopen\b|\blaunch\b|\bstart\b/.test(lower)) return 'open';
+      return undefined;
+
+    case 'screenshot':
+      // Screenshot has no approval-gated intents at trust level 1+
+      return undefined;
+
+    case 'clipboard':
+      if (/\bcopy\b|\bwrite\b|\bset\b|\bput\b/.test(lower)) return 'write';
+      if (/\bpaste\b|\bread\b|\bclipboard\b|\bwhat.*cop/.test(lower)) return 'read';
+      return undefined;
+
+    default:
+      return undefined;
+  }
 }

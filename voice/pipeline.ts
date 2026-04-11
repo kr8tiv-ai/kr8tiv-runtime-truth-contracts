@@ -149,15 +149,15 @@ export async function transcribeLocal(
 const COMPANION_VOICES: Record<string, VoicePersonality> = {
   cipher: {
     companionId: 'cipher',
-    voiceId: 'pNInz6obpgDQGcFmaJgB',  // Adam — deep, warm, analytical
-    style: 'analytical, warm, slightly playful',
+    voiceId: process.env.ELEVENLABS_VOICE_ID_CIPHER ?? 'pNInz6obpgDQGcFmaJgB',  // Adam — deep, warm, analytical
+    style: 'analytical, warm, playful with excitement',
     speed: 1.0,
     pitch: 0,
-    characteristics: ['thoughtful pauses', 'technical precision', 'encouraging tone'],
+    characteristics: ['thoughtful pauses', 'technical precision', 'encouraging tone', 'excited inflection when coding'],
   },
   mischief: {
     companionId: 'mischief',
-    voiceId: 'EXAVITQu4vr4xnSDxMaL',  // Bella — playful, young, energetic
+    voiceId: process.env.ELEVENLABS_VOICE_ID_MISCHIEF ?? 'EXAVITQu4vr4xnSDxMaL',  // Bella — playful, young, energetic
     style: 'playful, energetic, curious',
     speed: 1.1,
     pitch: 2,
@@ -165,7 +165,7 @@ const COMPANION_VOICES: Record<string, VoicePersonality> = {
   },
   vortex: {
     companionId: 'vortex',
-    voiceId: 'VR6AewLTigWG4xSOukaG',  // Arnold — authoritative, strategic
+    voiceId: process.env.ELEVENLABS_VOICE_ID_VORTEX ?? 'VR6AewLTigWG4xSOukaG',  // Arnold — authoritative, strategic
     style: 'calm, wise, serene',
     speed: 0.95,
     pitch: -2,
@@ -173,7 +173,7 @@ const COMPANION_VOICES: Record<string, VoicePersonality> = {
   },
   forge: {
     companionId: 'forge',
-    voiceId: 'ErXwobaYiN019PkySvjV',  // Antoni — confident, builder energy
+    voiceId: process.env.ELEVENLABS_VOICE_ID_FORGE ?? 'ErXwobaYiN019PkySvjV',  // Antoni — confident, builder energy
     style: 'confident, inspiring, warm',
     speed: 1.0,
     pitch: 0,
@@ -181,7 +181,7 @@ const COMPANION_VOICES: Record<string, VoicePersonality> = {
   },
   aether: {
     companionId: 'aether',
-    voiceId: 'MF3mGyEYCl7XYWbV9V6O',  // Elli — calm, contemplative
+    voiceId: process.env.ELEVENLABS_VOICE_ID_AETHER ?? 'MF3mGyEYCl7XYWbV9V6O',  // Elli — calm, contemplative
     style: 'steady, patient, methodical',
     speed: 0.9,
     pitch: -1,
@@ -189,7 +189,7 @@ const COMPANION_VOICES: Record<string, VoicePersonality> = {
   },
   catalyst: {
     companionId: 'catalyst',
-    voiceId: '21m00Tcm4TlvDq8ikWAM',  // Rachel — warm, motivational
+    voiceId: process.env.ELEVENLABS_VOICE_ID_CATALYST ?? '21m00Tcm4TlvDq8ikWAM',  // Rachel — warm, motivational
     style: 'enthusiastic, warm, adaptive',
     speed: 1.05,
     pitch: 1,
@@ -228,11 +228,11 @@ export async function synthesizeWithElevenLabs(
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_monolingual_v1',
+          model_id: process.env.ELEVENLABS_MODEL ?? 'eleven_multilingual_v2',
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.3,
+            stability: 0.45,        // lower = more expressive (Cipher is playful)
+            similarity_boost: 0.80, // high = consistent voice
+            style: 0.35,            // moderate style exaggeration
             use_speaker_boost: true,
           },
         }),
@@ -366,7 +366,7 @@ export class VoicePipeline {
 
   constructor(config: VoiceConfig = {}) {
     this.config = {
-      ttsProvider: config.ttsProvider ?? 'openai',
+      ttsProvider: config.ttsProvider ?? (process.env.TTS_PROVIDER as VoiceConfig['ttsProvider']) ?? 'elevenlabs',
       outputFormat: config.outputFormat ?? 'mp3',
       maxDurationSeconds: config.maxDurationSeconds ?? 300,
       ...config,

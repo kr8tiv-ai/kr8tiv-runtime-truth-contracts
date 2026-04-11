@@ -2,8 +2,11 @@
 """
 Unsloth QLoRA Fine-Tuning Script for Companion Models
 
-Reads curated JSONL (SFTLine format), fine-tunes Llama 3.2 1B/3B via
-Unsloth QLoRA 4-bit quantization, and exports merged GGUF for Ollama.
+Reads curated JSONL (SFTLine format), fine-tunes models via Unsloth QLoRA
+4-bit quantization, and exports merged GGUF for Ollama.
+
+Supports multiple model families: Llama 3.2, Gemma 4, Qwen 2.5
+Supports multiple alignment stages: SFT, SimPO, GRPO, KTO
 
 Usage:
     python training/fine-tune.py \
@@ -14,12 +17,20 @@ Usage:
     python training/fine-tune.py \
         --companion-id cipher \
         --data-path data/training/cipher/training.jsonl \
-        --base-model unsloth/Llama-3.2-3B-Instruct-bnb-4bit \
+        --base-model unsloth/gemma-4-E4B-it-bnb-4bit \
+        --model-family gemma \
         --epochs 2
+
+    python training/fine-tune.py \
+        --companion-id cipher \
+        --data-path data/training/cipher/training.jsonl \
+        --alignment-stage simpo \
+        --base-model training/output/cipher
 
 Environment:
     HF_TOKEN — HuggingFace token for gated model access (Llama 3.2 requires
-               Meta license acceptance at https://huggingface.co/meta-llama)
+               Meta license acceptance at https://huggingface.co/meta-llama).
+               Not required for Gemma or Qwen models.
 
 Observability:
     All progress messages use [fine-tune] prefix for grep-ability.
@@ -40,8 +51,27 @@ from pathlib import Path
 
 MIN_VALID_ENTRIES = 5
 MAX_SAFE_EPOCHS = 3
+
+# Llama VRAM requirements
 VRAM_MIN_1B_MB = 3500
 VRAM_MIN_3B_MB = 7000
+
+# Gemma VRAM requirements
+VRAM_MIN_GEMMA_2B_MB = 2500
+VRAM_MIN_GEMMA_5B_MB = 4000
+VRAM_MIN_GEMMA_E4B_MB = 5500
+
+# Qwen VRAM requirements
+VRAM_MIN_QWEN_4B_MB = 3000
+VRAM_MIN_QWEN_9B_MB = 6000
+
+# Model family constants
+FAMILY_LLAMA = "llama"
+FAMILY_GEMMA = "gemma"
+FAMILY_QWEN = "qwen"
+
+VALID_FAMILIES = {FAMILY_LLAMA, FAMILY_GEMMA, FAMILY_QWEN}
+VALID_ALIGNMENT_STAGES = {"sft", "simpo", "grpo", "kto"}
 
 # ============================================================================
 # Logging
@@ -66,9 +96,19 @@ def fatal(msg: str) -> None:
 # CLI
 # ============================================================================
 
+def detect_model_family(model_name: str) -> str:
+    """Auto-detect model family from model name string."""
+    name_lower = model_name.lower()
+    if "gemma" in name_lower:
+        return FAMILY_GEMMA
+    if "qwen" in name_lower:
+        return FAMILY_QWEN
+    return FAMILY_LLAMA
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fine-tune Llama 3.2 via Unsloth QLoRA for companion models",
+        description="Fine-tune models via Unsloth QLoRA for companion models",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
@@ -86,6 +126,18 @@ def parse_args() -> argparse.Namespace:
         "--base-model",
         default="unsloth/Llama-3.2-1B-Instruct-bnb-4bit",
         help="Unsloth model identifier (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--model-family",
+        default=None,
+        choices=sorted(VALID_FAMILIES),
+        help="Model family: gemma, llama, qwen (auto-detected from model name if not specified)",
+    )
+    parser.add_argument(
+        "--alignment-stage",
+        default="sft",
+        choices=sorted(VALID_ALIGNMENT_STAGES),
+        help="Alignment stage: sft (default), simpo, grpo, kto",
     )
     parser.add_argument(
         "--output-dir",
@@ -115,7 +167,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Validate data and print stats without loading ML libraries or GPU",
     )
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    # Auto-detect model family if not specified
+    if args.model_family is None:
+        args.model_family = detect_model_family(args.base_model)
+        log(f"Auto-detected model family: {args.model_family}")
+
+    return args
 
 # ============================================================================
 # JSONL Loading
@@ -245,7 +305,34 @@ def print_data_stats(entries: list[dict]) -> None:
 # VRAM Check
 # ============================================================================
 
-def check_vram(base_model: str) -> int:
+def _get_vram_requirement(base_model: str, model_family: str) -> tuple[int, str]:
+    """
+    Determine minimum VRAM and label based on model family and size.
+
+    Returns (min_vram_mb, model_label) tuple.
+    """
+    name_lower = base_model.lower()
+
+    if model_family == FAMILY_GEMMA:
+        if "e4b" in name_lower:
+            return VRAM_MIN_GEMMA_E4B_MB, "Gemma-4-E4B"
+        if "5b" in name_lower:
+            return VRAM_MIN_GEMMA_5B_MB, "Gemma-5B"
+        return VRAM_MIN_GEMMA_2B_MB, "Gemma-2B"
+
+    if model_family == FAMILY_QWEN:
+        if "9b" in name_lower:
+            return VRAM_MIN_QWEN_9B_MB, "Qwen-9B"
+        return VRAM_MIN_QWEN_4B_MB, "Qwen-4B"
+
+    # Llama (default)
+    is_3b = "3b" in name_lower
+    if is_3b:
+        return VRAM_MIN_3B_MB, "Llama-3B"
+    return VRAM_MIN_1B_MB, "Llama-1B"
+
+
+def check_vram(base_model: str, model_family: str = FAMILY_LLAMA) -> int:
     """
     Check available GPU VRAM via nvidia-smi.
 
@@ -282,10 +369,8 @@ def check_vram(base_model: str) -> int:
 
     log(f"VRAM check: {vram_mb} MB available")
 
-    # Determine minimum VRAM based on model size
-    is_3b = "3B" in base_model or "3b" in base_model
-    min_vram = VRAM_MIN_3B_MB if is_3b else VRAM_MIN_1B_MB
-    model_label = "3B" if is_3b else "1B"
+    # Determine minimum VRAM based on model family and size
+    min_vram, model_label = _get_vram_requirement(base_model, model_family)
 
     if vram_mb < min_vram:
         fatal(
@@ -299,11 +384,16 @@ def check_vram(base_model: str) -> int:
 # HuggingFace Auth Check
 # ============================================================================
 
-def check_hf_auth() -> None:
+def check_hf_auth(model_family: str = FAMILY_LLAMA) -> None:
     """
     Check if HuggingFace authentication is available.
-    Prints a warning if not — Llama 3.2 requires Meta license acceptance.
+    Only required for Llama models (Meta license). Gemma and Qwen are open.
     """
+    # Gemma and Qwen don't require HF Meta license
+    if model_family != FAMILY_LLAMA:
+        log(f"HuggingFace auth: not required for {model_family} models")
+        return
+
     # Check env var first
     if os.environ.get("HF_TOKEN"):
         log("HuggingFace auth: HF_TOKEN environment variable set")
@@ -335,6 +425,27 @@ def check_hf_auth() -> None:
 # Training
 # ============================================================================
 
+def _get_chat_template(model_family: str) -> str:
+    """Return the appropriate chat template name for the model family."""
+    if model_family == FAMILY_GEMMA:
+        return "gemma"
+    if model_family == FAMILY_QWEN:
+        return "qwen-2.5"
+    return "llama-3.1"
+
+
+def _get_lora_target_modules(model_family: str) -> list[str] | str:
+    """Return LoRA target modules appropriate for the model family."""
+    if model_family == FAMILY_GEMMA:
+        # Gemma 4 benefits from "all-linear" shorthand for broader coverage
+        return "all-linear"
+    # Llama and Qwen use explicit module names
+    return [
+        "q_proj", "k_proj", "v_proj", "o_proj",
+        "gate_proj", "up_proj", "down_proj",
+    ]
+
+
 def run_training(
     entries: list[dict],
     base_model: str,
@@ -342,12 +453,20 @@ def run_training(
     epochs: int,
     max_seq_length: int,
     learning_rate: float,
+    model_family: str = FAMILY_LLAMA,
+    alignment_stage: str = "sft",
 ) -> None:
     """
     Run QLoRA fine-tuning via Unsloth and export merged GGUF.
 
     This function imports ML libraries only when called (not at module level)
     so that --dry-run works without GPU or ML dependencies.
+
+    Supports alignment stages:
+      - sft: Standard supervised fine-tuning (default)
+      - simpo: SimPO — no reference model, uses beta + gamma_beta_ratio
+      - grpo: GRPO — 2-GRPO variant with 2 rollouts per prompt
+      - kto: KTO — binary thumbs-up/down, no paired preferences needed
     """
     # Lazy imports — only load heavy ML libraries when actually training
     try:
@@ -394,14 +513,12 @@ def run_training(
     )
 
     # ── Configure LoRA ──────────────────────────────────────────────────
-    log("Configuring LoRA adapters...")
+    log(f"Configuring LoRA adapters (family={model_family})...")
+    target_modules = _get_lora_target_modules(model_family)
     model = FastLanguageModel.get_peft_model(
         model,
         r=16,
-        target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
-        ],
+        target_modules=target_modules,
         lora_alpha=16,
         lora_dropout=0,
         bias="none",
@@ -410,9 +527,11 @@ def run_training(
     )
 
     # ── Apply chat template ─────────────────────────────────────────────
+    chat_template = _get_chat_template(model_family)
+    log(f"Applying chat template: {chat_template}")
     tokenizer = get_chat_template(
         tokenizer,
-        chat_template="llama-3.1",
+        chat_template=chat_template,
     )
 
     # ── Prepare dataset ─────────────────────────────────────────────────
@@ -430,8 +549,35 @@ def run_training(
     dataset = Dataset.from_list(entries)
     dataset = dataset.map(format_conversation)
 
-    # ── Configure training ──────────────────────────────────────────────
-    log("Training...")
+    # ── Run the appropriate alignment stage ──────────────────────────────
+    if alignment_stage == "sft":
+        _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, learning_rate)
+    elif alignment_stage == "simpo":
+        _run_simpo(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+    elif alignment_stage == "grpo":
+        _run_grpo(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+    elif alignment_stage == "kto":
+        _run_kto(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+    else:
+        fatal(f"Unknown alignment stage: {alignment_stage}")
+
+    # ── Export GGUF (Unsloth Dynamic 2.0 quantization) ──────────────────
+    log(f"Exporting GGUF to {output_dir}")
+    # quantization_method="q4_k_m" uses Unsloth Dynamic 2.0 for optimal
+    # quality-to-size ratio on consumer GPUs (RTX 4050 6GB etc.)
+    model.save_pretrained_gguf(
+        output_dir,
+        tokenizer,
+        quantization_method="q4_k_m",
+    )
+    log(f"GGUF exported to {output_dir}")
+
+
+def _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, learning_rate):
+    """Run standard supervised fine-tuning."""
+    from trl import SFTTrainer, SFTConfig
+
+    log("Running SFT alignment stage...")
     training_args = SFTConfig(
         output_dir=output_dir,
         per_device_train_batch_size=1,
@@ -457,18 +603,116 @@ def run_training(
         args=training_args,
     )
 
-    # ── Train ───────────────────────────────────────────────────────────
     trainer.train()
-    log("Training complete")
+    log("SFT training complete")
 
-    # ── Export GGUF ──────────────────────────────────────────────────────
-    log(f"Exporting GGUF to {output_dir}")
-    model.save_pretrained_gguf(
-        output_dir,
-        tokenizer,
-        quantization_method="q4_k_m",
+
+def _run_simpo(model, tokenizer, dataset, output_dir, epochs, learning_rate):
+    """
+    Run SimPO alignment — no reference model needed.
+    Uses beta (implicit reward margin) and gamma_beta_ratio hyperparameters.
+    Loads from previous SFT checkpoint.
+    """
+    try:
+        from trl import SimPOConfig, SimPOTrainer
+    except ImportError:
+        fatal("SimPO requires trl>=0.14.0. Update: pip install trl>=0.14.0")
+
+    log("Running SimPO alignment stage...")
+    training_args = SimPOConfig(
+        output_dir=output_dir,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        learning_rate=learning_rate,
+        num_train_epochs=epochs,
+        beta=2.5,
+        gamma_beta_ratio=0.3,
+        logging_steps=1,
+        optim="adamw_8bit",
+        seed=3407,
+        bf16=True,
     )
-    log(f"GGUF exported to {output_dir}")
+
+    trainer = SimPOTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        args=training_args,
+    )
+
+    trainer.train()
+    log("SimPO training complete")
+
+
+def _run_grpo(model, tokenizer, dataset, output_dir, epochs, learning_rate):
+    """
+    Run GRPO alignment — 2-GRPO variant with 2 rollouts per prompt.
+    Uses group normalization for reward computation.
+    Loads from previous SFT checkpoint.
+    """
+    try:
+        from trl import GRPOConfig, GRPOTrainer
+    except ImportError:
+        fatal("GRPO requires trl>=0.14.0. Update: pip install trl>=0.14.0")
+
+    log("Running GRPO alignment stage (2-GRPO, 2 rollouts)...")
+    training_args = GRPOConfig(
+        output_dir=output_dir,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        learning_rate=learning_rate,
+        num_train_epochs=epochs,
+        num_generations=2,  # 2-GRPO: 2 rollouts per prompt
+        logging_steps=1,
+        optim="adamw_8bit",
+        seed=3407,
+        bf16=True,
+    )
+
+    trainer = GRPOTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        args=training_args,
+    )
+
+    trainer.train()
+    log("GRPO training complete")
+
+
+def _run_kto(model, tokenizer, dataset, output_dir, epochs, learning_rate):
+    """
+    Run KTO alignment — binary thumbs-up/down signal.
+    No paired preferences needed — works with unpaired feedback data.
+    Loads from previous SFT checkpoint.
+    """
+    try:
+        from trl import KTOConfig, KTOTrainer
+    except ImportError:
+        fatal("KTO requires trl>=0.14.0. Update: pip install trl>=0.14.0")
+
+    log("Running KTO alignment stage...")
+    training_args = KTOConfig(
+        output_dir=output_dir,
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        learning_rate=learning_rate,
+        num_train_epochs=epochs,
+        logging_steps=1,
+        optim="adamw_8bit",
+        seed=3407,
+        bf16=True,
+    )
+
+    trainer = KTOTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=dataset,
+        args=training_args,
+    )
+
+    trainer.train()
+    log("KTO training complete")
 
 # ============================================================================
 # Main
@@ -490,12 +734,13 @@ def main() -> None:
         sys.exit(0)
 
     # ── VRAM check ──────────────────────────────────────────────────────
-    check_vram(args.base_model)
+    check_vram(args.base_model, args.model_family)
 
     # ── HuggingFace auth check ──────────────────────────────────────────
-    check_hf_auth()
+    check_hf_auth(args.model_family)
 
     # ── Run training ────────────────────────────────────────────────────
+    log(f"Model family: {args.model_family}, Alignment stage: {args.alignment_stage}")
     run_training(
         entries=entries,
         base_model=args.base_model,
@@ -503,6 +748,8 @@ def main() -> None:
         epochs=args.epochs,
         max_seq_length=args.max_seq_length,
         learning_rate=args.learning_rate,
+        model_family=args.model_family,
+        alignment_stage=args.alignment_stage,
     )
 
     log("Done.")

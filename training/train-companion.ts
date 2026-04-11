@@ -19,6 +19,7 @@ import { COMPANION_SHORT_PROMPTS } from '../inference/companion-prompts.js';
 import {
   generateModelfile,
   getModelName,
+  type ModelFamily,
 } from './modelfile-generator.js';
 import { OllamaClient } from '../inference/local-llm.js';
 
@@ -33,6 +34,10 @@ export interface TrainCompanionArgs {
   outputDir: string;
   dryRun: boolean;
   skipTraining: boolean;
+  /** Model family: gemma, llama, qwen (passed through to fine-tune.py) */
+  modelFamily?: string;
+  /** Alignment stage: sft, simpo, grpo, kto (passed through to fine-tune.py) */
+  alignmentStage?: string;
 }
 
 // ============================================================================
@@ -83,6 +88,12 @@ export function parseArgs(argv: string[]): TrainCompanionArgs {
       case '--skip-training':
         args.skipTraining = true;
         break;
+      case '--model-family':
+        args.modelFamily = argv[++i];
+        break;
+      case '--alignment-stage':
+        args.alignmentStage = argv[++i];
+        break;
     }
   }
 
@@ -98,11 +109,13 @@ export function parseArgs(argv: string[]): TrainCompanionArgs {
       args.dataPath ??
       path.join('data', 'training', companionId, 'training.jsonl'),
     baseModel:
-      args.baseModel ?? 'unsloth/Llama-3.2-1B-Instruct-bnb-4bit',
+      args.baseModel ?? 'unsloth/gemma-4-E4B-it-bnb-4bit',
     outputDir:
       args.outputDir ?? path.join('training', 'output', companionId),
     dryRun: args.dryRun ?? false,
     skipTraining: args.skipTraining ?? false,
+    modelFamily: args.modelFamily,
+    alignmentStage: args.alignmentStage,
   };
 }
 
@@ -203,6 +216,14 @@ export function buildPythonArgs(
     '--output-dir', isWindows ? toWslPath(path.resolve(args.outputDir)) : args.outputDir,
   ];
 
+  if (args.modelFamily) {
+    scriptArgs.push('--model-family', args.modelFamily);
+  }
+
+  if (args.alignmentStage) {
+    scriptArgs.push('--alignment-stage', args.alignmentStage);
+  }
+
   if (args.dryRun) {
     scriptArgs.push('--dry-run');
   }
@@ -275,6 +296,7 @@ export function runPythonTraining(
 export function generateAndWriteModelfile(
   companionId: string,
   outputDir: string,
+  modelFamily?: ModelFamily,
 ): { modelfilePath: string; modelName: string } {
   const ggufPath = path.join(outputDir, 'unsloth.Q4_K_M.gguf');
   log(`Generating Modelfile for companion "${companionId}" with GGUF: ${ggufPath}`);
@@ -283,6 +305,7 @@ export function generateAndWriteModelfile(
     companionId,
     ggufPath,
     outputDir,
+    modelFamily,
   });
 
   log(`✓ Modelfile written to: ${result.modelfilePath}`);
@@ -365,11 +388,13 @@ export async function printSummary(
 
 export async function runPipeline(args: TrainCompanionArgs): Promise<void> {
   log(`Starting training pipeline for companion "${args.companionId}"`);
-  log(`  Data path:    ${args.dataPath}`);
-  log(`  Base model:   ${args.baseModel}`);
-  log(`  Output dir:   ${args.outputDir}`);
-  log(`  Dry run:      ${args.dryRun}`);
-  log(`  Skip training: ${args.skipTraining}`);
+  log(`  Data path:       ${args.dataPath}`);
+  log(`  Base model:      ${args.baseModel}`);
+  log(`  Model family:    ${args.modelFamily ?? '(auto-detect)'}`);
+  log(`  Alignment stage: ${args.alignmentStage ?? 'sft'}`);
+  log(`  Output dir:      ${args.outputDir}`);
+  log(`  Dry run:         ${args.dryRun}`);
+  log(`  Skip training:   ${args.skipTraining}`);
 
   // ── Step 1: Validate prerequisites ────────────────────────────────────
   validateCompanionId(args.companionId);
@@ -396,6 +421,7 @@ export async function runPipeline(args: TrainCompanionArgs): Promise<void> {
   const { modelfilePath, modelName } = generateAndWriteModelfile(
     args.companionId,
     args.outputDir,
+    args.modelFamily as ModelFamily | undefined,
   );
   const ggufPath = path.join(args.outputDir, 'unsloth.Q4_K_M.gguf');
 

@@ -70,6 +70,12 @@ import canvasRoutes from './routes/canvas.js';
 import proactiveRoutes from './routes/proactive.js';
 import calendarAuthRoutes from './routes/calendar-auth.js';
 import familyRoutes from './routes/family.js';
+import deviceRoutes from './routes/device.js';
+import personalizeRoutes from './routes/personalize.js';
+
+// Device bridge imports
+import { initDeviceBridge, getDeviceBridge } from '../bot/skills/device-bridge.js';
+import type { DeviceToolResponse, DeviceHeartbeat, DevicePairing } from '../bot/skills/device-bridge.js';
 
 // Mission Control imports
 import { initMissionControlClient, getMissionControlClient } from '../inference/mission-control.js';
@@ -334,6 +340,9 @@ export async function createServer(config: ApiConfig = {}) {
   // --------------------------------------------------------------------------
   // Approval initialisation (before scheduler/pipeline — they reference it)
   // --------------------------------------------------------------------------
+
+  // Device Bridge initialisation (must be before device routes)
+  initDeviceBridge(resolvedConfig.jwtSecret);
 
   const approvalManager = new ApprovalManager({ db, channelDelivery });
 
@@ -664,6 +673,8 @@ export async function createServer(config: ApiConfig = {}) {
     await protectedFastify.register(proactiveRoutes);
     await protectedFastify.register(calendarAuthRoutes);
     await protectedFastify.register(familyRoutes);
+    await protectedFastify.register(deviceRoutes);
+    await protectedFastify.register(personalizeRoutes);
   });
 
   // Webhook ingestion routes (HMAC-authenticated, no JWT)
@@ -743,6 +754,126 @@ export async function createServer(config: ApiConfig = {}) {
             type: 'error',
             message: 'Invalid JSON',
           }));
+        }
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Device Bridge WebSocket — persistent connection for desktop devices
+    // -----------------------------------------------------------------------
+
+    wsFastify.get('/ws/device', { websocket: true }, (connection, request) => {
+      const bridge = getDeviceBridge();
+      const url = new URL(request.url, `http://${request.hostname}`);
+      const pairingCode = url.searchParams.get('code');
+
+      // Validate pairing code
+      if (!pairingCode) {
+        connection.socket.send(JSON.stringify({ type: 'error', message: 'Missing pairing code' }));
+        connection.socket.close(4001, 'Missing pairing code');
+        return;
+      }
+
+      const pendingPairing = bridge.validatePairingCode(pairingCode);
+      if (!pendingPairing) {
+        connection.socket.send(JSON.stringify({ type: 'error', message: 'Invalid or expired pairing code' }));
+        connection.socket.close(4002, 'Invalid or expired pairing code');
+        return;
+      }
+
+      const userId = pendingPairing.userId;
+      let paired = false;
+
+      connection.socket.on('message', (raw: Buffer | string) => {
+        const message = raw.toString();
+
+        // Reject oversized messages (device messages can carry screenshots, allow 10MB)
+        if (message.length > 10 * 1024 * 1024) {
+          connection.socket.send(JSON.stringify({ type: 'error', message: 'Message too large' }));
+          return;
+        }
+
+        try {
+          const data = JSON.parse(message);
+
+          switch (data.type) {
+            case 'pair': {
+              // Complete device pairing handshake
+              const pairing: DevicePairing = {
+                pairingCode: pairingCode,
+                deviceName: data.deviceName ?? 'Unknown Device',
+                platform: data.platform ?? 'windows',
+                capabilities: data.capabilities ?? [],
+              };
+
+              bridge.pairDevice(userId, connection.socket as unknown as WebSocket, pairing);
+              paired = true;
+
+              connection.socket.send(JSON.stringify({
+                type: 'paired',
+                userId,
+                deviceName: pairing.deviceName,
+                message: 'Device paired successfully',
+              }));
+              break;
+            }
+
+            case 'heartbeat': {
+              if (!paired) {
+                connection.socket.send(JSON.stringify({ type: 'error', message: 'Not paired yet' }));
+                return;
+              }
+              const heartbeat: DeviceHeartbeat = {
+                deviceId: data.deviceId ?? userId,
+                timestamp: data.timestamp ?? Date.now(),
+                capabilities: data.capabilities ?? [],
+              };
+              bridge.handleHeartbeat(userId, heartbeat);
+              connection.socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
+              break;
+            }
+
+            case 'tool_response': {
+              if (!paired) {
+                connection.socket.send(JSON.stringify({ type: 'error', message: 'Not paired yet' }));
+                return;
+              }
+              const response: DeviceToolResponse = {
+                requestId: data.requestId,
+                result: data.result,
+                error: data.error,
+              };
+              bridge.handleToolResponse(userId, response);
+              break;
+            }
+
+            case 'ping':
+              connection.socket.send(JSON.stringify({ type: 'pong' }));
+              break;
+
+            default:
+              connection.socket.send(JSON.stringify({
+                type: 'error',
+                message: `Unknown message type: ${data.type}`,
+              }));
+          }
+        } catch {
+          connection.socket.send(JSON.stringify({
+            type: 'error',
+            message: 'Invalid JSON',
+          }));
+        }
+      });
+
+      connection.socket.on('close', () => {
+        if (paired) {
+          bridge.handleDisconnect(userId);
+        }
+      });
+
+      connection.socket.on('error', () => {
+        if (paired) {
+          bridge.handleDisconnect(userId);
         }
       });
     });

@@ -35,15 +35,20 @@ export const MIN_VALID_ENTRIES = 5;
 
 const DEFAULT_DISTILL_BASE = path.join('data', 'distill');
 const DEFAULT_HISTORY_BASE = path.join('data', 'retrain');
-const DEFAULT_BASE_MODEL = 'unsloth/Llama-3.2-1B-Instruct-bnb-4bit';
+const DEFAULT_BASE_MODEL = 'unsloth/gemma-4-E4B-it-bnb-4bit';
 
 // ============================================================================
 // Types
 // ============================================================================
 
+/** Valid alignment stages for multi-stage training */
+const ALIGNMENT_STAGES = ['sft', 'simpo', 'grpo', 'kto'] as const;
+type AlignmentStage = typeof ALIGNMENT_STAGES[number];
+
 /**
  * Optional overrides for a retrain run.
  */
+
 export interface RetrainConfig {
   /** Run distillation before training (default: false) */
   runDistillFirst?: boolean;
@@ -51,10 +56,14 @@ export interface RetrainConfig {
   skipTraining?: boolean;
   /** Dry run — validate everything but don't mutate (passed to runPipeline) */
   dryRun?: boolean;
-  /** Base model for fine-tuning (default: unsloth/Llama-3.2-1B-Instruct-bnb-4bit) */
+  /** Base model for fine-tuning (default: unsloth/gemma-4-E4B-it-bnb-4bit) */
   baseModel?: string;
   /** Quality threshold for distillation candidate selection (default: 0.7) */
   qualityThreshold?: number;
+  /** Model family: gemma, llama, qwen (default: auto-detect from base model) */
+  modelFamily?: string;
+  /** Alignment stages to run in order (default: ['sft']). Each loads from previous checkpoint. */
+  alignmentStages?: AlignmentStage[];
 }
 
 /**
@@ -231,22 +240,40 @@ export async function runRetrainLoop(
   const dataPath = path.join('data', 'distill', companionId, 'distill.jsonl');
   const outputDir = path.join('training', 'output', companionId);
   const modelName = getModelName(companionId);
+  const baseModel = config?.baseModel ?? DEFAULT_BASE_MODEL;
 
-  const trainArgs: TrainCompanionArgs = {
-    companionId,
-    dataPath,
-    baseModel: config?.baseModel ?? DEFAULT_BASE_MODEL,
-    outputDir,
-    dryRun: config?.dryRun ?? false,
-    skipTraining: config?.skipTraining ?? false,
-  };
+  // Determine alignment stages: default to SFT only
+  const stages: AlignmentStage[] = config?.alignmentStages ?? ['sft'];
 
-  log(`Training args: dataPath=${trainArgs.dataPath}, baseModel=${trainArgs.baseModel}, dryRun=${trainArgs.dryRun}`);
+  log(`Training args: dataPath=${dataPath}, baseModel=${baseModel}, stages=${stages.join(',')}, dryRun=${config?.dryRun ?? false}`);
 
-  // Step 5: Run training pipeline
+  // Step 5: Run training pipeline — multi-stage orchestration
+  // SFT runs first; subsequent stages load from the SFT checkpoint directory
   try {
-    await runPipeline(trainArgs);
-    log(`Training pipeline completed for '${companionId}'`);
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i]!;
+      const isFirstStage = i === 0;
+      // First stage uses the base model; subsequent stages load from previous output
+      const stageBaseModel = isFirstStage ? baseModel : outputDir;
+
+      log(`Running alignment stage ${i + 1}/${stages.length}: ${stage}`);
+
+      const trainArgs: TrainCompanionArgs = {
+        companionId,
+        dataPath,
+        baseModel: stageBaseModel,
+        outputDir,
+        dryRun: config?.dryRun ?? false,
+        skipTraining: config?.skipTraining ?? false,
+        modelFamily: config?.modelFamily,
+        alignmentStage: stage,
+      };
+
+      await runPipeline(trainArgs);
+      log(`Stage '${stage}' completed for '${companionId}'`);
+    }
+
+    log(`All ${stages.length} alignment stage(s) completed for '${companionId}'`);
 
     const result: RetrainResult = {
       success: true,
@@ -393,6 +420,15 @@ function parseCliArgs(argv: string[]): { companionId: string; config: RetrainCon
       case '--quality-threshold':
         config.qualityThreshold = parseFloat(argv[++i] ?? '0.7');
         break;
+      case '--model-family':
+        config.modelFamily = argv[++i];
+        break;
+      case '--alignment-stages': {
+        // Comma-separated list: --alignment-stages sft,simpo
+        const raw = argv[++i] ?? 'sft';
+        config.alignmentStages = raw.split(',').map((s) => s.trim()) as AlignmentStage[];
+        break;
+      }
     }
   }
 

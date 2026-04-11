@@ -41,6 +41,8 @@ export interface TrainingCollectResult {
 interface SFTMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+  /** Optional image URLs/paths for multimodal training data (e.g., Gemma 4 vision) */
+  images?: string[];
 }
 
 interface SFTLine {

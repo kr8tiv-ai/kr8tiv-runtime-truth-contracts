@@ -2,7 +2,10 @@
  * Modelfile Generator — Bridges fine-tuned GGUF models to Ollama.
  *
  * Reads companion short prompts and templates Ollama Modelfiles with the
- * correct base model reference, system prompt, and Llama 3.2 parameters.
+ * correct base model reference, system prompt, and model-family-specific
+ * parameters (stop tokens, context length).
+ *
+ * Supports: Llama 3.2, Gemma 4, Qwen 2.5
  *
  * @module training/modelfile-generator
  */
@@ -18,6 +21,9 @@ import {
 // Types
 // ============================================================================
 
+/** Supported model families for stop token and parameter selection */
+export type ModelFamily = 'llama' | 'gemma' | 'qwen';
+
 export interface GenerateModelfileOptions {
   /** Companion ID (must exist in COMPANION_SHORT_PROMPTS) */
   companionId: string;
@@ -28,6 +34,8 @@ export interface GenerateModelfileOptions {
   modelRef?: string;
   /** Output directory for the Modelfile (default: training/output/{companionId}) */
   outputDir?: string;
+  /** Model family for stop tokens and parameters (default: 'llama' for backward compat) */
+  modelFamily?: ModelFamily;
 }
 
 export interface GenerateModelfileResult {
@@ -37,6 +45,42 @@ export interface GenerateModelfileResult {
   modelfileContent: string;
   /** The Ollama model name (kin-{companionId}) */
   modelName: string;
+}
+
+// ============================================================================
+// Model Family Stop Tokens
+// ============================================================================
+
+/** Llama 3.2 stop tokens (default for backward compatibility) */
+const LLAMA_STOP_TOKENS = [
+  '<|start_header_id|>',
+  '<|end_header_id|>',
+  '<|eot_id|>',
+];
+
+/** Gemma 4 stop tokens */
+const GEMMA_STOP_TOKENS = [
+  '<start_of_turn>',
+  '<end_of_turn>',
+];
+
+/** Qwen 2.5 stop tokens */
+const QWEN_STOP_TOKENS = [
+  '<|im_start|>',
+  '<|im_end|>',
+  '<|endoftext|>',
+];
+
+function getStopTokens(family: ModelFamily): string[] {
+  switch (family) {
+    case 'gemma':
+      return GEMMA_STOP_TOKENS;
+    case 'qwen':
+      return QWEN_STOP_TOKENS;
+    case 'llama':
+    default:
+      return LLAMA_STOP_TOKENS;
+  }
 }
 
 // ============================================================================
@@ -65,7 +109,8 @@ export function getModelName(companionId: string): string {
 export function generateModelfile(
   options: GenerateModelfileOptions,
 ): GenerateModelfileResult {
-  const { companionId, ggufPath, modelRef, outputDir } = options;
+  const { companionId, ggufPath, modelRef, outputDir, modelFamily } = options;
+  const family: ModelFamily = modelFamily ?? 'llama';
 
   // ── Validate that at least one model source is provided ───────────────
   if (!modelRef && !ggufPath) {
@@ -87,15 +132,17 @@ export function generateModelfile(
 
   // ── Build Modelfile content (prefer modelRef over ggufPath) ───────────
   const fromValue = modelRef ?? ggufPath;
+  const stopTokens = getStopTokens(family);
+  const stopLines = stopTokens.map((t) => `PARAMETER stop "${t}"`);
+
   const modelfileContent = [
     `FROM ${fromValue}`,
     `SYSTEM """${shortPrompt}"""`,
     `PARAMETER temperature 0.7`,
     `PARAMETER top_p 0.9`,
-    `PARAMETER num_ctx 2048`,
-    `PARAMETER stop "<|start_header_id|>"`,
-    `PARAMETER stop "<|end_header_id|>"`,
-    `PARAMETER stop "<|eot_id|>"`,
+    // Use 4096 context for 6GB VRAM optimization (RTX 4050 etc.)
+    `PARAMETER num_ctx 4096`,
+    ...stopLines,
     '', // trailing newline
   ].join('\n');
 

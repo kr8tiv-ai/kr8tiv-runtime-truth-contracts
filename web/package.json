@@ -20,6 +20,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.0",
     "js-cookie": "^3.0.5",
+    "kin-platform": "file:..",
     "next": "15.5.14",
     "next-intl": "^4.9.0",
     "postprocessing": "^6.39.0",

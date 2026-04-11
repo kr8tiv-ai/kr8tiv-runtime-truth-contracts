@@ -15,6 +15,11 @@ import { emailSkill } from './email.js';
 import { scheduleSkill } from './schedule.js';
 import { pipelineSkill } from './pipeline.js';
 import { videoGenSkill, musicGenSkill } from './media.js';
+import { terminalSkill } from './terminal.js';
+import { fileManagerSkill } from './file-manager.js';
+import { screenshotSkill } from './screenshot.js';
+import { appLauncherSkill } from './app-launcher.js';
+import { clipboardSkill } from './clipboard.js';
 
 export const builtinSkills: KinSkill[] = [
   weatherSkill,
@@ -27,6 +32,11 @@ export const builtinSkills: KinSkill[] = [
   pipelineSkill,
   videoGenSkill,
   musicGenSkill,
+  terminalSkill,
+  fileManagerSkill,
+  screenshotSkill,
+  appLauncherSkill,
+  clipboardSkill,
 ];
 
 export { weatherSkill } from './weather.js';
@@ -38,5 +48,10 @@ export { emailSkill } from './email.js';
 export { scheduleSkill } from './schedule.js';
 export { pipelineSkill } from './pipeline.js';
 export { videoGenSkill, musicGenSkill } from './media.js';
+export { terminalSkill } from './terminal.js';
+export { fileManagerSkill } from './file-manager.js';
+export { screenshotSkill } from './screenshot.js';
+export { appLauncherSkill } from './app-launcher.js';
+export { clipboardSkill } from './clipboard.js';
 
 export default builtinSkills;

@@ -43,6 +43,12 @@ export interface SkillContext {
 
   /** Environment variables (process.env passthrough) */
   env: Record<string, string | undefined>;
+
+  /** Connected device ID (when skill is invoked via device bridge) */
+  deviceId?: string;
+
+  /** Current device trust level (0 = untrusted, 3 = full trust) */
+  trustLevel?: 0 | 1 | 2 | 3;
 }
 
 // ============================================================================
