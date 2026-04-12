@@ -97,7 +97,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Voice toggle in UI offers three modes: text-only, local voice, premium voice
   4. Each companion bloodline has a distinct voice identity via KokoClone with 30-60s reference audio
   5. Streaming TTS delivers audio with under 1 second latency for natural conversational flow
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 06-01-PLAN.md -- Kokoro TTS engine with KokoClone voice embeddings per companion
+- [ ] 06-02-PLAN.md -- Streaming TTS with sentence chunking, crossfade, and WebSocket/SSE endpoints
+- [ ] 06-03-PLAN.md -- Voice mode toggle (text-only/local/premium) and smart response matching
 **UI hint**: yes
 
 ### Phase 7: Cipher Flagship Tools
@@ -160,7 +164,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5/6 (parallel) -> 7 -> 8 ->
 | 3. Installer & Distribution | 0/TBD | Not started | - |
 | 4. Core Chat Experience | 0/TBD | Not started | - |
 | 5. Two-Brain Router | 0/TBD | Not started | - |
-| 6. Voice | 0/TBD | Not started | - |
+| 6. Voice | 0/3 | Planned | - |
 | 7. Cipher Flagship Tools | 0/TBD | Not started | - |
 | 8. Tailscale Networking | 0/TBD | Not started | - |
 | 9. Memory & Intelligence | 0/TBD | Not started | - |
@@ -209,4 +213,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5/6 (parallel) -> 7 -> 8 ->
 
 ---
 *Roadmap created: 2026-04-11*
-*Last updated: 2026-04-11*
+*Last updated: 2026-04-12*
