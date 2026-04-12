@@ -39,7 +39,7 @@ interface SFTLine {
 // ============================================================================
 
 /** Target number of training examples to generate */
-export const SAMPLE_COUNT = 550;
+export const SAMPLE_COUNT = 700;
 
 const COMPANION_ID = 'cipher';
 const GENERATOR_ID = 'cipher-persona';

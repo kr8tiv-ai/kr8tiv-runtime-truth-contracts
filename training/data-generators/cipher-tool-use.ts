@@ -49,7 +49,7 @@ interface ToolResult {
 // Constants
 // ============================================================================
 
-export const SAMPLE_COUNT = 820;
+export const SAMPLE_COUNT = 875;
 
 const COMPANION_ID = 'cipher';
 const GENERATOR_ID = 'cipher-tool-use';

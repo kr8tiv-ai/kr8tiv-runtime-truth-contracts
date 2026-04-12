@@ -153,14 +153,30 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-seq-length",
         type=int,
-        default=1024,
-        help="Maximum sequence length for training (default: %(default)s)",
+        default=2048,
+        help="Maximum sequence length for training (default: %(default)s). "
+        "Use 2048 for code-heavy tasks on Gemma 4 E4B with 6-10GB VRAM.",
     )
     parser.add_argument(
         "--learning-rate",
         type=float,
-        default=2e-4,
-        help="Learning rate (default: %(default)s)",
+        default=None,
+        help="Learning rate. Defaults vary by stage: SFT=2e-4, SimPO=5e-7, "
+        "GRPO=8e-6, KTO=5e-7. Override only if you know what you're doing.",
+    )
+    parser.add_argument(
+        "--lora-rank",
+        type=int,
+        default=64,
+        help="LoRA rank (default: %(default)s). Higher ranks capture richer "
+        "features for code generation. Use 16-32 for small datasets, "
+        "64 for production quality.",
+    )
+    parser.add_argument(
+        "--lora-alpha",
+        type=int,
+        default=128,
+        help="LoRA alpha scaling (default: %(default)s). Recommended: 2x rank.",
     )
     parser.add_argument(
         "--dry-run",
@@ -452,9 +468,11 @@ def run_training(
     output_dir: str,
     epochs: int,
     max_seq_length: int,
-    learning_rate: float,
+    learning_rate: float | None,
     model_family: str = FAMILY_LLAMA,
     alignment_stage: str = "sft",
+    lora_rank: int = 64,
+    lora_alpha: int = 128,
 ) -> None:
     """
     Run QLoRA fine-tuning via Unsloth and export merged GGUF.
@@ -513,13 +531,16 @@ def run_training(
     )
 
     # ── Configure LoRA ──────────────────────────────────────────────────
-    log(f"Configuring LoRA adapters (family={model_family})...")
+    # Training doc research: r=64, alpha=128 (2x ratio) for code generation.
+    # All-linear targets for Gemma 4 maximize adaptation coverage.
+    # Zero dropout when training data is abundant (per Unsloth/QLoRA studies).
+    log(f"Configuring LoRA adapters (family={model_family}, r={lora_rank}, alpha={lora_alpha})...")
     target_modules = _get_lora_target_modules(model_family)
     model = FastLanguageModel.get_peft_model(
         model,
-        r=16,
+        r=lora_rank,
         target_modules=target_modules,
-        lora_alpha=16,
+        lora_alpha=lora_alpha,
         lora_dropout=0,
         bias="none",
         use_gradient_checkpointing="unsloth",
@@ -549,15 +570,28 @@ def run_training(
     dataset = Dataset.from_list(entries)
     dataset = dataset.map(format_conversation)
 
+    # ── Resolve per-stage learning rate defaults ─────────────────────────
+    # Research-backed defaults from training doc:
+    # SFT: 2e-4 (standard QLoRA), SimPO: 5e-7 (much lower — prevents collapse),
+    # GRPO: 8e-6 (2-GRPO variant), KTO: 5e-7 (never exceed 1e-6)
+    STAGE_LR_DEFAULTS = {
+        "sft": 2e-4,
+        "simpo": 5e-7,
+        "grpo": 8e-6,
+        "kto": 5e-7,
+    }
+    effective_lr = learning_rate if learning_rate is not None else STAGE_LR_DEFAULTS[alignment_stage]
+    log(f"Learning rate: {effective_lr} (stage={alignment_stage})")
+
     # ── Run the appropriate alignment stage ──────────────────────────────
     if alignment_stage == "sft":
-        _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, learning_rate)
+        _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, effective_lr)
     elif alignment_stage == "simpo":
-        _run_simpo(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+        _run_simpo(model, tokenizer, dataset, output_dir, epochs, effective_lr)
     elif alignment_stage == "grpo":
-        _run_grpo(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+        _run_grpo(model, tokenizer, dataset, output_dir, epochs, effective_lr)
     elif alignment_stage == "kto":
-        _run_kto(model, tokenizer, dataset, output_dir, epochs, learning_rate)
+        _run_kto(model, tokenizer, dataset, output_dir, epochs, effective_lr)
     else:
         fatal(f"Unknown alignment stage: {alignment_stage}")
 
@@ -578,11 +612,14 @@ def _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, lear
     from trl import SFTTrainer, SFTConfig
 
     log("Running SFT alignment stage...")
+    # Training doc: cosine annealing outperforms linear for code generation;
+    # effective batch 16 (batch=2 x grad_accum=8) balances stability/speed;
+    # warmup_ratio=0.03 scales with dataset size better than fixed steps.
     training_args = SFTConfig(
         output_dir=output_dir,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
-        warmup_steps=5,
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=8,
+        warmup_ratio=0.03,
         learning_rate=learning_rate,
         num_train_epochs=epochs,
         max_seq_length=max_seq_length,
@@ -590,7 +627,7 @@ def _run_sft(model, tokenizer, dataset, output_dir, epochs, max_seq_length, lear
         logging_steps=1,
         save_steps=0,
         weight_decay=0.01,
-        lr_scheduler_type="linear",
+        lr_scheduler_type="cosine",
         optim="adamw_8bit",
         seed=3407,
         bf16=True,
@@ -619,14 +656,18 @@ def _run_simpo(model, tokenizer, dataset, output_dir, epochs, learning_rate):
         fatal("SimPO requires trl>=0.14.0. Update: pip install trl>=0.14.0")
 
     log("Running SimPO alignment stage...")
+    # Training doc (arXiv:2405.14734): β=2.0-2.5 (much larger than DPO's 0.1),
+    # γ=0.5-1.5 (target reward margin). SimPO's length normalization prevents
+    # verbose code padding — critical for clean frontend output.
+    # gamma_beta_ratio = γ/β ≈ 0.3-0.6 for code tasks.
     training_args = SimPOConfig(
         output_dir=output_dir,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=8,
         learning_rate=learning_rate,
         num_train_epochs=epochs,
         beta=2.5,
-        gamma_beta_ratio=0.3,
+        gamma_beta_ratio=0.4,
         logging_steps=1,
         optim="adamw_8bit",
         seed=3407,
@@ -656,10 +697,14 @@ def _run_grpo(model, tokenizer, dataset, output_dir, epochs, learning_rate):
         fatal("GRPO requires trl>=0.14.0. Update: pip install trl>=0.14.0")
 
     log("Running GRPO alignment stage (2-GRPO, 2 rollouts)...")
+    # Training doc (arXiv:2510.00977): 2-GRPO retains 98.1% of full GRPO
+    # performance while cutting training time 73-84%. Use batch 256 prompts
+    # x 2 rollouts = 512 total for stable group statistics.
+    # KL coeff 0.001, clip 0.2 (DAPO-style 0.2/0.28 for exploration optional).
     training_args = GRPOConfig(
         output_dir=output_dir,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=8,
         learning_rate=learning_rate,
         num_train_epochs=epochs,
         num_generations=2,  # 2-GRPO: 2 rollouts per prompt
@@ -750,6 +795,8 @@ def main() -> None:
         learning_rate=args.learning_rate,
         model_family=args.model_family,
         alignment_stage=args.alignment_stage,
+        lora_rank=args.lora_rank,
+        lora_alpha=args.lora_alpha,
     )
 
     log("Done.")

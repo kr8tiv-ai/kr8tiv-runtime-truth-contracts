@@ -38,6 +38,10 @@ export interface TrainCompanionArgs {
   modelFamily?: string;
   /** Alignment stage: sft, simpo, grpo, kto (passed through to fine-tune.py) */
   alignmentStage?: string;
+  /** LoRA rank (passed through to fine-tune.py, default 64) */
+  loraRank?: number;
+  /** LoRA alpha (passed through to fine-tune.py, default 128) */
+  loraAlpha?: number;
 }
 
 // ============================================================================
@@ -94,6 +98,12 @@ export function parseArgs(argv: string[]): TrainCompanionArgs {
       case '--alignment-stage':
         args.alignmentStage = argv[++i];
         break;
+      case '--lora-rank':
+        args.loraRank = parseInt(argv[++i]!, 10);
+        break;
+      case '--lora-alpha':
+        args.loraAlpha = parseInt(argv[++i]!, 10);
+        break;
     }
   }
 
@@ -116,6 +126,8 @@ export function parseArgs(argv: string[]): TrainCompanionArgs {
     skipTraining: args.skipTraining ?? false,
     modelFamily: args.modelFamily,
     alignmentStage: args.alignmentStage,
+    loraRank: args.loraRank,
+    loraAlpha: args.loraAlpha,
   };
 }
 
@@ -222,6 +234,14 @@ export function buildPythonArgs(
 
   if (args.alignmentStage) {
     scriptArgs.push('--alignment-stage', args.alignmentStage);
+  }
+
+  if (args.loraRank != null) {
+    scriptArgs.push('--lora-rank', String(args.loraRank));
+  }
+
+  if (args.loraAlpha != null) {
+    scriptArgs.push('--lora-alpha', String(args.loraAlpha));
   }
 
   if (args.dryRun) {

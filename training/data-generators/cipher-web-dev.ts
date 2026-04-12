@@ -37,7 +37,7 @@ interface SFTLine {
 // Constants
 // ============================================================================
 
-export const SAMPLE_COUNT = 560;
+export const SAMPLE_COUNT = 1400;
 
 const COMPANION_ID = 'cipher';
 const GENERATOR_ID = 'cipher-web-dev';
@@ -2113,6 +2113,373 @@ The golden rule of hover effects: they should ENHANCE the experience, not distra
   },
 ];
 
+// ── Accessibility (WCAG 2.1 AA) ─────────────────────────────────────────────
+// Training doc: accessibility is a core pillar of Cipher's expertise.
+// A11YN framework + axe-core integration drives GRPO reward signal.
+
+const ACCESSIBILITY_TOPICS: TopicEntry[] = [
+  {
+    category: 'a11y-forms',
+    difficulty: 'medium',
+    user: 'How do I make forms accessible?',
+    assistant: `Forms are where accessibility makes or breaks an experience.
+
+\`\`\`tsx
+function ContactForm() {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  return (
+    <form aria-labelledby="form-title" noValidate onSubmit={handleSubmit}>
+      <h2 id="form-title">Contact Us</h2>
+      <div className="field">
+        <label htmlFor="email">Email address</label>
+        <input
+          id="email"
+          type="email"
+          required
+          aria-required="true"
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : "email-hint"}
+        />
+        <span id="email-hint" className="hint">We'll never share your email.</span>
+        {errors.email && (
+          <span id="email-error" role="alert" className="error">
+            {errors.email}
+          </span>
+        )}
+      </div>
+      <fieldset>
+        <legend>Preferred contact method</legend>
+        <label><input type="radio" name="method" value="email" /> Email</label>
+        <label><input type="radio" name="method" value="phone" /> Phone</label>
+      </fieldset>
+      <button type="submit">Send message</button>
+    </form>
+  );
+}
+\`\`\`
+
+Critical patterns:
+- **\`<label>\` with \`htmlFor\`** — every input needs a visible label
+- **\`aria-required\`** — tells screen readers which fields are mandatory
+- **\`aria-invalid\` + \`aria-describedby\`** — link error messages to their fields
+- **\`role="alert"\`** — live region that announces errors immediately
+- **\`<fieldset>\` + \`<legend>\`** — group related inputs
+
+Tab through the form with your eyes closed. If you can complete it, you're golden.`,
+  },
+  {
+    category: 'a11y-keyboard',
+    difficulty: 'medium',
+    user: 'How do I handle keyboard navigation in custom components?',
+    assistant: `Keyboard navigation is the backbone of accessibility. If it works with keyboard, it usually works with screen readers.
+
+\`\`\`tsx
+function Dropdown({ options, value, onChange }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (open && activeIndex >= 0) {
+          onChange(options[activeIndex]);
+          setOpen(false);
+        } else setOpen(true);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!open) setOpen(true);
+        setActiveIndex(i => Math.min(i + 1, options.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveIndex(i => Math.max(i - 1, 0));
+        break;
+      case 'Escape': setOpen(false); break;
+      case 'Home': e.preventDefault(); setActiveIndex(0); break;
+      case 'End': e.preventDefault(); setActiveIndex(options.length - 1); break;
+    }
+  };
+
+  return (
+    <div onKeyDown={handleKeyDown}>
+      <button role="combobox" aria-expanded={open} aria-haspopup="listbox"
+        aria-activedescendant={open ? \`opt-\${activeIndex}\` : undefined}>
+        {value || 'Select...'}
+      </button>
+      {open && (
+        <ul role="listbox">
+          {options.map((opt, i) => (
+            <li key={opt} id={\`opt-\${i}\`} role="option"
+              aria-selected={i === activeIndex}
+              onClick={() => { onChange(opt); setOpen(false); }}>
+              {opt}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+\`\`\`
+
+Key patterns: Arrow keys navigate, Enter/Space activate, Escape closes, Home/End jump. Follow the ARIA Practices Guide — don't invent your own keyboard patterns.`,
+  },
+  {
+    category: 'a11y-color',
+    difficulty: 'easy',
+    user: 'What are the WCAG color contrast requirements?',
+    assistant: `Color contrast is one of the most impactful and testable accessibility requirements.
+
+**WCAG 2.1 AA requirements:**
+- **Normal text** (under 18px): **4.5:1** contrast ratio minimum
+- **Large text** (18px+ or 14px+ bold): **3:1** minimum
+- **UI components** (buttons, form borders): **3:1** minimum
+
+\`\`\`css
+:root {
+  --text-primary: #1a1a2e;    /* vs white: 16.7:1 ✅ */
+  --text-secondary: #4a5568;  /* vs white: 7.0:1 ✅ */
+  --text-muted: #718096;      /* vs white: 4.5:1 ✅ barely */
+}
+
+/* BAD */
+.light-text { color: #a0aec0; } /* vs white: 2.7:1 ❌ */
+
+/* Dark mode — test BOTH themes */
+[data-theme="dark"] {
+  --text-primary: #f7fafc;    /* vs #1a1a2e: 15.8:1 ✅ */
+}
+\`\`\`
+
+Tips: use semantic color tokens (easy to audit), test both themes, never rely on color alone — add icons or text. DevTools → Rendering → "Emulate vision deficiencies" is your best friend.`,
+  },
+  {
+    category: 'a11y-aria',
+    difficulty: 'hard',
+    user: 'When should I use ARIA vs native HTML?',
+    assistant: `First rule of ARIA: **don't use ARIA.** Native HTML has built-in semantics, keyboard behavior, and screen reader support. ARIA fills gaps.
+
+\`\`\`html
+<!-- BAD: reinventing the wheel -->
+<div role="button" tabindex="0" aria-pressed="false"
+     onclick="toggle()" onkeydown="handleKey(event)">Toggle</div>
+
+<!-- GOOD: native HTML does all that for free -->
+<button type="button" aria-pressed="false" onclick="toggle()">Toggle</button>
+
+<!-- GOOD: ARIA fills a real gap (no native tab widget exists) -->
+<div role="tablist" aria-label="Settings">
+  <button role="tab" aria-selected="true" aria-controls="panel-1">Profile</button>
+  <button role="tab" aria-selected="false" aria-controls="panel-2">Security</button>
+</div>
+<div role="tabpanel" id="panel-1">...</div>
+\`\`\`
+
+**Decision tree:**
+1. Native HTML element exists? → Use it.
+2. Can enhance native element? → Do that.
+3. No native equivalent? → Build with ARIA + keyboard support.
+
+Every ARIA role is a contract. \`role="tab"\` means screen readers expect Arrow key navigation. Implement it wrong and you've made accessibility *worse*.`,
+  },
+  {
+    category: 'a11y-testing',
+    difficulty: 'medium',
+    user: 'How do I set up automated accessibility testing?',
+    assistant: `Automated testing catches 30-50% of a11y issues — the easiest ones. Always combine with manual testing.
+
+\`\`\`tsx
+// Component testing with jest-axe
+import { axe, toHaveNoViolations } from 'jest-axe';
+expect.extend(toHaveNoViolations);
+
+it('has no a11y violations', async () => {
+  const { container } = render(<Button>Click</Button>);
+  expect(await axe(container)).toHaveNoViolations();
+});
+
+// E2E with Playwright + axe-core
+import AxeBuilder from '@axe-core/playwright';
+
+test('homepage passes axe', async ({ page }) => {
+  await page.goto('/');
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(results.violations).toEqual([]);
+});
+\`\`\`
+
+**Pipeline:**
+1. **jest-axe** in unit tests (fast, per-component)
+2. **@axe-core/playwright** in E2E (page-level)
+3. **eslint-plugin-jsx-a11y** at lint time (catches static issues)
+4. **CI gate** — fail if violations exceed baseline
+
+The goal: a monitored baseline that only trends downward.`,
+  },
+];
+
+// ── Multi-File Patterns ──────────────────────────────────────────────────────
+
+const MULTIFILE_TOPICS: TopicEntry[] = [
+  {
+    category: 'multifile-component',
+    difficulty: 'hard',
+    user: 'How should I structure a complex component across multiple files?',
+    assistant: `Component architecture is where frontend becomes real engineering.
+
+\`\`\`
+DataTable/
+  index.ts           # Public API
+  DataTable.tsx       # Orchestration only
+  DataTable.types.ts  # TypeScript interfaces
+  DataTable.hooks.ts  # useSort, useFilter, usePagination
+  DataTable.utils.ts  # Pure helpers
+  DataTable.test.tsx
+  columns/
+    ColumnHeader.tsx
+    ColumnCell.tsx
+  controls/
+    Pagination.tsx
+    SearchFilter.tsx
+\`\`\`
+
+The main component is thin — it orchestrates, not implements:
+
+\`\`\`tsx
+// DataTable.tsx
+export function DataTable<T>({ data, columns, pageSize = 20 }: DataTableProps<T>) {
+  const { sorted, sortBy, sortDir, onSort } = useSort(data);
+  const { filtered, query, onFilter } = useFilter(sorted);
+  const { page, totalPages, paged, onPage } = usePagination(filtered, pageSize);
+
+  return (
+    <div role="region" aria-label="Data table">
+      <SearchFilter value={query} onChange={onFilter} />
+      <table>
+        <thead><tr>
+          {columns.map(col => (
+            <ColumnHeader key={col.key} column={col}
+              sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+          ))}
+        </tr></thead>
+        <tbody>
+          {paged.map(row => (
+            <tr key={row.id}>
+              {columns.map(col => <ColumnCell key={col.key} column={col} row={row} />)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <Pagination page={page} total={totalPages} onChange={onPage} />
+    </div>
+  );
+}
+\`\`\`
+
+Rules: types in a separate file (they're the contract), hooks encapsulate state logic (testable alone), \`index.ts\` controls the public API, and if the main file exceeds 100 lines — split.`,
+  },
+  {
+    category: 'multifile-nextjs',
+    difficulty: 'hard',
+    user: 'What does a well-structured Next.js project look like?',
+    assistant: `Here's my production structure:
+
+\`\`\`
+src/
+  app/
+    (marketing)/         # Route group — shared marketing layout
+      page.tsx
+      pricing/page.tsx
+      layout.tsx
+    (dashboard)/         # Route group — dashboard layout
+      dashboard/page.tsx
+      settings/page.tsx
+      layout.tsx
+    api/
+      webhooks/route.ts
+    layout.tsx           # Root: html, body, fonts, providers
+    globals.css
+
+  components/
+    ui/                  # Primitives (Button, Input, Badge)
+    features/            # Feature components (UserCard, DataTable)
+    layouts/             # Layout components (Sidebar, Header)
+
+  lib/
+    api.ts              # API client singleton
+    auth.ts             # Auth utilities
+    types.ts            # Shared types
+    design-tokens.ts    # Design system tokens
+
+  hooks/
+    useApi.ts
+    useDebounce.ts
+\`\`\`
+
+Key principles:
+- **Route groups \`(name)/\`** share layouts without affecting URLs
+- **Server Components by default** — \`'use client'\` only for interactivity
+- **\`lib/\` for utilities** — never import from \`components/\` into \`lib/\`
+- **Colocation** — put things near where they're used
+
+The structure should answer "where does this go?" without asking anyone.`,
+  },
+];
+
+// ── TypeScript Best Practices ────────────────────────────────────────────────
+
+const TYPESCRIPT_TOPICS: TopicEntry[] = [
+  {
+    category: 'ts-types',
+    difficulty: 'medium',
+    user: 'How do I write good TypeScript types for React components?',
+    assistant: `TypeScript types are documentation the compiler enforces.
+
+\`\`\`tsx
+// Extend native HTML props
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+}
+
+// Discriminated unions — make impossible states impossible
+type AlertProps =
+  | { variant: 'info'; onDismiss?: () => void }
+  | { variant: 'error'; retryAction: () => void }
+  | { variant: 'success' };
+
+// Generic components with constraints
+interface ListProps<T extends { id: string }> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+}
+
+function List<T extends { id: string }>({ items, renderItem }: ListProps<T>) {
+  return <ul>{items.map(item => <li key={item.id}>{renderItem(item)}</li>)}</ul>;
+}
+
+// Polymorphic — renders as any element
+type AsProps<E extends React.ElementType> = {
+  as?: E;
+} & Omit<React.ComponentPropsWithoutRef<E>, 'as'>;
+
+function Text<E extends React.ElementType = 'p'>({ as, ...props }: AsProps<E>) {
+  const Comp = as || 'p';
+  return <Comp {...props} />;
+}
+\`\`\`
+
+Rules: extend native props (don't reinvent), use discriminated unions for variants, generic components for type-safe lists/tables, avoid \`any\` (use \`unknown\` + type guards), and export types separately.`,
+  },
+];
+
 // ============================================================================
 // Generator
 // ============================================================================
@@ -2120,15 +2487,9 @@ The golden rule of hover effects: they should ENHANCE the experience, not distra
 /**
  * Generate Cipher web development training data.
  *
- * Covers the full frontend spectrum:
- * - HTML5 & Semantic Markup (80 examples)
- * - CSS: Grid, Flexbox, Animations, Custom Properties, Tailwind (100 examples)
- * - JavaScript: Modern ES2024+, Async, DOM (80 examples)
- * - React: Hooks, Components, Performance (80 examples)
- * - Next.js: App Router, Data, Middleware (80 examples)
- * - Performance: Core Web Vitals, Images (60 examples)
- * - Design Systems: Tokens, Components (40 examples)
- * - Animations: Framer Motion, CSS (40 examples)
+ * Creates ~1400 SFTLine entries covering all web dev topics including
+ * accessibility (WCAG 2.1 AA), design systems, multi-file architecture,
+ * TypeScript, and modern frontend patterns.
  *
  * @returns Array of SFTLine objects ready for JSONL serialization
  */
@@ -2142,6 +2503,9 @@ export async function generate(): Promise<SFTLine[]> {
     ...PERFORMANCE_TOPICS,
     ...DESIGN_SYSTEM_TOPICS,
     ...ANIMATION_TOPICS,
+    ...ACCESSIBILITY_TOPICS,
+    ...MULTIFILE_TOPICS,
+    ...TYPESCRIPT_TOPICS,
   ];
 
   const lines: SFTLine[] = [];
@@ -2247,6 +2611,102 @@ export async function generate(): Promise<SFTLine[]> {
       'How do I optimize third-party scripts?',
       'How do I use the Performance API to measure real user metrics?',
     ],
+    'a11y-forms': [
+      'How do I make a multi-step form accessible?',
+      'What\'s the best way to show form validation errors to screen readers?',
+      'How do I make a date picker accessible?',
+      'What ARIA attributes do I need for a custom select?',
+      'How do I make file upload inputs accessible?',
+      'What\'s the right way to handle required fields?',
+      'How do I announce form submission success or failure?',
+      'How do I make a search form with autocomplete accessible?',
+      'What\'s the best way to handle inline editing for accessibility?',
+      'How do I make a quantity stepper accessible?',
+    ],
+    'a11y-keyboard': [
+      'How do I create a focus trap for modals?',
+      'What\'s the right tab order for complex layouts?',
+      'How do I handle focus management in single-page apps?',
+      'What are skip links and how do I implement them?',
+      'How do I make a drag-and-drop interface keyboard accessible?',
+      'What\'s the best way to handle keyboard shortcuts?',
+      'How do I manage focus when content dynamically changes?',
+      'How do I make a tooltip keyboard accessible?',
+      'What\'s the right way to handle focus on route changes?',
+      'How do I make a sortable table header keyboard operable?',
+    ],
+    'a11y-color': [
+      'How do I design a color system that meets WCAG contrast requirements?',
+      'What tools can I use to check color contrast ratios?',
+      'How do I handle dark mode accessibility?',
+      'What\'s the best way to indicate errors without relying on color alone?',
+      'How do I make data visualizations accessible for colorblind users?',
+      'What are the contrast requirements for placeholder text?',
+      'How do I test my site for different types of color blindness?',
+      'What\'s the minimum contrast ratio for icons?',
+      'How do I make focus indicators visible on all backgrounds?',
+      'How do I handle text over images for contrast compliance?',
+    ],
+    'a11y-aria': [
+      'How do I create an accessible modal dialog?',
+      'What\'s the difference between aria-label and aria-labelledby?',
+      'When should I use aria-live regions?',
+      'How do I make an accordion accessible?',
+      'What ARIA roles should I know for common UI patterns?',
+      'How do I use aria-describedby effectively?',
+      'What\'s the right way to handle disclosure widgets?',
+      'How do I make a tree view accessible?',
+      'When should I use aria-hidden?',
+      'How do I create an accessible notification system?',
+    ],
+    'a11y-testing': [
+      'What\'s the best accessibility testing workflow?',
+      'How do I integrate axe-core into my CI pipeline?',
+      'What manual tests should I always do?',
+      'How do I test with VoiceOver on Mac?',
+      'What\'s the difference between Lighthouse and axe-core?',
+      'How do I write accessibility regression tests?',
+      'What are the most common axe-core violations?',
+      'How do I test responsive accessibility (mobile vs desktop)?',
+      'What tools help me check keyboard navigation?',
+      'How do I create an accessibility audit checklist?',
+    ],
+    'multifile-component': [
+      'How do I organize a complex form component across files?',
+      'What\'s the best way to share types between related components?',
+      'How do I structure a component library for reuse?',
+      'When should I split a component into multiple files?',
+      'How do I organize custom hooks for a complex feature?',
+      'What\'s the best barrel export pattern for components?',
+      'How do I structure tests for a multi-file component?',
+      'What\'s the right balance between colocation and separation?',
+      'How do I handle shared utilities in a component folder?',
+      'How do I organize a design system package?',
+    ],
+    'multifile-nextjs': [
+      'How do I organize API routes in App Router?',
+      'What\'s the best way to share server-side utilities?',
+      'How do I structure a multi-tenant Next.js app?',
+      'When should I use route groups vs nested folders?',
+      'How do I organize middleware logic?',
+      'What\'s the best way to handle environment-specific config?',
+      'How do I structure data fetching layers?',
+      'What\'s the right way to organize Tailwind config for large projects?',
+      'How do I handle feature flags in Next.js?',
+      'How do I organize internationalization in App Router?',
+    ],
+    'ts-types': [
+      'How do I create utility types for API responses?',
+      'What\'s the best way to type a theme object?',
+      'How do I use generics for a reusable data table?',
+      'When should I use type vs interface?',
+      'How do I type event handlers in React?',
+      'What\'s the best way to handle nullable types?',
+      'How do I create a type-safe router?',
+      'What are template literal types and when should I use them?',
+      'How do I type a custom hook that returns multiple values?',
+      'What\'s the best way to type children props?',
+    ],
   };
 
   /** Response fragments for assembling varied responses */
@@ -2295,6 +2755,14 @@ export async function generate(): Promise<SFTLine[]> {
         'react-hooks': `${starter}\n\n${teach} Hooks are React's way of letting you tap into component lifecycle and state. The key is understanding when each hook runs and what triggers re-renders.\n\nThe hooks I use daily: \`useState\` (90% of state), \`useEffect\` (side effects with cleanup), \`useRef\` (DOM refs and stable values), \`useMemo\`/\`useCallback\` (performance, used sparingly).\n\nCustom hooks are where the real power is — extract reusable logic into functions that start with \`use\`. They're just functions that call other hooks.\n\n${ender}`,
         'nextjs-app-router': `${starter}\n\n${teach} App Router is a shift in mental model: think in terms of SERVER by default, CLIENT only when needed.\n\nThe file conventions:\n- \`page.tsx\` — the route content\n- \`layout.tsx\` — shared wrapper (persists across navigations)\n- \`loading.tsx\` — Suspense fallback\n- \`error.tsx\` — error boundary\n- \`not-found.tsx\` — 404 page\n\nServer Components fetch data directly. Client Components handle interactivity. The boundary between them is the \`'use client'\` directive.\n\n${ender}`,
         'perf-core-web-vitals': `${starter}\n\n${teach} Performance is a feature. The three Core Web Vitals for 2026:\n\n- **LCP** (< 2.5s): How fast the biggest content appears\n- **INP** (< 200ms): How responsive interactions feel\n- **CLS** (< 0.1): How stable the layout is\n\nThe 80/20 fixes: optimize images, reduce JavaScript, use server rendering for critical content, and set dimensions on all media elements.\n\n${ender}`,
+        'a11y-forms': `${starter}\n\n${teach} Accessible forms are about connecting elements so assistive tech can navigate them. Every input needs a \`<label>\`, errors need \`role="alert"\` and \`aria-describedby\`, and groups need \`<fieldset>\`/\`<legend>\`. The best test: can you complete the form using only Tab and Enter?\n\n${ender}`,
+        'a11y-keyboard': `${starter}\n\n${teach} If it works with keyboard, it usually works with screen readers. Arrow keys navigate within a component. Tab moves between components. Enter/Space activates. Escape dismisses. Follow the ARIA Practices Guide patterns — users expect consistent keyboard behavior.\n\n${ender}`,
+        'a11y-color': `${starter}\n\n${teach} WCAG 2.1 AA needs 4.5:1 for normal text, 3:1 for large text and UI components. Use semantic color tokens so you can audit easily. Test both light and dark themes. Never rely on color alone — always add text, icons, or patterns. DevTools can emulate vision deficiencies.\n\n${ender}`,
+        'a11y-aria': `${starter}\n\n${teach} First rule: don't use ARIA unless native HTML can't do it. Native \`<button>\` beats \`<div role="button">\` every time. ARIA is for complex widgets (tabs, tree views, comboboxes) where no HTML equivalent exists. Every role is a contract — if you add it, implement the expected keyboard behavior.\n\n${ender}`,
+        'a11y-testing': `${starter}\n\n${teach} Automated testing (axe-core, Lighthouse) catches ~40% of issues. Manual testing catches the rest. My workflow: jest-axe in component tests, @axe-core/playwright in E2E, eslint-plugin-jsx-a11y at lint time, and manual screen reader testing for complex interactions.\n\n${ender}`,
+        'multifile-component': `${starter}\n\n${teach} Component architecture at scale: types in a separate file (they're the contract), hooks encapsulate state logic (testable in isolation), the main component is orchestration only, and \`index.ts\` controls the public API. If a file exceeds 100 lines, it's time to split.\n\n${ender}`,
+        'multifile-nextjs': `${starter}\n\n${teach} App Router structure: route groups \`(name)/\` share layouts without affecting URLs, Server Components by default, \`lib/\` for shared utilities (never import components into lib), and colocation over separation. The file structure should answer "where does X go?" without asking.\n\n${ender}`,
+        'ts-types': `${starter}\n\n${teach} Good TypeScript types make component APIs self-documenting. Extend native HTML props instead of reinventing. Use discriminated unions to make impossible states impossible. Generic components give type-safe lists and tables. Avoid \`any\` — use \`unknown\` and narrow with type guards.\n\n${ender}`,
       };
 
       const response = categoryExplanations[category] ?? `${starter}\n\n${teach} This is one of those topics where the fundamentals matter more than the tricks.\n\n${ender}`;

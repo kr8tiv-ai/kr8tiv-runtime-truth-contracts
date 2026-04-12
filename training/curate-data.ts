@@ -67,13 +67,17 @@ interface CurationStats {
 
 const VALID_COMPANIONS = ['cipher', 'mischief', 'vortex', 'forge', 'aether', 'catalyst'];
 
+// Training doc optimal mix ratios (research-backed):
+// ~40% code/tutorials, 25% tool-use, 20% persona/teaching,
+// 10% safety+alignment, 5% voice. Accessibility integrated into code category.
+// Total target: ~3500 samples (increased from 3000 for richer coverage)
 const TARGET_COUNTS: Record<string, number> = {
-  persona: 500,
-  domain: 500,
-  'tool-use': 800,
-  safety: 500,
-  alignment: 500,
-  voice: 200,
+  persona: 700,         // 20% — personality + teaching conversations
+  domain: 1400,         // 40% — web-dev code + accessibility + design systems
+  'tool-use': 875,      // 25% — tool-calling + multi-step agent trajectories
+  safety: 175,          // 5%  — safety/refusal training
+  alignment: 175,       // 5%  — preference pair data for SimPO/GRPO
+  voice: 175,           // 5%  — voice-optimized spoken interaction
 };
 
 const TOTAL_TARGET = Object.values(TARGET_COUNTS).reduce((a, b) => a + b, 0);

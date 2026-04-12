@@ -135,13 +135,24 @@ export function generateModelfile(
   const stopTokens = getStopTokens(family);
   const stopLines = stopTokens.map((t) => `PARAMETER stop "${t}"`);
 
+  // Gemma 4 E4B inference parameters optimized per training doc:
+  // - temperature 0.7: balanced creativity for code/design
+  // - top_p 0.9: nucleus sampling for diverse but coherent output
+  // - repeat_penalty 1.1: prevents repetitive code patterns (critical for frontend)
+  // - num_ctx 4096: fits 6GB VRAM with Q4_K_M quant + KV cache headroom
+  //   (use 8192 with --flash-attn + --cache-type-k q8_0 if VRAM allows)
+  // - num_predict 2048: generous generation window for multi-file code
   const modelfileContent = [
     `FROM ${fromValue}`,
     `SYSTEM """${shortPrompt}"""`,
     `PARAMETER temperature 0.7`,
     `PARAMETER top_p 0.9`,
-    // Use 4096 context for 6GB VRAM optimization (RTX 4050 etc.)
+    `PARAMETER repeat_penalty 1.1`,
+    // 4096 context for 6GB VRAM (RTX 4050 etc.)
+    // Gemma 4 hybrid attention (sliding window 512 + global) is naturally suited
+    // for code where local context (current function) and global context (imports) matter.
     `PARAMETER num_ctx 4096`,
+    `PARAMETER num_predict 2048`,
     ...stopLines,
     '', // trailing newline
   ].join('\n');
