@@ -38,11 +38,25 @@ Requirements covered: OBS-01 through OBS-04.
 - Strictly opt-in with clear privacy explanation
 - No conversation content ever sent — only aggregate metrics
 
+### Health Dashboard: System Tray + Settings Panel (Both)
+- **System tray:** Traffic light icon (green/yellow/red). Click to expand quick status.
+- **Settings panel:** Full details — each component's status, latency, last check time.
+- Both surfaces show the same data, different detail levels.
+
+### Usage Stats: Companion Commentary
+- Stats presented BY the companion in their voice:
+  - Cipher: "We've built 12 websites together! Our best work was that Three.js portfolio — chef's kiss. 🐙"
+  - Forge: "47 bugs squashed this month. Our debugging streak is 8 days. NICE! 🦄"
+- Gamified: streaks, milestones, "level" progression
+- Messages exchanged, hours chatted, topics explored, projects completed
+- Weekly summary sent proactively (ties into Phase 4 smart proactive feature)
+
 ### Claude's Discretion
 - Dashboard component architecture
 - Ollama process monitoring implementation
 - Metric collection and aggregation
 - Mission Control API integration
+- Gamification logic and milestone thresholds
 
 </decisions>
 

@@ -32,11 +32,23 @@ Requirements covered: TAIL-01 through TAIL-04.
 - Model update checks + LoRA adapter downloads
 - Telemetry export (opt-in)
 
+### Tailscale Auth: kr8tiv-Managed with User Option
+- **Default:** User auto-joins kr8tiv's Tailscale network. Zero setup.
+- **Advanced:** Power users can connect their own Tailscale account instead.
+- kr8tiv manages the tailnet, handles provisioning, DNS routing.
+
+### Device Discovery: Auto-Discover + Approve
+- Companion detects new devices on the tailnet
+- Asks user once: "A new device wants to connect — approve?"
+- Once approved, device is remembered permanently
+- User can revoke devices from settings panel
+
 ### Claude's Discretion
 - Tailscale OAuth flow implementation
 - MagicDNS configuration
 - Firewall/NAT traversal handling
-- Service discovery protocol
+- Device fingerprinting for approval
+- kr8tiv tailnet provisioning API
 
 </decisions>
 

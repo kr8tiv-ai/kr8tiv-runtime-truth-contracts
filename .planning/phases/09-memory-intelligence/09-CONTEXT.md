@@ -27,9 +27,10 @@ Requirements covered: MEM-01 through MEM-04.
 
 ### Memory Architecture
 - **Local SQLite** — Primary storage, always available, survives offline
-- **Supermemory cloud** — Opt-in sync for cross-device persistence
+- **Supermemory cloud** — Sync by DEFAULT for cross-device persistence. User can opt out.
 - Personal memory boundary: NEVER stores credentials, financial info, personal life details
 - Memory categories: design preferences, project context, teaching progress, user preferences
+- Sync indicator in UI: shows when memories are syncing to cloud
 
 ### Privacy Controls
 - Clear indicator when companion is "remembering" something

@@ -41,11 +41,29 @@ Requirements covered: VOICE-01 through VOICE-05.
 - Stream audio as it generates — don't wait for full response
 - Smooth crossfade between chunks to avoid choppy audio
 
+### Voice Activation: All Three Options
+- **Push-to-talk** — Click and hold mic button. Default for desktop app.
+- **Wake word** — "Hey Cipher" (or companion name). Requires always-on mic permission.
+- **Toggle mode** — Click once to enter voice mode, all speech routed. Good for extended sessions.
+- User picks preferred method in settings. Push-to-talk is the default.
+
+### Response Mode: Smart Matching
+- If user SPOKE → companion speaks back (TTS) + shows text
+- If user TYPED → companion shows text only (no TTS)
+- Seamless switching mid-conversation
+- User can override: click speaker icon on any text message to hear it
+
+### Voice Assignment: Auto Per Companion
+- Each companion has a fixed voice that matches their personality
+- No user choice needed — the voice IS the companion
+- Voices pre-configured with Kokoro embeddings during setup
+
 ### Claude's Discretion
 - Exact Kokoro model configuration per companion
 - Audio streaming protocol (WebAudio API vs native audio)
 - Reference audio creation process
 - ElevenLabs voice ID mapping
+- Wake word detection library (Picovoice vs browser API)
 - Audio caching strategy
 
 </decisions>

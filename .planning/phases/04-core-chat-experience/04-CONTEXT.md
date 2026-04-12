@@ -60,12 +60,32 @@ Requirements covered: CHAT-01 through CHAT-05.
 - Tokens stream word-by-word with smooth animation
 - Typing indicator shows companion "thinking" with personality-specific animation
 
+### Telegram Bot Token: kr8tiv-Provided
+- kr8tiv pre-creates Telegram bots for each Genesis holder
+- User clicks "Activate Telegram" → bot is instantly live, zero BotFather friction
+- Bot name matches companion: "Cipher 🐙", "Forge 🦄", etc.
+- NFT image set as bot profile picture automatically
+- Power users can optionally "bring your own bot token"
+
+### Companion Avatar: NFT Image
+- User's actual Genesis NFT artwork as companion avatar across ALL surfaces
+- Desktop app: NFT image with subtle glow/pulse animation
+- Telegram: NFT image as bot profile picture
+- Web dashboard: NFT image in chat header + message bubbles
+
+### Proactive Intelligence: Smart Learning
+- Companion starts quiet (only responds when asked)
+- Learns user's patterns over time (when they work, what they build, preferred check-in times)
+- Gradually becomes proactive: morning greetings, project reminders, encouragement
+- Fully configurable: user can dial proactivity up/down or disable entirely
+- Proactive messages are always in-character and contextual (not generic)
+
 ### Claude's Discretion
 - Exact React component architecture for chat UI
 - SQLite schema for conversation storage
 - Streaming protocol (SSE vs WebSocket)
 - Rolling summarization strategy
-- Telegram bot token management
+- Proactive trigger logic and timing algorithms
 
 </decisions>
 
