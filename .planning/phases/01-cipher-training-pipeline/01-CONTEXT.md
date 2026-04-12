@@ -22,6 +22,32 @@ Requirements covered: TRAIN-01 through TRAIN-07.
 - Total target: 8K SFT examples, 5K SimPO pairs, 3K GRPO problems
 - Frontier distillation focuses on: persona conversations (Maximum Kraken voice), multi-file design critiques, tool-calling trajectories
 
+### CRITICAL: Anti-AI-Slop & Awwwards-Worthy Output (NON-NEGOTIABLE)
+- Cipher must produce **stunning, high-end websites** — the kind that win Awwwards, not generic Bootstrap/template garbage
+- Training data MUST include examples of premium creative development:
+  - **Three.js** — 3D scenes, particle systems, immersive experiences, WebGL shaders
+  - **GSAP** — Professional scroll-triggered animations, timeline sequences, SplitText, ScrollTrigger, Flip
+  - **Lenis** — Buttery smooth scrolling, parallax, scroll-linked animations
+  - **Vanilla JS** — Custom cursor effects, magnetic buttons, text reveal animations, canvas experiments
+  - **Advanced CSS** — clip-path animations, mix-blend-mode, custom properties animations, container queries
+  - **Framer Motion** — Layout animations, shared element transitions, spring physics, gesture-driven UI
+- SimPO preference pairs MUST specifically train against AI slop:
+  - **Chosen:** Hand-crafted, agency-quality code with GSAP ScrollTrigger + Lenis smooth scroll + custom cursor
+  - **Rejected:** Generic div soup with Tailwind defaults, no animations, cookie-cutter layouts
+  - **Chosen:** Three.js hero with particle mesh + organic camera movement
+  - **Rejected:** Static hero image with gradient overlay and centered text (the classic AI slop pattern)
+  - **Chosen:** Custom SVG morphing navigation with magnetic hover effects
+  - **Rejected:** Basic hamburger menu with no personality
+- GRPO problems should include Awwwards-caliber challenges:
+  - "Build a portfolio with smooth page transitions using GSAP Flip + Lenis"
+  - "Create an interactive 3D product viewer with Three.js and OrbitControls"
+  - "Design a landing page with scroll-triggered text reveals using GSAP SplitText"
+  - "Build a custom cursor that morphs on hover using vanilla JS + CSS mix-blend-mode"
+- **Scrape real Awwwards/FWA/CSS Design Awards sites** for code patterns and structure
+- Training data should reference real creative agencies: Locomotive, Active Theory, Resn, 14islands, Immersive Garden
+- The model should know the difference between "website" and "web experience"
+- If Cipher generates a website that looks like it came from a template, the reward function should PENALIZE it heavily
+
 ### Personality Enforcement: Maximum Kraken
 - **Every response** should have ocean metaphors, tentacle references, "bloop" sounds, excitement about design
 - Character should NEVER break — even in error messages, Cipher stays the Kraken
@@ -30,13 +56,16 @@ Requirements covered: TRAIN-01 through TRAIN-07.
 - GRPO reward includes 0.2 weight for personality adherence (measured by keyword/pattern matching)
 - Training examples should show Cipher being Maximum Kraken even during technical work: "Let me wrap all eight tentacles around this TypeScript error..."
 
-### GRPO Reward Weights (Accessibility-First)
-- **0.40** — Accessibility (axe-core WCAG pass rate, semantic HTML, ARIA attributes)
-- **0.25** — Aesthetics (Tailwind patterns, modern CSS, design system adherence)
+### GRPO Reward Weights (Accessibility + Anti-Slop)
+- **0.30** — Accessibility (axe-core WCAG pass rate, semantic HTML, ARIA attributes)
+- **0.30** — Creative Quality / Anti-Slop (detects GSAP/Three.js/Lenis/custom animations, penalizes generic templates, rewards hand-crafted interactions)
 - **0.20** — Personality (kraken metaphors, teaching explanations, excitement patterns)
-- **0.15** — Executability (valid HTML/JSX, balanced tags, no errors)
+- **0.10** — Executability (valid HTML/JSX, balanced tags, no errors)
+- **0.10** — Code Craftsmanship (vanilla JS over jQuery, custom solutions over libraries, creative CSS over utility-only)
 - Plus format bonus for valid JSON tool calls
-- This weighting enforces the brand promise: WCAG compliance is non-negotiable, beauty and character follow
+- **Anti-slop penalty:** -0.3 if output contains patterns like: centered-text-on-gradient hero, generic card grids with no interaction, div soup with no semantic structure, or cookie-cutter layouts
+- **Creative bonus:** +0.2 for detecting: GSAP timeline/ScrollTrigger usage, Three.js scene setup, Lenis smooth scroll, custom cursor implementation, SVG animation, canvas experiments
+- This enforces: WCAG compliance is non-negotiable AND output must be Awwwards-worthy, not AI slop
 
 ### Training Execution: All on Colab A100
 - Full pipeline on Colab Pro+ A100 40GB
