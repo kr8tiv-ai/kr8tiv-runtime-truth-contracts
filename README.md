@@ -14,7 +14,44 @@
 
 This is not a smart contract repo. It is the **source of truth** for what KIN agents are allowed to do, what state they hold, and how they prove it.
 
-[Organization](https://github.com/kr8tiv-ai) | [KIN Platform](https://github.com/kr8tiv-ai/Kin) | [Mission Control](https://github.com/kr8tiv-ai/kr8tiv-mission-control)
+[Organization](https://github.com/kr8tiv-ai) | [KIN Platform](https://github.com/kr8tiv-ai/Kin) | [Mission Control](https://github.com/kr8tiv-ai/kr8tiv-mission-control) | [Training](https://github.com/kr8tiv-ai/kr8tiv-training)
+
+---
+
+## Cipher — Current Status
+
+> **The Code Kraken is alive.** First of 6 companions shipped through Stage 1 (SFT) and Stage 2 (SimPO anti-slop).
+
+### Models on HuggingFace (public)
+| Stage | Model | Format |
+|-------|-------|--------|
+| Stage 1 SFT | [`Auroraventures/cipher-sft-merged`](https://huggingface.co/Auroraventures/cipher-sft-merged) | safetensors (62.5 GB) |
+| Stage 1 SFT GGUF Q4_K_M | [`Auroraventures/cipher-sft-merged-Q4_K_M-GGUF`](https://huggingface.co/Auroraventures/cipher-sft-merged-Q4_K_M-GGUF) | GGUF (18.7 GB, Ollama-ready) |
+| Stage 2 SimPO | [`Auroraventures/cipher-simpo-merged`](https://huggingface.co/Auroraventures/cipher-simpo-merged) | safetensors (62.6 GB) |
+
+### Runtime integration (this repo)
+The `companions/cipher/` directory + `inference/` module are wired for:
+- **Local inference** — Ollama pulls the GGUF, serves via `runtime/inference.ts` (Gemma 4 raw chat template, not Ollama auto-template)
+- **Two-brain routing** — `inference/supervisor.ts` escalates vision/video/image tasks to frontier models
+- **Render-loop critique** — `companions/cipher/runtime/render-loop.ts` renders generated HTML in Playwright + axe-core audit → screenshot → critique → iterate (designed, pending Stage 3 wiring)
+- **Pull from HF**:
+  ```bash
+  ollama pull hf.co/Auroraventures/cipher-sft-merged-Q4_K_M-GGUF
+  ollama cp hf.co/Auroraventures/cipher-sft-merged-Q4_K_M-GGUF kin-cipher
+  ```
+
+### Training pipeline status
+| Stage | Status | Artifact |
+|-------|--------|----------|
+| SFT (pattern learning from 163 Awwwards examples) | ✅ complete | `cipher-sft-merged` |
+| SimPO (anti-slop preference pairs) | ✅ complete | `cipher-simpo-merged` |
+| GRPO (RL with render-loop rewards) | ⏳ queued | — |
+| KTO (binary production feedback) | ⏳ queued | — |
+
+Training infrastructure lives in the [`kr8tiv-training`](https://github.com/kr8tiv-ai/kr8tiv-training) repo. GSD planning artifacts for phases 1-10 in `.planning/`.
+
+### Evaluation samples
+5-site evaluation suite in `scripts/generate_full_sites.py` covering: architecture firm, tech SaaS, photographer portfolio, creative studio, Three.js experience. Known failure modes (opacity inheritance, broken DOM refs, Lenis.stop misuse) are tracked and addressed by Stage 3 GRPO's render-loop reward.
 
 ---
 
