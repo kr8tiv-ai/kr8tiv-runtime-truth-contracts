@@ -10,6 +10,7 @@ out/
 secrets/
 **/ghp_*
 **/hf_*
+scripts/endpoint_config.json
 .gsd/browser-state/
 .gsd/browser-baselines/
 .gsd/worktrees/
