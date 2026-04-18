@@ -1,3 +1,15 @@
+# Generated site outputs (too heavy for git — produced by scripts/generate_*.py)
+out/
+# but keep the handcrafted reference
+!out/handcrafted/
+# Secrets — NEVER commit
+*.token
+*token*.txt
+.git-credentials
+.hf_token
+secrets/
+**/ghp_*
+**/hf_*
 .gsd/browser-state/
 .gsd/browser-baselines/
 .gsd/worktrees/
