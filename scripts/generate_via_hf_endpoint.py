@@ -1,7 +1,7 @@
 """Generate Awwwards-quality website examples via a HuggingFace Inference Endpoint.
 
 Usage:
-  1. Matt deploys `Auroraventures/cipher-sft-merged` as an HF Inference Endpoint via the
+  1. Matt deploys `Auroraventures/cipher-sft25-real-merged` as an HF Inference Endpoint via the
      web UI (see .planning/staged-rolling-oasis.md — the UI path bypasses the 403
      "Payment method required" API error).
   2. Copy the endpoint URL from the dashboard (looks like
@@ -14,7 +14,7 @@ Config file format (scripts/endpoint_config.json — gitignored):
     {
       "endpoint_url": "https://xxxxxxxx.us-east-1.aws.endpoints.huggingface.cloud",
       "hf_token_env": "HF_TOKEN",
-      "model": "Auroraventures/cipher-sft-merged"
+      "model": "Auroraventures/cipher-sft25-real-merged"
     }
 
 The endpoint runs TGI with an OpenAI-compatible /v1/chat/completions route; this script
@@ -28,6 +28,11 @@ import time
 import urllib.request
 import webbrowser
 from pathlib import Path
+
+try:
+    from scripts.cipher_prompting import REAL_HF_MODEL, clean_generated_text
+except ImportError:
+    from cipher_prompting import REAL_HF_MODEL, clean_generated_text  # type: ignore
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
@@ -83,7 +88,7 @@ def load_config() -> dict:
     return {
         "url": url,
         "token": token,
-        "model": cfg.get("model", "tgi"),  # TGI accepts any model string when single-model
+        "model": cfg.get("model", REAL_HF_MODEL),
     }
 
 
@@ -117,14 +122,8 @@ def generate(cfg: dict, user_prompt: str, max_tokens: int = 4096) -> tuple[str, 
 
 
 def clean(text: str) -> str:
-    """Strip markdown fences and stray chat-template tags."""
-    text = re.sub(r"</?start_of_turn>\w*\s*", "", text)
-    text = re.sub(r"</?end_of_turn>\w*\s*", "", text)
-    if "```" in text:
-        m = re.search(r"```(?:html)?\s*\n?(.*?)```", text, re.DOTALL)
-        if m:
-            text = m.group(1)
-    return text.strip()
+    """Strip markdown fences and any stray template tags."""
+    return clean_generated_text(text)
 
 
 def ensure_html(text: str) -> str:
@@ -152,7 +151,7 @@ a:hover{background:#252550;border-color:#9bf;transform:translateY(-2px)}
      display:inline-block;margin-left:8px;color:#9bf;letter-spacing:.5px;text-transform:uppercase}
 </style></head><body>
 <h1>Cipher via HF Inference Endpoint</h1>
-<p>Generated against a deployed HuggingFace Inference Endpoint (cipher-sft-merged).</p>
+<p>Generated against a deployed HuggingFace Inference Endpoint (cipher-sft25-real-merged).</p>
 <a href=\"01-hero-particles.html\">01. Hero with Three.js Particles<span class=\"tag\">Three.js + GSAP</span></a>
 <a href=\"02-portfolio-scroll.html\">02. Smooth Scroll Portfolio<span class=\"tag\">Lenis + GSAP</span></a>
 <a href=\"03-3d-card.html\">03. Interactive 3D Card<span class=\"tag\">CSS 3D + GSAP</span></a>

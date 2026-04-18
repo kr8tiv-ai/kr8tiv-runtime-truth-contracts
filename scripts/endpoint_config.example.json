@@ -3,5 +3,5 @@
   "endpoint_url": "https://REPLACE-WITH-YOUR-ENDPOINT.us-east-1.aws.endpoints.huggingface.cloud",
   "hf_token_env": "HF_TOKEN",
   "hf_token": null,
-  "model": "Auroraventures/cipher-sft-merged"
+  "model": "Auroraventures/cipher-sft25-real-merged"
 }

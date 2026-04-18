@@ -1,11 +1,26 @@
 """Generate Awwwards-quality website examples via local Ollama Cipher.
-Uses raw mode with manual Gemma 4 chat template (Ollama's auto-template is broken for our SFT model).
+Uses raw mode with the real Gemma 4 chat template from the shipped HF checkpoint.
 Saves HTML to out/sites/ and opens index.html in the default browser."""
 import os, re, time, json, urllib.request, webbrowser
 from pathlib import Path
 
+try:
+    from scripts.cipher_prompting import (
+        DEFAULT_LOCAL_MODEL,
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+except ImportError:
+    from cipher_prompting import (  # type: ignore
+        DEFAULT_LOCAL_MODEL,
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+
 OLLAMA_URL = os.environ.get("CIPHER_API_URL", "http://localhost:11434").rstrip("/")
-MODEL = os.environ.get("CIPHER_MODEL", "kin-cipher")
+MODEL = os.environ.get("CIPHER_MODEL", DEFAULT_LOCAL_MODEL)
 OUT_DIR = Path(__file__).resolve().parent.parent / "out" / "sites"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -21,11 +36,8 @@ PROMPTS = {
 
 
 def build_prompt(system: str, user: str) -> str:
-    """Manual Gemma 4 chat template — Ollama's auto-template breaks our SFT model."""
-    return (
-        f"<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n"
-        f"<start_of_turn>model\n"
-    )
+    """Manual Gemma 4 chat template — copied from the model's HF tokenizer/chat template."""
+    return build_gemma4_prompt(system, user)
 
 
 def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
@@ -39,7 +51,7 @@ def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
             "top_p": 0.9,
             "repeat_penalty": 1.05,
             "num_predict": max_tokens,
-            "stop": ["<end_of_turn>", "<start_of_turn>"],
+            "stop": ["<|turn>", "<turn|>"],
         },
     }).encode()
     req = urllib.request.Request(
@@ -56,17 +68,8 @@ def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
 
 
 def clean(text: str) -> str:
-    """Strip channel/thought tags and markdown fences."""
-    # Remove <|channel>thought\n<channel|> and similar
-    text = re.sub(r'<\|?channel\|?>[a-z]*\s*<?\|?channel\|?>?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<\|channel\|>\w*\s*', '', text)
-    text = re.sub(r'</?start_of_turn>\w*\s*', '', text)
-    text = re.sub(r'</?end_of_turn>\w*\s*', '', text)
-    # Markdown fences
-    if "```" in text:
-        m = re.search(r"```(?:html)?\s*\n?(.*?)```", text, re.DOTALL)
-        if m: text = m.group(1)
-    return text.strip()
+    """Strip Gemma 4 channel/turn tags and markdown fences."""
+    return clean_generated_text(text)
 
 
 def ensure_html(text: str) -> str:
@@ -76,6 +79,7 @@ def ensure_html(text: str) -> str:
 
 
 def main():
+    assert_supported_local_model(MODEL)
     print(f"Cipher generation via Ollama at {OLLAMA_URL} (model: {MODEL})")
     print(f"Output dir: {OUT_DIR}\n")
 

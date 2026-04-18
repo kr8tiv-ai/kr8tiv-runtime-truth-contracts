@@ -12,6 +12,19 @@ import os, re, time, json, urllib.request, webbrowser, sys
 from pathlib import Path
 from datetime import datetime
 
+try:
+    from scripts.cipher_prompting import (
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+except ImportError:
+    from cipher_prompting import (  # type: ignore
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+
 API = os.environ.get("CIPHER_API_URL", "http://localhost:11434").rstrip("/")
 MODEL = os.environ.get("CIPHER_MODEL", "cipher-simpo")
 
@@ -74,10 +87,7 @@ PROMPTS = {
 
 
 def build_prompt(system: str, user: str) -> str:
-    return (
-        f"<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n"
-        f"<start_of_turn>model\n"
-    )
+    return build_gemma4_prompt(system, user)
 
 
 def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
@@ -92,7 +102,7 @@ def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
             "repeat_penalty": 1.05,
             "num_predict": max_tokens,
             "num_ctx": 8192,
-            "stop": ["<end_of_turn>", "<start_of_turn>"],
+            "stop": ["<|turn>", "<turn|>"],
         },
     }).encode()
     req = urllib.request.Request(
@@ -109,14 +119,7 @@ def generate(user_prompt: str, max_tokens: int = 4096) -> tuple[str, dict]:
 
 
 def clean(text: str) -> str:
-    text = re.sub(r'<\|?channel\|?>[a-z]*\s*<?\|?channel\|?>?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'<\|channel\|>\w*\s*', '', text)
-    text = re.sub(r'</?start_of_turn>\w*\s*', '', text)
-    text = re.sub(r'</?end_of_turn>\w*\s*', '', text)
-    if "```" in text:
-        m = re.search(r"```(?:html)?\s*\n?(.*?)```", text, re.DOTALL)
-        if m: text = m.group(1)
-    return text.strip()
+    return clean_generated_text(text)
 
 
 def ensure_html(text: str) -> str:
@@ -143,6 +146,7 @@ def slop_flags(html: str) -> list[str]:
 
 
 def main():
+    assert_supported_local_model(MODEL)
     print(f"Cipher SimPO 5-site generation")
     print(f"  API: {API}")
     print(f"  Model: {MODEL}")

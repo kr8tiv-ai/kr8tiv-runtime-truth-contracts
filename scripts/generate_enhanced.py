@@ -10,6 +10,19 @@ import os, re, time, json, urllib.request, webbrowser, sys
 from pathlib import Path
 from datetime import datetime
 
+try:
+    from scripts.cipher_prompting import (
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+except ImportError:
+    from cipher_prompting import (  # type: ignore
+        assert_supported_local_model,
+        build_gemma4_prompt,
+        clean_generated_text,
+    )
+
 API = os.environ.get("CIPHER_API_URL", "http://localhost:11434").rstrip("/")
 MODEL = os.environ.get("CIPHER_MODEL", "kin-cipher-simpo")
 LABEL = sys.argv[1] if len(sys.argv) > 1 else "v7-enhanced-" + datetime.now().strftime("%H%M%S")
@@ -145,7 +158,7 @@ PROMPTS = {
 
 
 def build_prompt(system: str, user: str) -> str:
-    return f"<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n"
+    return build_gemma4_prompt(system, user)
 
 
 def generate(user_prompt: str, max_tokens: int = 8192) -> tuple[str, dict]:
@@ -160,7 +173,7 @@ def generate(user_prompt: str, max_tokens: int = 8192) -> tuple[str, dict]:
             "repeat_penalty": 1.05,
             "num_predict": max_tokens,
             "num_ctx": 16384,
-            "stop": ["<end_of_turn>", "<start_of_turn>"],
+            "stop": ["<|turn>", "<turn|>"],
         },
     }).encode()
     req = urllib.request.Request(
@@ -172,13 +185,7 @@ def generate(user_prompt: str, max_tokens: int = 8192) -> tuple[str, dict]:
 
 
 def clean(text):
-    text = re.sub(r'<\|?channel\|?>[a-z]*\s*<?\|?channel\|?>?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'</?start_of_turn>\w*\s*', '', text)
-    text = re.sub(r'</?end_of_turn>\w*\s*', '', text)
-    if '```' in text:
-        m = re.search(r'```(?:html)?\s*\n?(.*?)```', text, re.DOTALL)
-        if m: text = m.group(1)
-    return text.strip()
+    return clean_generated_text(text)
 
 
 def slop_flags(html):
@@ -194,6 +201,7 @@ def slop_flags(html):
 
 
 def main():
+    assert_supported_local_model(MODEL)
     print(f"Cipher ENHANCED 5-site generation")
     print(f"  API: {API}")
     print(f"  Model: {MODEL}")

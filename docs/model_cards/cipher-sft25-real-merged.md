@@ -38,7 +38,7 @@ model-index:
         dataset:
           name: cipher-real-v1-sft
           type: Auroraventures/cipher-awwwards-sft25
-          config: cipher-real-v1-sft
+          config: real-scraped-v1
           split: train
         metrics:
           - type: loss
@@ -66,7 +66,7 @@ inference: false
 This is the **v3 breakthrough checkpoint** in the Cipher series: the first Kin generator trained end-to-end on authentic, production-grade creative-coding repositories after v1/v2 suffered template-collapse.
 
 - 🧠 **Base:** `Auroraventures/cipher-simpo-merged` (Gemma-4-31B-IT + SimPO anti-slop preference pairs)
-- 🔬 **Fine-tune:** Supervised SFT on `cipher-real-v1-sft` (741 records, 5.4 MB) curated from four canonical sources
+- 🔬 **Fine-tune:** Supervised SFT on `cipher-real-v1-sft.jsonl` via dataset config `real-scraped-v1` (741 records, 5.4 MB) built from three source-backed code corpora, with Aura shells kept only as reference metadata
 - 🎨 **Optimized for:** Awwwards Site-of-the-Day motion stacks — Three.js, GSAP, ScrollTrigger, SplitText, Lenis, vanilla JS
 - 🚫 **Slop-suppressed:** No Tailwind CDN, no `lenis.stop()` misuse, no copy-paste boilerplate
 - ⚡ **Library:** [Unsloth](https://github.com/unslothai/unsloth) QLoRA (r=64, α=128, rsLoRA) merged to BF16
@@ -118,12 +118,14 @@ Use the companion GGUF: **`Auroraventures/cipher-sft25-real-merged-Q4_K_M-GGUF`*
 | `mrdoob/three.js/examples` | 578 | Ground truth Three.js patterns (raycasting, shaders, particles, postprocessing) |
 | `motiondivision/motion/dev` | 148 | Framer Motion idioms transplanted to vanilla DOM |
 | `freefrontend.com` GSAP corpus | 63 | ScrollTrigger, SplitText, SVG morph, timeline chains |
-| `aura.build` shells | ≤998 → 1 per record | Modern CSS scaffolding, typography, dark-mode tokens |
+| `aura.build` shells | reference-only | Modern CSS scaffolding, typography, and palette metadata used for prompting and analysis, not assistant completions |
 
 Every record is a Gemma-4 chat-format triple (`system`, `user`, `assistant`) where:
 - **system** — Cipher's output contract (no Tailwind CDN, Lenis + GSAP + ScrollTrigger + SplitText, opacity-safe cascade)
 - **user** — a naturalistic request keyed to the source pattern
-- **assistant** — the actual hand-written HTML/CSS/JS from the canonical source
+- **assistant** — the actual HTML / JS / TSX lifted from the three source-backed code corpora above
+
+Aura shells are deliberately excluded from assistant completions because they do not provide trustworthy full-code artifacts; they remain reference metadata only.
 
 ---
 
