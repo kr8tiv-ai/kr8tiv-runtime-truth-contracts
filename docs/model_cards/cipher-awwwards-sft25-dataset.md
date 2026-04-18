@@ -7,9 +7,6 @@ size_categories:
   - 1K<n<10K
 task_categories:
   - text-generation
-  - text2text-generation
-task_ids:
-  - conversational
 tags:
   - code
   - html
