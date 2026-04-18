@@ -20,7 +20,7 @@ This is not a smart contract repo. It is the **source of truth** for what KIN ag
 
 ## Cipher — Current Status
 
-> **The Code Kraken is alive.** First of 6 companions shipped through Stage 1 (SFT) and Stage 2 (SimPO anti-slop).
+> **The Code Kraken is alive.** First of 6 companions shipped through Stage 1 (SFT), Stage 2 (SimPO anti-slop), and Stage 2.5 on **real** scraped Awwwards-grade source (v3 breakthrough, Apr 18 2026).
 
 ### Models on HuggingFace (public)
 | Stage | Model | Format |
@@ -28,6 +28,16 @@ This is not a smart contract repo. It is the **source of truth** for what KIN ag
 | Stage 1 SFT | [`Auroraventures/cipher-sft-merged`](https://huggingface.co/Auroraventures/cipher-sft-merged) | safetensors (62.5 GB) |
 | Stage 1 SFT GGUF Q4_K_M | [`Auroraventures/cipher-sft-merged-Q4_K_M-GGUF`](https://huggingface.co/Auroraventures/cipher-sft-merged-Q4_K_M-GGUF) | GGUF (18.7 GB, Ollama-ready) |
 | Stage 2 SimPO | [`Auroraventures/cipher-simpo-merged`](https://huggingface.co/Auroraventures/cipher-simpo-merged) | safetensors (62.6 GB) |
+| Stage 2 SimPO GGUF | [`Auroraventures/cipher-simpo-merged-Q4_K_M-GGUF`](https://huggingface.co/Auroraventures/cipher-simpo-merged-Q4_K_M-GGUF) | GGUF (18 GB) |
+| Stage 2.5 SFT synthetic (retired) | [`Auroraventures/cipher-sft25-merged`](https://huggingface.co/Auroraventures/cipher-sft25-merged) | safetensors — template collapse, see v3 below |
+| Stage 2.5 SFT real ⭐ | [`Auroraventures/cipher-sft25-real-merged`](https://huggingface.co/Auroraventures/cipher-sft25-real-merged) | safetensors (62.6 GB) · **final loss 0.29** |
+
+### Generation harness
+Two generate scripts ship in `scripts/`:
+- `generate_via_endpoint.py` — local Ollama path (raw Gemma 4 chat template + `kin-cipher` GGUF)
+- `generate_via_hf_endpoint.py` — HF Inference Endpoint path (OpenAI-compatible `/v1/chat/completions` on deployed TGI)
+
+Three canonical sites (hero-particles · portfolio-scroll · 3d-card) are produced into `out/sites/` + `out/sites_hf/` and opened automatically in the default browser.
 
 ### Runtime integration (this repo)
 The `companions/cipher/` directory + `inference/` module are wired for:
