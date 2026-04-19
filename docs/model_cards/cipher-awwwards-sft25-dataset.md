@@ -50,9 +50,15 @@ configs:
 
 # Cipher — Awwwards SFT 2.5 + Real v1 🦑
 
-> *The training fuel for Kin's creative-web generator. Real Three.js / GSAP / Lenis source code, hand-curated to teach a 31 B Gemma-4 the Awwwards idiom.*
+> *The training fuel for Kin's creative-web generator, AND the retrieval corpus for [Kraken RAG](https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts/tree/main/kraken_rag). 96 real Awwwards Site-of-the-Day winners + ~1,200 records from official motion-library repositories.*
 
-This dataset is the authoritative SFT corpus for the [Cipher](https://huggingface.co/Auroraventures/cipher-sft25-real-merged) family of creative-web code generators. It ships **five splits** so every stage of the Cipher pipeline — synthetic SFT, real SFT, GRPO — is reproducible.
+## Two ways this dataset is used
+
+1. **As a retrieval corpus for [Kraken RAG](https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts/tree/main/kraken_rag) ⭐ (the production path).** The `awwwards-gold.jsonl` file contains 96 structured records of real Awwwards SOTD winners — tags, tech stack, motion libs, CSS features, section counts, HTML size — which `kraken_rag` indexes with TF-IDF. A creative brief retrieves the 3 most stylistically similar winners and they're packed as in-context examples for a frontier model. This is the architecture Vercel's v0 is built around.
+
+2. **As a supervised fine-tuning corpus for the `cipher-sft25-*` checkpoint family (an experiment).** The `real-scraped-v1` split (741 records from official Three.js / Motion One / GSAP examples) was used to fine-tune `Auroraventures/cipher-sft25-real-merged`. This experiment confirmed what the repo's own [CRITICAL-ASSESSMENT.md](https://github.com/kr8tiv-ai/kr8tiv-training/blob/main/data/awwwards/distilled/CRITICAL-ASSESSMENT.md) had warned on 2026-04-15: a 31 B local fine-tune on library examples converges on syntactically correct but aesthetically generic output. The weights remain useful as an offline scaffolder; for creative output, use Kraken RAG.
+
+It ships **five splits** so every use case is reproducible.
 
 ---
 

@@ -61,9 +61,24 @@ inference: false
 
 > *"The Code Kraken sees what others miss."*
 
-**Cipher-SFT25-Real** is a 31 B parameter Gemma-4 creative-web generator, fine-tuned on **real, scraped Awwwards-quality source code** — not synthetic templates. It speaks fluent Three.js, GSAP, Lenis, and modern CSS, and emits complete, single-file HTML documents on demand.
+## ⚠ For creative-brief → full site generation, use the **Kraken RAG** pipeline instead
 
-This is the **v3 breakthrough checkpoint** in the Cipher series: the first Kin generator trained end-to-end on authentic, production-grade creative-coding repositories after v1/v2 suffered template-collapse.
+This checkpoint exists as an experiment in local creative-web fine-tuning. **In practice, the production path for "brief → Awwwards-quality single-file HTML" is the [kraken_rag](https://github.com/kr8tiv-ai/kr8tiv-runtime-truth-contracts/tree/main/kraken_rag) package, which retrieves over 96 real Site-of-the-Day winners and prompts a frontier model (Claude Opus 4.7 via the Claude Code CLI, or GPT-5.4 via the SDK).** See `data/awwwards/distilled/CRITICAL-ASSESSMENT.md` in the training repo — the TL;DR written on 2026-04-15 said this explicitly, and subsequent generation tests with this checkpoint confirmed the ceiling.
+
+This checkpoint still has value as:
+- A **local offline scaffolder** for motion-stack boilerplate (runs on one A100 via `transformers.generate`).
+- A **research artifact** for the Kin training pipeline (v1 SFT → SimPO → v3 real-data SFT).
+- A **reward-model candidate** for future RL work against rendered-page critiques.
+
+It is **not** the creative brain. For creative output, start at `kraken_rag/README.md`.
+
+---
+
+## What it actually is
+
+**Cipher-SFT25-Real** is a 31 B parameter Gemma-4 creative-web generator, fine-tuned on **real, scraped source code** from three canonical creative-coding repositories (official Three.js examples, Motion One examples, freefrontend.com GSAP gallery). It emits complete, single-file HTML documents with no Tailwind CDN and the correct motion-stack idioms.
+
+This is the **v3 breakthrough checkpoint** in the Cipher series: the first Kin generator trained end-to-end on authentic, source-backed creative-coding repositories after v1/v2 suffered template-collapse. Whether that's enough to reach the creative quality bar the project was aimed at — see the disclaimer above.
 
 - 🧠 **Base:** `Auroraventures/cipher-simpo-merged` (Gemma-4-31B-IT + SimPO anti-slop preference pairs)
 - 🔬 **Fine-tune:** Supervised SFT on `cipher-real-v1-sft.jsonl` via dataset config `real-scraped-v1` (741 records, 5.4 MB) built from three source-backed code corpora, with Aura shells kept only as reference metadata
