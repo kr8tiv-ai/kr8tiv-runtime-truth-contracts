@@ -12,12 +12,8 @@ def retrieve(
     k: int = 3,
     store: Store | None = None,
 ) -> list[tuple[Site, float]]:
-    """Given a free-text brief, return `k` most similar SOTD references.
-
-    Lazy-loads data + builds (or loads cached) embeddings on first call.
-    Pass `store` to reuse a pre-built store across many queries.
-    """
+    """Free-text brief → `k` most stylistically similar SOTD references."""
     if store is None:
         store = build(load_sites())
-    qv = embed_one(brief, model_name=store.model_name)
+    qv = embed_one(brief, model_name=store.model_name, tfidf=store.tfidf)
     return store.top_k(qv, k=k)

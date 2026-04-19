@@ -1,12 +1,20 @@
-# Core — local embeddings and vector math
-sentence-transformers>=3.0
+# ── required ──────────────────────────────────────────────────────────────
+# numpy is the only required dep for the default TF-IDF backend.
 numpy>=1.24
 
-# Frontier providers (either is enough; install both for --provider auto)
+# Frontier providers (at least one needed for `generate`; neither for `retrieve`).
 anthropic>=0.40
-openai>=1.60
 
-# Web UI (optional — only needed for `python -m kraken_rag serve`)
-fastapi>=0.115
-uvicorn>=0.32
-python-multipart>=0.0.9
+# ── optional ──────────────────────────────────────────────────────────────
+# openai — only needed if you want --provider openai
+# openai>=1.60
+
+# sentence-transformers — opt-in semantic embeddings upgrade over TF-IDF
+# (adds ~500 MB of torch/transformers; only install if disk allows and you
+# want to experiment beyond the TF-IDF default). Enable with KRAKEN_RAG_MODEL=miniLM.
+# sentence-transformers>=3.0
+
+# FastAPI web UI — only needed for `python -m kraken_rag serve`
+# fastapi>=0.115
+# uvicorn>=0.32
+# python-multipart>=0.0.9
