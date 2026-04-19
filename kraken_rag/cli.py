@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     p_g.add_argument("--k", type=int, default=3, help="Number of refs to ground on")
     p_g.add_argument("--out", help="Write HTML to this path (else print to stdout)")
     p_g.add_argument("--open", action="store_true", help="Open result in browser")
-    p_g.add_argument("--provider", choices=["anthropic", "openai", "auto"], default="auto")
+    p_g.add_argument("--provider", choices=["claude-cli", "anthropic", "openai", "auto"], default="auto")
     p_g.add_argument("--model", default=None, help="Override default model id")
     p_g.add_argument("--max-tokens", type=int, default=16000)
     p_g.set_defaults(fn=cmd_generate)

@@ -181,16 +181,28 @@ class StoreAndRetrieveTests(unittest.TestCase):
 
 
 class ProviderSelectionTests(unittest.TestCase):
-    def test_no_providers_raises(self) -> None:
+    def test_auto_picks_something_when_cli_or_keys_available(self) -> None:
+        # This machine has `claude` CLI on PATH, so auto should return "claude-cli".
+        from kraken_rag.generate import claude_cli_available
+        if claude_cli_available():
+            self.assertEqual(pick_provider("auto"), "claude-cli")
+
+    def test_explicit_api_key_provider_raises_without_key(self) -> None:
         import os
         saved = {k: os.environ.pop(k, None) for k in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY")}
         try:
             with self.assertRaises(RuntimeError):
-                pick_provider("auto")
+                pick_provider("anthropic")
+            with self.assertRaises(RuntimeError):
+                pick_provider("openai")
         finally:
             for k, v in saved.items():
                 if v is not None:
                     os.environ[k] = v
+
+    def test_unknown_preference_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            pick_provider("mistral")  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
